@@ -29,25 +29,27 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $hasSession = $request->hasSession();
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user() ? [
-                    'id' => $request->user()->id,
-                    'name' => $request->user()->name,
-                    'email' => $request->user()->email,
-                    'roles' => $request->user()->getRoleNames(),
-                    'permissions' => $request->user()->getAllPermissions()->pluck('name'),
-                    'employee_photo' => $request->user()->employee?->photo_url 
-                        ? $request->user()->employee->photo_url 
-                        : null,
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames() : [],
+                    'permissions' => method_exists($user, 'getAllPermissions') ? $user->getAllPermissions()->pluck('name') : [],
+                    'employee_photo' => $user->employee?->photo_url ?? null,
                 ] : null,
             ],
             'flash' => [
-                'message' => fn () => $request->session()->get('message'),
-                'success' => fn () => $request->session()->get('success'),
-                'error' => fn () => $request->session()->get('error'),
+                'message' => fn () => $hasSession ? $request->session()->get('message') : null,
+                'success' => fn () => $hasSession ? $request->session()->get('success') : null,
+                'error' => fn () => $hasSession ? $request->session()->get('error') : null,
             ],
         ];
     }
+
 }

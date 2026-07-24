@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Symfony\Component\HttpFoundation\Response;
+
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -24,5 +26,14 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->respond(function (Response $response, Throwable $exception, $request) {
+            if ($response->getStatusCode() === 419 || $exception instanceof \Illuminate\Session\TokenMismatchException) {
+                if ($request->header('X-Inertia')) {
+                    return \Inertia\Inertia::location(route('login'));
+                }
+                return redirect()->route('login')->with('message', 'Sesi Anda telah berakhir. Silakan login kembali.');
+            }
+            return $response;
+        });
     })->create();
+
