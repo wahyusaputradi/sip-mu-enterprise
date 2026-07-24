@@ -587,7 +587,7 @@ class AttendanceController extends Controller
             ->keyBy('employee_id');
 
         $campusLocations = CampusLocation::all();
-        $employees = Employee::with('positions')->where('status', 'active')->get();
+        $employees = Employee::with('positions')->where('status', 'active')->orderBy('name', 'asc')->get();
         $leaveRequests = \App\Models\LeaveRequest::whereDate('start_date', '<=', $today)
             ->whereDate('end_date', '>=', $today)
             ->where('status', 'approved')
