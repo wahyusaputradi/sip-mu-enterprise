@@ -33,7 +33,13 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
                 return redirect()->route('login')->with('message', 'Sesi Anda telah berakhir. Silakan login kembali.');
             }
+            if ($response->getStatusCode() === 500 && !config('app.debug')) {
+                if ($request->header('X-Inertia')) {
+                    return back()->with('error', 'Terjadi kesalahan sistem sementara. Silakan muat ulang halaman.');
+                }
+            }
             return $response;
         });
     })->create();
+
 
