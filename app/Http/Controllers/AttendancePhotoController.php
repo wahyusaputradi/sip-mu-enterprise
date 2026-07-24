@@ -27,7 +27,7 @@ class AttendancePhotoController extends Controller
 
         // Query Daily Attendance with targeted column selection & lightweight eager loading
         $dailyQuery = Attendance::select(['id', 'employee_id', 'date', 'check_in', 'check_out', 'photo_check_in', 'photo_check_out', 'latitude', 'longitude', 'campus_location_id'])
-            ->with(['employee:id,name,nik,nip', 'campusLocation:id,name'])
+            ->with(['employee:id,name,nik', 'campusLocation:id,name'])
             ->whereBetween('date', [$startDate, $endDate]);
 
         if ($search) {
@@ -41,8 +41,9 @@ class AttendancePhotoController extends Controller
 
         // Query Teaching Attendance with targeted column selection & lightweight eager loading
         $teachingQuery = TeachingAttendance::select(['id', 'employee_id', 'date', 'time', 'photo', 'latitude', 'longitude', 'campus_location_id', 'teaching_schedule_id'])
-            ->with(['employee:id,name,nik,nip', 'campusLocation:id,name', 'teachingSchedule:id,school_class_id,hour_number,subject', 'teachingSchedule.schoolClass:id,name'])
+            ->with(['employee:id,name,nik', 'campusLocation:id,name', 'teachingSchedule:id,school_class_id,hour_number,subject', 'teachingSchedule.schoolClass:id,name'])
             ->whereBetween('date', [$startDate, $endDate]);
+
 
         if ($search) {
             $teachingQuery->whereHas('employee', function ($q) use ($search) {
