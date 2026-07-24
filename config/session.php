@@ -18,7 +18,7 @@ return [
     |
     */
 
-    'driver' => class_exists(\Redis::class) ? env('SESSION_DRIVER', 'database') : 'database',
+    'driver' => env('SESSION_DRIVER', 'database'),
 
     /*
     |--------------------------------------------------------------------------
