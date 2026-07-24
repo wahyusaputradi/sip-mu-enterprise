@@ -30,6 +30,7 @@ export default function Edit({ employee, positions }) {
         subject: employee.subject || '',
         ukg_number: employee.ukg_number || '',
         teaching_hours: employee.teaching_hours || '',
+        is_certified: employee.is_certified == 1,
         is_homeroom_teacher: employee.is_homeroom_teacher == 1,
         homeroom_class: employee.homeroom_class || '',
         is_extracurricular_builder: employee.is_extracurricular_builder == 1,
@@ -334,6 +335,20 @@ export default function Edit({ employee, positions }) {
                                             <Label htmlFor="ukg_number" className="font-bold text-slate-700">No. UKG</Label>
                                             <Input id="ukg_number" value={data.ukg_number} onChange={e => setData('ukg_number', e.target.value)} placeholder="Nomor UKG..." className="rounded-xl font-mono" />
                                             {errors.ukg_number && <p className="text-rose-500 text-xs font-bold">{errors.ukg_number}</p>}
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <Label htmlFor="is_certified" className="font-bold text-slate-700">Status Sertifikasi Guru</Label>
+                                            <Select value={data.is_certified ? '1' : '0'} onValueChange={(val) => setData('is_certified', val === '1')}>
+                                                <SelectTrigger className="rounded-xl bg-white">
+                                                    <SelectValue placeholder="Pilih Status Sertifikasi" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="0">Guru Non-Sertifikasi (Belum Sertifikasi Pendidik)</SelectItem>
+                                                    <SelectItem value="1">Guru Sertifikasi (Sudah Sertifikasi Pendidik)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            {errors.is_certified && <p className="text-rose-500 text-xs font-bold">{errors.is_certified}</p>}
                                         </div>
                                     </motion.div>
                                 )}

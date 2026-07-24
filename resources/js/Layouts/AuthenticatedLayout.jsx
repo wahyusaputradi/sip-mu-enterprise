@@ -8,7 +8,6 @@ import {
     LayoutDashboard, 
     Users, 
     CalendarClock, 
-    CreditCard, 
     Settings, 
     MapPin, 
     ClipboardList,
@@ -27,12 +26,11 @@ import {
     School,
     GraduationCap,
     History,
-    Wallet,
     ShieldCheck,
-    DatabaseBackup,
     Sun,
     Moon,
-    AlertCircle
+    AlertCircle,
+    Image
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -143,11 +141,19 @@ export default function AuthenticatedLayout({ header, children }) {
 
     const fetchNotifications = async () => {
         try {
-            const res = await axios.get(route('notifications.unread'));
-            setNotifications(res.data.notifications || []);
-            setUnreadCount(res.data.notifications?.length || 0);
+            if (typeof route === 'function' && route().has && !route().has('notifications.unread')) {
+                return;
+            }
+            const url = route('notifications.unread');
+            const res = await axios.get(url, {
+                validateStatus: (status) => status >= 200 && status < 300
+            });
+            if (res && res.data) {
+                setNotifications(res.data.notifications || []);
+                setUnreadCount(res.data.notifications?.length || 0);
+            }
         } catch (error) {
-            console.error("Error fetching notifications", error);
+            // Quietly handle background polling errors without disturbing the user interface
         }
     };
 
@@ -201,7 +207,6 @@ export default function AuthenticatedLayout({ header, children }) {
             { name: 'Data Profil', route: 'profile.edit', icon: <UserIcon className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
             { name: 'Jadwal Saya', route: 'my-schedule.index', icon: <GraduationCap className="w-5 h-5" />, roles: ['Guru'] },
             { name: 'Rekap Absensi', route: 'my-attendance.index', icon: <History className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
-            { name: 'Slip Gaji', route: 'my-payslip.index', icon: <Wallet className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
             { name: 'Pengajuan Cuti/Izin', route: 'leave-requests.index', icon: <FilePlus className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
             { name: 'Bursa Inval', route: 'invals.index', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
         ]},
@@ -211,17 +216,15 @@ export default function AuthenticatedLayout({ header, children }) {
             { name: 'Jabatan', route: 'positions.index', icon: <ClipboardList className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Bendahara'] },
             { name: 'Monitoring', route: 'monitoring.attendance', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: 'Rekap Presensi', route: 'attendance.recap', icon: <ClipboardList className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
-            { name: 'Jadwal Mengajar', route: 'teaching-schedules.index', icon: <CalendarDays className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum'] },
+            { name: 'Foto Presensi', route: 'monitoring.photos.index', icon: <Image className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: 'Jadwal Mengajar', route: 'teaching-schedules.index', icon: <CalendarDays className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: 'Data Kelas', route: 'school-classes.index', icon: <School className="w-5 h-5" />, roles: ['Super Admin', 'Kurikulum'] },
             { name: 'Persetujuan Cuti', route: 'leave-requests.approval', icon: <ClipboardCheck className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum'] },
-            { name: 'Penggajian', route: 'payroll.index', icon: <CreditCard className="w-5 h-5" />, roles: ['Super Admin', 'Bendahara'] },
-            { name: 'Pengaturan Gaji', route: 'salary-settings.index', icon: <CreditCard className="w-5 h-5" />, roles: ['Super Admin', 'Bendahara'] },
         ]},
         // ═══ KONFIGURASI ═══
         { group: 'Konfigurasi', items: [
             { name: 'Lokasi Kampus', route: 'campus-locations.index', icon: <MapPin className="w-5 h-5" />, roles: ['Super Admin'] },
             { name: 'Otoritas User', route: 'user-authority.index', icon: <ShieldCheck className="w-5 h-5" />, roles: ['Super Admin'] },
-            { name: 'Backup & Restore', route: 'backups.index', icon: <DatabaseBackup className="w-5 h-5" />, roles: ['Super Admin'] },
             { name: 'Pengaturan', route: 'settings.index', icon: <Settings className="w-5 h-5" />, roles: ['Super Admin'] },
         ]}
     ];
@@ -349,19 +352,6 @@ export default function AuthenticatedLayout({ header, children }) {
 
                 {/* Footer Sidebar */}
                 <div className="p-5 border-t border-white/5 space-y-4">
-                    {isSidebarOpen && (
-                        <div className="bg-gradient-to-br from-[#1E293B] to-[#0F172A] p-6 rounded-3xl relative overflow-hidden group ring-1 ring-white/5 shadow-2xl">
-                            <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                                <Sparkles className="w-24 h-24 text-indigo-400" />
-                            </div>
-                            <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest mb-1 relative z-10">Pro Support</p>
-                            <p className="text-white text-sm font-bold mb-5 relative z-10 leading-relaxed">Butuh bantuan teknis?</p>
-                            <button className="w-full py-3 bg-white/5 hover:bg-white/10 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-xl border border-white/10 transition-all relative z-10 shadow-lg">
-                                Hubungi Admin
-                            </button>
-                        </div>
-                    )}
-                    
                     <button 
                         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                         className="w-full flex items-center justify-center p-3.5 rounded-2xl bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/5"

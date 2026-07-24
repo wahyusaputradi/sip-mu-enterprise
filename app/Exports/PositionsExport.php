@@ -22,15 +22,6 @@ class PositionsExport implements FromCollection, WithHeadings, WithMapping, With
             'ID',
             'Nama Jabatan',
             'Keterangan',
-            'Gaji Pokok',
-            'Tarif per Jam',
-            'Tarif Inval',
-            'Potongan Alpha',
-            'Tunjangan Jabatan',
-            'Tunjangan Wali Kelas',
-            'Tunjangan Sertifikasi',
-            'Tunjangan Makan',
-            'Tunjangan Transport',
             'Jumlah Pegawai',
         ];
     }
@@ -41,15 +32,6 @@ class PositionsExport implements FromCollection, WithHeadings, WithMapping, With
             $position->id,
             $position->name,
             $position->description,
-            $position->base_salary,
-            $position->hourly_rate,
-            $position->inval_rate,
-            $position->alpha_penalty_rate,
-            $position->allowance_jabatan,
-            $position->allowance_homeroom,
-            $position->allowance_certification,
-            $position->allowance_lunch,
-            $position->allowance_transport,
             $position->employees_count,
         ];
     }

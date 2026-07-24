@@ -18,3 +18,10 @@ yarn-error.log
 /.idea
 /.vscode
 .blackboxcli/
+temp_*.txt
+temp.json
+backup_temp.sql
+test_*.php
+test.php
+check_payroll.php
+

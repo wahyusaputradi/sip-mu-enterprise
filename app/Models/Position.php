@@ -12,15 +12,6 @@ class Position extends Model
     protected $fillable = [
         'name',
         'description',
-        'base_salary',
-        'hourly_rate',
-        'inval_rate',
-        'alpha_penalty_rate',
-        'allowance_jabatan',
-        'allowance_homeroom',
-        'allowance_certification',
-        'allowance_lunch',
-        'allowance_transport',
     ];
 
     public function employees()

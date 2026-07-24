@@ -19,6 +19,11 @@ class TeachingAttendance extends Model
         'longitude',
         'campus_location_id',
         'status',
+        'is_dinas_luar',
+    ];
+
+    protected $casts = [
+        'is_dinas_luar' => 'boolean',
     ];
 
     protected $appends = ['photo_url'];
@@ -28,8 +33,7 @@ class TeachingAttendance extends Model
         if (!$this->photo) {
             return null;
         }
-        $disk = config('filesystems.default', 'public');
-        return \Illuminate\Support\Facades\Storage::disk($disk)->url($this->photo);
+        return route('media.stream', ['path' => $this->photo]);
     }
 
     public function employee()

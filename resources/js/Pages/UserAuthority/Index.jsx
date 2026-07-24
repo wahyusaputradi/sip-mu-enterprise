@@ -100,12 +100,12 @@ export default function UserAuthorityIndex({ users, roles, filters, auth }) {
     // Role description maps
     const roleDescriptions = {
         'Super Admin': { mgmt: 'Memberikan akses penuh tanpa batas ke seluruh fitur sistem.', personal: '(Pengecualian Presensi)' },
-        'Bendahara': { mgmt: 'Memberikan akses ke fitur keuangan, payroll, dan pengaturan gaji.', personal: 'Data profil, presensi harian, pengajuan izin, rekap, slip gaji' },
-        'Absensi': { mgmt: 'Memberikan akses untuk mengelola data kehadiran/edit dan rekap absensi.', personal: 'Data profil, presensi harian, pengajuan izin, rekap, slip gaji' },
-        'Kepala Sekolah': { mgmt: 'Memberikan akses untuk monitoring laporan dan evaluasi kinerja.', personal: 'Data profil, presensi harian, pengajuan izin, rekap, slip gaji' },
-        'Kurikulum': { mgmt: 'Memberikan akses untuk mengelola SDM, jadwal, dan struktur jabatan.', personal: 'Data profil, presensi harian, pengajuan izin, rekap, slip gaji' },
-        'Guru': { mgmt: '(Hanya Area Pribadi)', personal: 'Dashboard, data profil, presensi harian, pengajuan izin, rekap presensi, slip gaji' },
-        'Karyawan': { mgmt: '(Hanya Area Pribadi)', personal: 'Dashboard, data profil, presensi harian, pengajuan izin, rekap presensi, slip gaji' },
+        'Bendahara': { mgmt: 'Memberikan akses ke fitur data pegawai dan jabatan.', personal: 'Data profil, presensi harian, pengajuan izin, rekap presensi' },
+        'Absensi': { mgmt: 'Memberikan akses untuk mengelola data kehadiran/edit dan rekap absensi.', personal: 'Data profil, presensi harian, pengajuan izin, rekap presensi' },
+        'Kepala Sekolah': { mgmt: 'Memberikan akses untuk monitoring laporan dan evaluasi kinerja.', personal: 'Data profil, presensi harian, pengajuan izin, rekap presensi' },
+        'Kurikulum': { mgmt: 'Memberikan akses untuk mengelola SDM, jadwal, dan struktur jabatan.', personal: 'Data profil, presensi harian, pengajuan izin, rekap presensi' },
+        'Guru': { mgmt: '(Hanya Area Pribadi)', personal: 'Dashboard, data profil, presensi harian, pengajuan izin, rekap presensi' },
+        'Karyawan': { mgmt: '(Hanya Area Pribadi)', personal: 'Dashboard, data profil, presensi harian, pengajuan izin, rekap presensi' },
     };
 
     return (

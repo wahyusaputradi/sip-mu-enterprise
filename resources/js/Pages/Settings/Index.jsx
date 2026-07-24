@@ -17,16 +17,42 @@ export default function Index({ settings, holidays }) {
         jam_masuk: settings.jam_masuk || '07:00',
         jam_keluar: settings.jam_keluar || '14:40',
         batas_waktu_maksimal_terlambat: settings.batas_waktu_maksimal_terlambat || '10',
+        buffer_presensi_masuk: settings.buffer_presensi_masuk || '10',
+        buffer_presensi_keluar: settings.buffer_presensi_keluar || '10',
         teaching_late_tolerance: settings.teaching_late_tolerance || '15',
+        count_holidays_as_present: settings.count_holidays_as_present !== undefined ? (settings.count_holidays_as_present === '1' || settings.count_holidays_as_present === 1 || settings.count_holidays_as_present === true) : true,
+        liveness_detection_enabled: settings.liveness_detection_enabled !== undefined ? (settings.liveness_detection_enabled === '1' || settings.liveness_detection_enabled === 1 || settings.liveness_detection_enabled === true) : true,
+        recap_cutoff_type: settings.recap_cutoff_type || 'calendar_month',
+        recap_cutoff_day: settings.recap_cutoff_day || '20',
     });
 
     const { data: holidayData, setData: setHolidayData, post: postHoliday, reset: resetHoliday, processing: processingHoliday, errors: holidayErrors } = useForm({
+        mode: 'single',
         date: '',
+        start_date: '',
+        end_date: '',
         description: '',
         is_national_holiday: true,
     });
 
     const [activeTab, setActiveTab] = useState('umum');
+    const [checkedHolidayIds, setCheckedHolidayIds] = useState([]);
+
+    const toggleOneHoliday = (id) => {
+        setCheckedHolidayIds(prev => 
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+
+    const allHolidaysChecked = holidays && holidays.length > 0 && holidays.every(h => checkedHolidayIds.includes(h.id));
+    
+    const toggleAllHolidays = () => {
+        if (allHolidaysChecked) {
+            setCheckedHolidayIds([]);
+        } else {
+            setCheckedHolidayIds(holidays.map(h => h.id));
+        }
+    };
 
     const submitSettings = (e) => {
         e.preventDefault();
@@ -48,7 +74,21 @@ export default function Index({ settings, holidays }) {
     const handleDeleteHoliday = (id) => {
         if(confirm('Hapus hari libur ini?')) {
             router.delete(route('holidays.destroy', id), {
-                onSuccess: () => toast.success("Hari libur berhasil dihapus.")
+                onSuccess: () => {
+                    toast.success("Hari libur berhasil dihapus.");
+                    setCheckedHolidayIds(prev => prev.filter(x => x !== id));
+                }
+            });
+        }
+    };
+
+    const handleBulkDeleteHolidays = () => {
+        if (confirm(`Hapus ${checkedHolidayIds.length} hari libur yang terpilih?`)) {
+            router.post(route('holidays.bulk-destroy'), { ids: checkedHolidayIds }, {
+                onSuccess: () => {
+                    toast.success("Hari libur terpilih berhasil dihapus.");
+                    setCheckedHolidayIds([]);
+                }
             });
         }
     };
@@ -202,6 +242,54 @@ export default function Index({ settings, holidays }) {
                                                 </div>
                                             </div>
 
+                                            <div className="p-5 rounded-2xl border border-indigo-200 bg-indigo-50/30">
+                                                <div className="space-y-3">
+                                                    <Label className="font-bold text-indigo-700 flex flex-col">
+                                                        <span>Waktu Awal Presensi Masuk Dibuka (Menit Sebelum Jam Masuk)</span>
+                                                        <span className="text-[10px] font-normal text-indigo-500/80 mt-0.5">(Menentukan seberapa awal pegawai dapat melakukan presensi masuk)</span>
+                                                    </Label>
+                                                    <div className="flex items-center space-x-2">
+                                                        <Input 
+                                                            type="number" 
+                                                            min="0"
+                                                            value={settingData.buffer_presensi_masuk} 
+                                                            onChange={e => setSettingData('buffer_presensi_masuk', e.target.value)} 
+                                                            className={`rounded-xl bg-white font-bold w-24 ${settingErrors.buffer_presensi_masuk ? 'border-indigo-500 focus-visible:ring-indigo-500 text-indigo-700' : 'border-indigo-200 focus-visible:ring-indigo-500 text-indigo-700'}`}
+                                                        />
+                                                        <span className="text-sm font-bold text-indigo-700">Menit</span>
+                                                    </div>
+                                                    {settingErrors.buffer_presensi_masuk && <p className="text-xs text-rose-500 font-bold mt-1">{settingErrors.buffer_presensi_masuk}</p>}
+                                                    <p className="text-xs font-semibold text-indigo-500 mt-2 flex items-center">
+                                                        <SettingsIcon className="w-3 h-3 mr-1" />
+                                                        Contoh: Jika diatur 15 menit dan jam masuk 07:00, maka presensi dibuka mulai pukul 06:45.
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-5 rounded-2xl border border-purple-200 bg-purple-50/30">
+                                                <div className="space-y-3">
+                                                    <Label className="font-bold text-purple-700 flex flex-col">
+                                                        <span>Batas Akhir Presensi Pulang (Menit Setelah Jam Keluar)</span>
+                                                        <span className="text-[10px] font-normal text-purple-500/80 mt-0.5">(Menentukan batas maksimal waktu keterlambatan presensi pulang)</span>
+                                                    </Label>
+                                                    <div className="flex items-center space-x-2">
+                                                        <Input 
+                                                            type="number" 
+                                                            min="0"
+                                                            value={settingData.buffer_presensi_keluar} 
+                                                            onChange={e => setSettingData('buffer_presensi_keluar', e.target.value)} 
+                                                            className={`rounded-xl bg-white font-bold w-24 ${settingErrors.buffer_presensi_keluar ? 'border-purple-500 focus-visible:ring-purple-500 text-purple-700' : 'border-purple-200 focus-visible:ring-purple-500 text-purple-700'}`}
+                                                        />
+                                                        <span className="text-sm font-bold text-purple-700">Menit</span>
+                                                    </div>
+                                                    {settingErrors.buffer_presensi_keluar && <p className="text-xs text-rose-500 font-bold mt-1">{settingErrors.buffer_presensi_keluar}</p>}
+                                                    <p className="text-xs font-semibold text-purple-500 mt-2 flex items-center">
+                                                        <SettingsIcon className="w-3 h-3 mr-1" />
+                                                        Contoh: Jika diatur 30 menit dan jam keluar 14:40, maka batas akhir presensi pulang adalah pukul 15:10.
+                                                    </p>
+                                                </div>
+                                            </div>
+
                                             <div className="p-5 rounded-2xl border border-amber-200 bg-amber-50/30">
                                                 <div className="space-y-3">
                                                     <Label className="font-bold text-amber-700 flex flex-col">
@@ -224,6 +312,111 @@ export default function Index({ settings, holidays }) {
                                                         Jika guru belum presensi mengajar setelah melebihi batas menit ini, kelas otomatis muncul di Bursa Inval.
                                                     </p>
                                                 </div>
+                                            </div>
+
+                                            {/* Kebijakan Libur Kerja */}
+                                            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="space-y-1">
+                                                        <Label className="font-bold text-slate-700 flex flex-col text-base">
+                                                            <span>Hitung Hari Libur sebagai Kehadiran (Hadir Kerja)</span>
+                                                        </Label>
+                                                        <p className="text-xs text-slate-500 font-semibold max-w-xl">
+                                                            Jika diaktifkan, seluruh hari libur (nasional/sekolah) di luar Sabtu & Minggu akan otomatis dihitung hadir kerja pada rekapitulasi presensi. Jika dinonaktifkan, hari libur tidak akan dihitung hadir kerja.
+                                                        </p>
+                                                    </div>
+                                                    <div className="relative inline-flex items-center cursor-pointer ml-4">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            id="count_holidays_as_present"
+                                                            checked={settingData.count_holidays_as_present}
+                                                            onChange={e => setSettingData('count_holidays_as_present', e.target.checked)}
+                                                            className="sr-only peer"
+                                                        />
+                                                        <label htmlFor="count_holidays_as_present" className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 cursor-pointer"></label>
+                                                    </div>
+                                                </div>
+                                                {settingErrors.count_holidays_as_present && <p className="text-xs text-rose-500 font-bold mt-1">{settingErrors.count_holidays_as_present}</p>}
+                                            </div>
+
+                                            {/* Kebijakan Liveness Detection */}
+                                            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="space-y-1">
+                                                        <Label className="font-bold text-slate-700 flex flex-col text-base">
+                                                            <span>Verifikasi Wajah Aktif (Liveness Detection)</span>
+                                                        </Label>
+                                                        <p className="text-xs text-slate-500 font-semibold max-w-xl">
+                                                            Jika diaktifkan, pegawai wajib melakukan gerakan tengok kanan untuk verifikasi keaktifan wajah sebelum mengambil foto. Jika dinonaktifkan, pegawai dapat langsung berfoto selfie biasa.
+                                                        </p>
+                                                    </div>
+                                                    <div className="relative inline-flex items-center cursor-pointer ml-4">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            id="liveness_detection_enabled"
+                                                            checked={settingData.liveness_detection_enabled}
+                                                            onChange={e => setSettingData('liveness_detection_enabled', e.target.checked)}
+                                                            className="sr-only peer"
+                                                        />
+                                                        <label htmlFor="liveness_detection_enabled" className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 cursor-pointer"></label>
+                                                    </div>
+                                                </div>
+                                                {settingErrors.liveness_detection_enabled && <p className="text-xs text-rose-500 font-bold mt-1">{settingErrors.liveness_detection_enabled}</p>}
+                                            </div>
+
+                                            {/* Cutoff & Periode Rekap Presensi */}
+                                            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label className="font-bold text-slate-700 flex flex-col text-base">
+                                                        <span>Tipe Periode Rekap Presensi</span>
+                                                    </Label>
+                                                    <p className="text-xs text-slate-500 font-semibold">
+                                                        Pilih bagaimana rentang tanggal bulanan untuk laporan rekapitulasi kehadiran dan jam tatap muka ditentukan.
+                                                    </p>
+                                                    <select
+                                                        value={settingData.recap_cutoff_type}
+                                                        onChange={e => setSettingData('recap_cutoff_type', e.target.value)}
+                                                        className="w-full md:w-80 rounded-xl border border-slate-200 bg-white p-3 font-bold text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                                    >
+                                                        <option value="calendar_month">Bulanan Penuh (Tanggal 1 s.d. Akhir Bulan)</option>
+                                                        <option value="custom_date">Tanggal Cutoff Kustom (Siklus Bulanan Kustom)</option>
+                                                    </select>
+                                                    {settingErrors.recap_cutoff_type && <p className="text-xs text-rose-500 font-bold mt-1">{settingErrors.recap_cutoff_type}</p>}
+                                                </div>
+
+                                                <AnimatePresence>
+                                                    {settingData.recap_cutoff_type === 'custom_date' && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, height: 0 }}
+                                                            animate={{ opacity: 1, height: 'auto' }}
+                                                            exit={{ opacity: 0, height: 0 }}
+                                                            transition={{ duration: 0.2 }}
+                                                            className="overflow-hidden space-y-3 pt-2"
+                                                        >
+                                                            <Label className="font-bold text-slate-700 flex flex-col">
+                                                                <span>Tanggal Cutoff Presensi (1 - 28)</span>
+                                                                <span className="text-[10px] font-normal text-slate-500 mt-0.5">
+                                                                    Contoh: Jika diatur tanggal 20, periode Juli 2026 akan dihitung dari 21 Juni s.d. 20 Juli.
+                                                                </span>
+                                                            </Label>
+                                                            <div className="flex items-center space-x-2">
+                                                                <Input 
+                                                                    type="number" 
+                                                                    min="1"
+                                                                    max="28"
+                                                                    value={settingData.recap_cutoff_day} 
+                                                                    onChange={e => setSettingData('recap_cutoff_day', e.target.value)} 
+                                                                    className={`rounded-xl bg-white font-bold w-24 ${settingErrors.recap_cutoff_day ? 'border-rose-500 focus-visible:ring-rose-500 text-rose-700' : 'border-slate-200 focus-visible:ring-indigo-500 text-slate-700'}`}
+                                                                />
+                                                                <span className="text-sm font-bold text-slate-600">Setiap Bulan</span>
+                                                            </div>
+                                                            {settingErrors.recap_cutoff_day && <p className="text-xs text-rose-500 font-bold mt-1">{settingErrors.recap_cutoff_day}</p>}
+                                                            <p className="text-xs font-semibold text-amber-600 flex items-center bg-amber-50 border border-amber-100 p-3 rounded-lg">
+                                                                ⚠️ Tanggal cutoff dibatasi dari 1 hingga 28 demi keselamatan perhitungan pada bulan Februari yang tidak memiliki tanggal 29, 30, atau 31.
+                                                            </p>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
                                             </div>
                                         </div>
 
@@ -256,17 +449,67 @@ export default function Index({ settings, holidays }) {
                                                     Tambah Libur
                                                 </h3>
                                                 <form onSubmit={submitHoliday} className="space-y-5">
-                                                    <div className="space-y-3">
-                                                        <Label className="font-bold text-slate-700">Tanggal</Label>
-                                                        <Input 
-                                                            type="date" 
-                                                            required
-                                                            value={holidayData.date} 
-                                                            onChange={e => setHolidayData('date', e.target.value)} 
-                                                            className={`rounded-xl bg-white ${holidayErrors.date ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
-                                                        />
-                                                        {holidayErrors.date && <p className="text-xs text-rose-500 font-bold mt-1">{holidayErrors.date}</p>}
+                                                    {/* Mode Switcher */}
+                                                    <div className="space-y-2">
+                                                        <Label className="font-bold text-slate-700">Tipe Input Hari Libur</Label>
+                                                        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100/80 rounded-xl border border-slate-200/50">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setHolidayData('mode', 'single')}
+                                                                className={`py-2 text-xs font-bold rounded-lg transition-all ${holidayData.mode === 'single' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/10' : 'text-slate-500 hover:text-slate-800'}`}
+                                                            >
+                                                                Satu Hari
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setHolidayData('mode', 'range')}
+                                                                className={`py-2 text-xs font-bold rounded-lg transition-all ${holidayData.mode === 'range' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/10' : 'text-slate-500 hover:text-slate-800'}`}
+                                                            >
+                                                                Rentang Tanggal
+                                                            </button>
+                                                        </div>
                                                     </div>
+
+                                                    {holidayData.mode === 'single' ? (
+                                                        <div className="space-y-3">
+                                                            <Label className="font-bold text-slate-700">Tanggal</Label>
+                                                            <Input 
+                                                                type="date" 
+                                                                required
+                                                                value={holidayData.date} 
+                                                                onChange={e => setHolidayData('date', e.target.value)} 
+                                                                className={`rounded-xl bg-white ${holidayErrors.date ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
+                                                            />
+                                                            {holidayErrors.date && <p className="text-xs text-rose-500 font-bold mt-1">{holidayErrors.date}</p>}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="grid grid-cols-1 gap-4">
+                                                            <div className="space-y-3">
+                                                                <Label className="font-bold text-slate-700">Tanggal Mulai</Label>
+                                                                <Input 
+                                                                    type="date" 
+                                                                    required
+                                                                    value={holidayData.start_date} 
+                                                                    onChange={e => setHolidayData('start_date', e.target.value)} 
+                                                                    className={`rounded-xl bg-white ${holidayErrors.start_date ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
+                                                                />
+                                                                {holidayErrors.start_date && <p className="text-xs text-rose-500 font-bold mt-1">{holidayErrors.start_date}</p>}
+                                                            </div>
+                                                            <div className="space-y-3">
+                                                                <Label className="font-bold text-slate-700">Tanggal Selesai</Label>
+                                                                <Input 
+                                                                    type="date" 
+                                                                    required
+                                                                    min={holidayData.start_date}
+                                                                    value={holidayData.end_date} 
+                                                                    onChange={e => setHolidayData('end_date', e.target.value)} 
+                                                                    className={`rounded-xl bg-white ${holidayErrors.end_date ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
+                                                                />
+                                                                {holidayErrors.end_date && <p className="text-xs text-rose-500 font-bold mt-1">{holidayErrors.end_date}</p>}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     <div className="space-y-3">
                                                         <Label className="font-bold text-slate-700">Keterangan Libur</Label>
                                                         <Input 
@@ -292,7 +535,7 @@ export default function Index({ settings, holidays }) {
                                                     <Button 
                                                         type="submit" 
                                                         disabled={processingHoliday} 
-                                                        className="w-full rounded-xl font-bold h-11 bg-indigo-600 hover:bg-indigo-700 text-white"
+                                                        className="w-full rounded-xl font-bold h-11 bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_4px_12px_rgba(79,70,229,0.2)] transition-all"
                                                     >
                                                         Tambahkan
                                                     </Button>
@@ -306,16 +549,37 @@ export default function Index({ settings, holidays }) {
                                                     <CalendarDays className="w-5 h-5" />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-bold text-emerald-800 text-sm">Informasi Payroll</h4>
-                                                    <p className="text-xs font-semibold text-emerald-600/80 mt-1">Pada hari libur yang tercatat, sistem akan otomatis mencatat status HADIR penuh bagi seluruh pegawai pada perhitungan gaji bulanan.</p>
+                                                    <h4 className="font-bold text-emerald-800 text-sm">Informasi Presensi</h4>
+                                                    <p className="text-xs font-semibold text-emerald-600/80 mt-1">Pada hari libur yang tercatat, sistem akan otomatis mencatat status LIBUR bagi seluruh pegawai dan tidak menghitung ketidakhadiran pada rekap presensi bulanan.</p>
                                                 </div>
                                             </div>
+
+                                            {checkedHolidayIds.length > 0 && (
+                                                <div className="flex justify-between items-center mb-4 bg-rose-50/50 border border-rose-100 p-3.5 rounded-2xl">
+                                                    <span className="text-sm font-bold text-rose-700">Terpilih {checkedHolidayIds.length} hari libur</span>
+                                                    <Button 
+                                                        type="button"
+                                                        onClick={handleBulkDeleteHolidays}
+                                                        variant="outline" 
+                                                        className="rounded-xl border-rose-200 text-rose-600 font-bold hover:bg-rose-600 hover:text-white transition-all shadow-sm h-10 px-4"
+                                                    >
+                                                        <Trash2 className="w-4 h-4 mr-2" /> Hapus Terpilih
+                                                    </Button>
+                                                </div>
+                                            )}
 
                                             <div className="border border-slate-200 rounded-[1.5rem] overflow-hidden bg-white">
                                                 <Table>
                                                     <TableHeader className="bg-slate-50 border-b border-slate-200">
                                                         <TableRow className="hover:bg-transparent">
-                                                            <TableHead className="font-black text-slate-800 py-4 px-6">Tanggal</TableHead>
+                                                            <TableHead className="w-12 px-6">
+                                                                <Checkbox 
+                                                                    checked={allHolidaysChecked}
+                                                                    onCheckedChange={toggleAllHolidays}
+                                                                    className="w-5 h-5 rounded text-indigo-600"
+                                                                />
+                                                            </TableHead>
+                                                            <TableHead className="font-black text-slate-800 py-4">Tanggal</TableHead>
                                                             <TableHead className="font-black text-slate-800">Keterangan</TableHead>
                                                             <TableHead className="font-black text-slate-800">Jenis Libur</TableHead>
                                                             <TableHead className="font-black text-slate-800 text-right px-6">Aksi</TableHead>
@@ -325,7 +589,14 @@ export default function Index({ settings, holidays }) {
                                                         {holidays && holidays.length > 0 ? (
                                                             holidays.map((holiday) => (
                                                                 <TableRow key={holiday.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100">
-                                                                    <TableCell className="font-bold text-slate-700 px-6 py-4">
+                                                                    <TableCell className="px-6 py-4 w-12">
+                                                                        <Checkbox 
+                                                                            checked={checkedHolidayIds.includes(holiday.id)}
+                                                                            onCheckedChange={() => toggleOneHoliday(holiday.id)}
+                                                                            className="w-5 h-5 rounded text-indigo-600"
+                                                                        />
+                                                                    </TableCell>
+                                                                    <TableCell className="font-bold text-slate-700 py-4">
                                                                         {new Date(holiday.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
                                                                     </TableCell>
                                                                     <TableCell className="font-semibold text-slate-600">
@@ -356,7 +627,7 @@ export default function Index({ settings, holidays }) {
                                                             ))
                                                         ) : (
                                                             <TableRow>
-                                                                <TableCell colSpan={4} className="text-center py-12">
+                                                                <TableCell colSpan={5} className="text-center py-12">
                                                                     <div className="flex flex-col items-center justify-center text-slate-400">
                                                                         <CalendarDays className="w-10 h-10 mb-3 text-slate-200" />
                                                                         <p className="font-bold text-slate-500">Belum ada data hari libur.</p>

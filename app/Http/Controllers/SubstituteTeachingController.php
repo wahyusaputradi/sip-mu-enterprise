@@ -15,7 +15,29 @@ class SubstituteTeachingController extends Controller
 {
     private function canApprove()
     {
-        return Auth::user()->hasAnyRole(['Super Admin', 'Kurikulum', 'Absensi', 'Petugas Piket']);
+        return Auth::user() && Auth::user()->hasAnyRole(['Super Admin', 'Kurikulum', 'Absensi']);
+    }
+
+    private function canApproveClaim($user, $substituteEmployeeId)
+    {
+        if (!$user) return false;
+
+        // Must have one of the general approver roles: Super Admin, Kurikulum, Absensi
+        if (!$user->hasAnyRole(['Super Admin', 'Kurikulum', 'Absensi'])) {
+            return false;
+        }
+
+        // Find the user account of the substitute employee
+        $substituteEmployee = \App\Models\Employee::with('user')->find($substituteEmployeeId);
+        $substituteUser = $substituteEmployee?->user;
+
+        // If the substitute user has the 'Absensi' role:
+        // Only Super Admin and Kurikulum can approve it.
+        if ($substituteUser && $substituteUser->hasRole('Absensi')) {
+            return $user->hasAnyRole(['Super Admin', 'Kurikulum']);
+        }
+
+        return true;
     }
 
     public function index(Request $request)
@@ -99,7 +121,25 @@ class SubstituteTeachingController extends Controller
             $invalsQuery->where('substitute_employee_id', $employeeId);
         }
 
-        $invals = $invalsQuery->paginate(20);
+        // Apply history filters
+        $historyStartDate = $request->input('history_start_date');
+        $historyEndDate = $request->input('history_end_date');
+        $historyStatus = $request->input('history_status');
+
+        if ($historyStartDate) {
+            $invalsQuery->whereDate('date', '>=', $historyStartDate);
+        }
+        if ($historyEndDate) {
+            $invalsQuery->whereDate('date', '<=', $historyEndDate);
+        }
+        if ($historyStatus && in_array($historyStatus, ['pending', 'approved', 'rejected'])) {
+            $invalsQuery->where('status', $historyStatus);
+        }
+
+        $invals = $invalsQuery->paginate(20)->withQueryString()->through(function ($inval) {
+            $inval->can_be_approved = $this->canApproveClaim(Auth::user(), $inval->substitute_employee_id);
+            return $inval;
+        });
 
         return Inertia::render('Invals/Index', [
             'date' => $date,
@@ -107,6 +147,11 @@ class SubstituteTeachingController extends Controller
             'invals' => $invals,
             'canApprove' => $this->canApprove(),
             'employees' => Employee::where('status', 'active')->orderBy('name')->get(['id', 'name']),
+            'filters' => [
+                'history_start_date' => $historyStartDate,
+                'history_end_date' => $historyEndDate,
+                'history_status' => $historyStatus,
+            ],
         ]);
     }
 
@@ -169,24 +214,28 @@ class SubstituteTeachingController extends Controller
                 return back()->with('error', "Gagal: Anda sudah mengambil Inval kelas lain pada Jam ke-{$targetSchedule->hour_number}.");
             }
 
+            $canAutoApprove = $this->canApproveClaim(Auth::user(), $substituteId);
+
             SubstituteTeaching::create([
                 'date' => $request->date,
                 'absent_employee_id' => $request->absent_employee_id,
                 'substitute_employee_id' => $substituteId,
                 'teaching_schedule_id' => $request->teaching_schedule_id,
                 'reason' => $request->reason ?? 'Menggantikan kelas',
-                'status' => $this->canApprove() ? 'approved' : 'pending',
-                'approved_by' => $this->canApprove() ? Auth::id() : null,
+                'status' => $canAutoApprove ? 'approved' : 'pending',
+                'approved_by' => $canAutoApprove ? Auth::id() : null,
             ]);
 
-            $msg = $this->canApprove() ? 'Inval berhasil ditambahkan dan disetujui.' : 'Berhasil mengambil Inval. Menunggu persetujuan Admin.';
+            $msg = $canAutoApprove ? 'Inval berhasil ditambahkan dan disetujui.' : 'Berhasil mengambil Inval. Menunggu persetujuan Admin.';
             return back()->with('success', $msg);
         });
     }
 
     public function approve(SubstituteTeaching $inval)
     {
-        if (!$this->canApprove()) abort(403);
+        if (!$this->canApproveClaim(Auth::user(), $inval->substitute_employee_id)) {
+            abort(403);
+        }
 
         $inval->update([
             'status' => 'approved',
@@ -198,7 +247,9 @@ class SubstituteTeachingController extends Controller
 
     public function reject(SubstituteTeaching $inval)
     {
-        if (!$this->canApprove()) abort(403);
+        if (!$this->canApproveClaim(Auth::user(), $inval->substitute_employee_id)) {
+            abort(403);
+        }
 
         $inval->update([
             'status' => 'rejected',
@@ -210,11 +261,13 @@ class SubstituteTeachingController extends Controller
     
     public function destroy(SubstituteTeaching $inval)
     {
-        if (!$this->canApprove() && $inval->substitute_employee_id !== Auth::user()->employee?->id) {
+        $canApproveThis = $this->canApproveClaim(Auth::user(), $inval->substitute_employee_id);
+
+        if (!$canApproveThis && $inval->substitute_employee_id !== Auth::user()->employee?->id) {
             abort(403);
         }
         
-        if ($inval->status === 'approved' && !$this->canApprove()) {
+        if ($inval->status === 'approved' && !$canApproveThis) {
             return back()->with('error', 'Tidak dapat membatalkan Inval yang sudah disetujui.');
         }
 

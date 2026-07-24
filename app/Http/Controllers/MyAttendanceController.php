@@ -28,6 +28,13 @@ class MyAttendanceController extends Controller
                 ->get()
                 ->keyBy(fn($a) => Carbon::parse($a->date)->format('Y-m-d'));
 
+            $teachingAttendances = \App\Models\TeachingAttendance::where('employee_id', $employee->id)
+                ->whereMonth('date', $month)
+                ->whereYear('date', $year)
+                ->where('status', '!=', 'alpha')
+                ->get()
+                ->groupBy(fn($ta) => Carbon::parse($ta->date)->format('Y-m-d'));
+
             $leaves = \App\Models\LeaveRequest::where('employee_id', $employee->id)
                 ->where('status', 'approved')
                 ->where(function ($q) use ($month, $year) {
@@ -45,15 +52,17 @@ class MyAttendanceController extends Controller
                 $dateStr = $date->format('Y-m-d');
 
                 if ($date->isWeekday() && !in_array($dateStr, $holidays)) {
+                    $tCount = isset($teachingAttendances[$dateStr]) ? $teachingAttendances[$dateStr]->count() : 0;
                     if ($existingAttendances->has($dateStr)) {
                         $a = $existingAttendances->get($dateStr);
+                        $totalTeaching = max(($a->teaching_hours ?? 0) + ($a->inval_hours ?? 0), $tCount);
                         $fullAttendances->push([
                             'id' => $a->id,
                             'date' => $a->date,
                             'check_in' => $a->check_in,
                             'check_out' => $a->check_out,
                             'status' => $a->status,
-                            'teaching_hours' => $a->teaching_hours,
+                            'teaching_hours' => $totalTeaching,
                             'inval_hours' => $a->inval_hours,
                         ]);
                     } else {
@@ -74,8 +83,8 @@ class MyAttendanceController extends Controller
                                 'date' => $dateStr,
                                 'check_in' => null,
                                 'check_out' => null,
-                                'status' => $leaveType,
-                                'teaching_hours' => 0,
+                                'status' => $tCount > 0 ? 'present' : $leaveType,
+                                'teaching_hours' => $tCount,
                                 'inval_hours' => 0,
                             ]);
                         }
@@ -86,14 +95,38 @@ class MyAttendanceController extends Controller
             // Sort by date desc
             $attendances = $fullAttendances->sortByDesc('date')->values();
 
-            $stats = [
-                'present' => $attendances->where('status', 'present')->count(),
-                'late' => $attendances->where('status', 'late')->count(),
-                'permit' => $attendances->where('status', 'permit')->count(),
-                'sick' => $attendances->where('status', 'sick')->count(),
-                'alpha' => $attendances->where('status', 'alpha')->count(),
-                'teaching_hours' => $attendances->sum('teaching_hours'),
-            ];
+            // Synchronize stats directly with AttendanceRecapService (Single Source of Truth)
+            $monthlyRecap = \App\Services\AttendanceRecapService::getMonthlyRecap($month, $year);
+            $empRecap = collect($monthlyRecap['recapData'])->firstWhere('id', $employee->id);
+
+            if ($empRecap) {
+                $stats = [
+                    'present' => $empRecap['present'],
+                    'late' => $empRecap['late'],
+                    'permit' => $empRecap['permit'],
+                    'sick' => $empRecap['sick'],
+                    'alpha' => $empRecap['alpha'],
+                    'teaching_hours' => $empRecap['teaching_hours'],
+                    'jtm_scheduled' => $empRecap['jtm_scheduled'] ?? 0,
+                    'jtm_effective' => $empRecap['jtm_effective'] ?? 0,
+                    'jtm_effective_10' => $empRecap['jtm_effective_10'] ?? 0,
+                    'jtm_effective_11' => $empRecap['jtm_effective_11'] ?? 0,
+                    'jtm_effective_12' => $empRecap['jtm_effective_12'] ?? 0,
+                    'jtm_inval' => $empRecap['jtm_inval'] ?? 0,
+                    'jtm_permit' => $empRecap['jtm_permit'] ?? 0,
+                    'jtm_holiday' => $empRecap['jtm_holiday'] ?? 0,
+                    'jtm_absent' => $empRecap['jtm_absent'] ?? 0,
+                ];
+            } else {
+                $stats = [
+                    'present' => $attendances->where('status', 'present')->count(),
+                    'late' => $attendances->where('status', 'late')->count(),
+                    'permit' => $attendances->where('status', 'permit')->count(),
+                    'sick' => $attendances->where('status', 'sick')->count(),
+                    'alpha' => $attendances->where('status', 'alpha')->count(),
+                    'teaching_hours' => $attendances->sum('teaching_hours'),
+                ];
+            }
         }
 
         return Inertia::render('MyAttendance/Index', [

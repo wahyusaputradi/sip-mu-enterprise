@@ -25,13 +25,20 @@ class SystemSettingController extends Controller
             'jam_masuk' => 'required|date_format:H:i',
             'jam_keluar' => 'required|date_format:H:i',
             'batas_waktu_maksimal_terlambat' => 'required|integer|min:0',
+            'buffer_presensi_masuk' => 'required|integer|min:0',
+            'buffer_presensi_keluar' => 'required|integer|min:0',
             'teaching_late_tolerance' => 'required|integer|min:0',
+            'count_holidays_as_present' => 'required|boolean',
+            'liveness_detection_enabled' => 'required|boolean',
+            'recap_cutoff_type' => 'required|in:calendar_month,custom_date',
+            'recap_cutoff_day' => 'required_if:recap_cutoff_type,custom_date|nullable|integer|min:1|max:28',
         ]);
         
         foreach ($validated as $key => $value) {
+            $storeValue = is_bool($value) ? ($value ? '1' : '0') : $value;
             SystemSetting::updateOrCreate(
                 ['key' => $key],
-                ['value' => $value]
+                ['value' => $storeValue]
             );
         }
 

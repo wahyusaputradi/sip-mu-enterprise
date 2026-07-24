@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function Recap({ recapData, totalStats, filters }) {
+export default function Recap({ recapData, totalStats, filters, periodLabel }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [month, setMonth] = useState(filters.month || new Date().getMonth() + 1);
     const [year, setYear] = useState(filters.year || new Date().getFullYear());
@@ -96,6 +96,10 @@ export default function Recap({ recapData, totalStats, filters }) {
                         <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
                             Rekap <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Presensi Bulanan</span>
                         </h2>
+                        <p className="text-xs font-semibold text-slate-500 mt-1 flex items-center">
+                            <Calendar className="w-3.5 h-3.5 mr-1 text-slate-400" />
+                            Periode Aktif: <span className="text-indigo-600 font-bold ml-1">{periodLabel}</span>
+                        </p>
                     </div>
                     <div className="flex items-center space-x-3">
                         <Button 
@@ -196,7 +200,15 @@ export default function Recap({ recapData, totalStats, filters }) {
                                         <TableHead className="font-black text-slate-800 text-center">Izin</TableHead>
                                         <TableHead className="font-black text-slate-800 text-center">Sakit</TableHead>
                                         <TableHead className="font-black text-slate-800 text-center">Alpa</TableHead>
-                                        <TableHead className="font-black text-slate-800 text-center pr-6">Jam Mengajar</TableHead>
+                                        <TableHead className="font-black text-slate-800 text-center">JTM Hadir (X)</TableHead>
+                                        <TableHead className="font-black text-slate-800 text-center">JTM Hadir (XI)</TableHead>
+                                        <TableHead className="font-black text-slate-800 text-center">JTM Hadir (XII)</TableHead>
+                                        <TableHead className="font-black text-slate-800 text-center">JTM Hadir (Total)</TableHead>
+                                        <TableHead className="font-black text-slate-800 text-center">JTM Izin</TableHead>
+                                        <TableHead className="font-black text-slate-800 text-center">JTM Inval</TableHead>
+                                        <TableHead className="font-black text-slate-800 text-center">JTM Libur</TableHead>
+                                        <TableHead className="font-black text-slate-800 text-center">JTM Alpa</TableHead>
+                                        <TableHead className="font-black text-slate-800 text-center pr-6">JTM Terjadwal</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -267,10 +279,82 @@ export default function Recap({ recapData, totalStats, filters }) {
                                                             <span className="ml-1.5 text-rose-500 animate-pulse" title="Peringatan: Alpha lebih dari 2 hari!">⚠️</span>
                                                         )}
                                                     </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {item.is_guru ? (
+                                                            <span className="font-semibold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 text-xs shadow-sm">
+                                                                {item.jtm_effective_10} JP
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-300 font-bold">—</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {item.is_guru ? (
+                                                            <span className="font-semibold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 text-xs shadow-sm">
+                                                                {item.jtm_effective_11} JP
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-300 font-bold">—</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {item.is_guru ? (
+                                                            <span className="font-semibold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 text-xs shadow-sm">
+                                                                {item.jtm_effective_12} JP
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-300 font-bold">—</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {item.is_guru ? (
+                                                            <span className="font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100 text-xs shadow-sm">
+                                                                {item.jtm_effective} JP
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-300 font-bold">—</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {item.is_guru ? (
+                                                            <span className="font-semibold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 text-xs shadow-sm">
+                                                                {item.jtm_permit} JP
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-300 font-bold">—</span>
+                                                        )}
+                                                    </TableCell>
+<TableCell className="text-center">
+                                                        {item.is_guru ? (
+                                                            <span className="font-semibold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 text-xs shadow-sm">
+                                                                {item.jtm_inval} JP
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-300 font-bold">—</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {item.is_guru ? (
+                                                            <span className="font-semibold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 text-xs shadow-sm">
+                                                                {item.jtm_holiday} JP
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-300 font-bold">—</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {item.is_guru ? (
+                                                            <span className="font-semibold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 text-xs shadow-sm">
+                                                                {item.jtm_absent} JP
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-300 font-bold">—</span>
+                                                        )}
+                                                    </TableCell>
                                                     <TableCell className="text-center pr-6">
                                                         {item.is_guru ? (
                                                             <span className="font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100 text-xs shadow-sm">
-                                                                {item.teaching_hours} JP
+                                                                {item.jtm_scheduled} JP
                                                             </span>
                                                         ) : (
                                                             <span className="text-slate-300 font-bold">—</span>
@@ -280,7 +364,7 @@ export default function Recap({ recapData, totalStats, filters }) {
                                             ))
                                         ) : (
                                             <TableRow>
-                                                <TableCell colSpan={7} className="text-center py-16">
+                                                <TableCell colSpan={15} className="text-center py-16">
                                                     <div className="flex flex-col items-center justify-center text-slate-400">
                                                         <Calendar className="w-12 h-12 mb-4 text-slate-200" />
                                                         <p className="font-bold text-slate-500 text-lg">Data tidak ditemukan</p>

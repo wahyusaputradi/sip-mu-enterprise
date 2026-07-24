@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, Link } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -25,9 +26,10 @@ import {
     CreditCard,
     Trophy,
     Star,
-    Award
+    Award,
+    LockOpen
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, PieChart, Pie } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, PieChart, Pie, LabelList } from 'recharts';
 import { motion } from 'framer-motion';
 
 const container = {
@@ -45,8 +47,40 @@ const item = {
     show: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
 };
 
-export default function Dashboard({ isEmployee, isGuruMurni, employee, todayAttendance, campusLocations, monthlyStats, adminStats, executiveStats, todayHoliday, primaryRole, roleData }) {
+export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, employee, todayAttendance, campusLocations, monthlyStats, adminStats, executiveStats, todayHoliday, primaryRole, roleData, managementMonthlyStats, dailyTrendStats }) {
     // We redirect to attendance.presensi instead of posting directly from dashboard.
+    const [initialServerTime] = useState(() => serverTimestamp || Date.now());
+    const [initialPerformanceTime] = useState(() => performance.now());
+    const [currentTime, setCurrentTime] = useState(() => new Date(initialServerTime));
+    const [isOffline, setIsOffline] = useState(!navigator.onLine);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const elapsed = performance.now() - initialPerformanceTime;
+            setCurrentTime(new Date(initialServerTime + elapsed));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [initialServerTime, initialPerformanceTime]);
+
+    useEffect(() => {
+        const handleOnline = () => setIsOffline(false);
+        const handleOffline = () => setIsOffline(true);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        const skeletonTimer = setTimeout(() => {
+            setIsLoading(false);
+        }, 800);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+            clearTimeout(skeletonTimer);
+        };
+    }, []);
+
+    const [personalTab, setPersonalTab] = useState('harian');
 
     const chartData = [
         { name: 'Hadir', value: monthlyStats?.present || 0, color: '#6366f1' },
@@ -55,12 +89,67 @@ export default function Dashboard({ isEmployee, isGuruMurni, employee, todayAtte
         { name: 'Alfa', value: monthlyStats?.alpha || 0, color: '#ef4444' },
     ];
 
-    const statsConfig = adminStats ? [
-        { title: 'Total Pegawai', value: adminStats.total_employees, icon: <Users className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'employees.index' },
-        { title: 'Hadir Hari Ini', value: adminStats.present_today, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'monitoring.attendance' },
-        { title: 'Terlambat', value: adminStats.late_today, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'monitoring.attendance' },
-        { title: 'Pending Cuti', value: adminStats.pending_leaves, icon: <CalendarDays className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'leave-requests.index' },
-    ] : [];
+    const jtmChartData = [
+        { name: 'JTM Hadir', value: monthlyStats?.jtm_present || 0, color: '#10b981' },
+        { name: 'JTM Inval', value: monthlyStats?.jtm_inval || 0, color: '#8b5cf6' },
+        { name: 'JTM Izin', value: monthlyStats?.jtm_permit || 0, color: '#3b82f6' },
+        { name: 'JTM Libur', value: monthlyStats?.jtm_holiday || 0, color: '#64748b' },
+        { name: 'JTM Alfa', value: monthlyStats?.jtm_absent || 0, color: '#ef4444' },
+    ];
+
+    const mgmtChartData = [
+        { name: 'Hadir', value: managementMonthlyStats?.present || 0, color: '#10b981' },
+        { name: 'Terlambat', value: managementMonthlyStats?.late || 0, color: '#f59e0b' },
+        { name: 'Sakit/Izin', value: (managementMonthlyStats?.sick || 0) + (managementMonthlyStats?.permit || 0), color: '#3b82f6' },
+        { name: 'Alfa', value: managementMonthlyStats?.alpha || 0, color: '#ef4444' },
+    ];
+
+    const statsConfig = (() => {
+        if (primaryRole === 'Super Admin' && adminStats) {
+            return [
+                { title: 'Total Pegawai', value: adminStats.total_employees, icon: <Users className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'employees.index' },
+                { title: 'Hadir Hari Ini', value: adminStats.present_today, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'monitoring.attendance' },
+                { title: 'Terlambat Hari Ini', value: adminStats.late_today, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'monitoring.attendance' },
+                { title: 'Pending Cuti', value: adminStats.pending_leaves, icon: <CalendarDays className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'leave-requests.approval' },
+            ];
+        } else if (primaryRole === 'Kepala Sekolah' && adminStats) {
+            const pct = adminStats.total_employees > 0 ? Math.round((adminStats.present_today / adminStats.total_employees) * 100) : 0;
+            return [
+                { title: 'Kedisiplinan Sekolah', value: `${pct}%`, icon: <Trophy className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'monitoring.attendance' },
+                { title: 'Hadir Hari Ini', value: adminStats.present_today, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'monitoring.attendance' },
+                { title: 'Belum Absen', value: roleData?.unrecordedTodayCount || 0, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'monitoring.attendance' },
+                { title: 'Persetujuan Cuti', value: adminStats.pending_leaves, icon: <CalendarDays className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'leave-requests.approval' },
+            ];
+        } else if (primaryRole === 'Kurikulum') {
+            return [
+                { title: 'Bursa Inval Terbuka', value: roleData?.openBursaInvalCount || 0, icon: <Briefcase className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'invals.index' },
+                { title: 'Jadwal Mengajar', value: roleData?.totalTeachingSchedules || 0, icon: <CalendarDays className="w-5 h-5" />, color: 'from-indigo-500 to-purple-600', link: 'teaching-schedules.index' },
+                { title: 'Hadir Hari Ini', value: adminStats?.present_today || 0, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'monitoring.attendance' },
+                { title: 'Pending Cuti', value: adminStats?.pending_leaves || 0, icon: <CalendarDays className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'leave-requests.approval' },
+            ];
+        } else if (primaryRole === 'Absensi' && adminStats) {
+            return [
+                { title: 'Hadir Hari Ini', value: adminStats.present_today, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'monitoring.attendance' },
+                { title: 'Terlambat', value: adminStats.late_today, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'monitoring.attendance' },
+                { title: 'Belum Absen', value: roleData?.unrecordedTodayCount || 0, icon: <Clock className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'monitoring.attendance' },
+                { title: 'Pending Cuti', value: adminStats.pending_leaves, icon: <CalendarDays className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'leave-requests.approval' },
+            ];
+        } else if (primaryRole === 'Guru') {
+            return [
+                { title: 'Hadir Bulan Ini', value: monthlyStats?.present || 0, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'my-attendance.index' },
+                { title: 'Terlambat', value: monthlyStats?.late || 0, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'my-attendance.index' },
+                { title: 'JTM Mengajar', value: `${monthlyStats?.jtm_present || 0} Jam`, icon: <CalendarDays className="w-5 h-5" />, color: 'from-indigo-500 to-purple-600', link: 'my-schedule.index' },
+                { title: 'Jam Inval', value: `${monthlyStats?.jtm_inval || 0} Jam`, icon: <Briefcase className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'invals.index' },
+            ];
+        } else {
+            return [
+                { title: 'Hadir Bulan Ini', value: monthlyStats?.present || 0, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'my-attendance.index' },
+                { title: 'Terlambat', value: monthlyStats?.late || 0, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'my-attendance.index' },
+                { title: 'Sakit / Izin', value: (monthlyStats?.sick || 0) + (monthlyStats?.permit || 0), icon: <CalendarDays className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'my-attendance.index' },
+                { title: 'Alpha', value: monthlyStats?.alpha || 0, icon: <AlertCircle className="w-5 h-5" />, color: 'from-rose-500 to-red-600', link: 'my-attendance.index' },
+            ];
+        }
+    })();
 
     return (
         <AuthenticatedLayout
@@ -82,9 +171,12 @@ export default function Dashboard({ isEmployee, isGuruMurni, employee, todayAtte
                             <Calendar className="w-5 h-5" />
                         </div>
                         <div className="text-right">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Hari Ini</p>
-                            <p className="text-sm font-black text-slate-900 dark:text-slate-100 leading-none">
-                                {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' })}
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1.5">Hari & Jam</p>
+                            <p className="text-sm font-black text-slate-900 dark:text-slate-100 leading-none flex items-center justify-end gap-2">
+                                <span>{currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' })}</span>
+                                <span className="text-indigo-600 dark:text-indigo-400 font-extrabold tabular-nums">
+                                    {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                </span>
                             </p>
                         </div>
                     </div>
@@ -99,8 +191,20 @@ export default function Dashboard({ isEmployee, isGuruMurni, employee, todayAtte
                 animate="show"
                 className="space-y-8 pb-8"
             >
-                {/* Admin Overview Cards */}
-                {adminStats && (
+                {isOffline && (
+                    <div className="bg-red-500 text-white px-6 py-4 rounded-[1.5rem] shadow-lg flex items-center justify-between animate-bounce border border-red-600">
+                        <div className="flex items-center space-x-3">
+                            <span className="flex h-3 w-3 relative">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                            </span>
+                            <span className="text-sm font-black uppercase tracking-wider">Koneksi Internet Terputus! Beberapa fitur absensi telah dinonaktifkan sementara.</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Overview Cards per User Role */}
+                {statsConfig && statsConfig.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                         {statsConfig.map((stat, idx) => (
                             <motion.div key={idx} variants={item}>
@@ -194,7 +298,7 @@ export default function Dashboard({ isEmployee, isGuruMurni, employee, todayAtte
                                         </CardDescription>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <CardContent className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
                                     {/* Top Performers */}
                                     <div className="space-y-4">
                                         <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-600 flex items-center mb-4 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full w-max border border-emerald-100 dark:border-emerald-500/20 shadow-sm">
@@ -203,13 +307,13 @@ export default function Dashboard({ isEmployee, isGuruMurni, employee, todayAtte
                                         <div className="space-y-3">
                                             {executiveStats.topPerformers.map((emp, i) => (
                                                 <div key={i} className="group flex items-center justify-between p-3 rounded-[1.25rem] bg-white dark:bg-card border border-slate-100 dark:border-border hover:border-emerald-200 dark:hover:border-emerald-500/30 hover:shadow-md transition-all duration-300">
-                                                    <div className="flex items-center">
-                                                        <div className="w-9 h-9 rounded-[0.8rem] bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center font-black text-xs mr-3 shadow-sm group-hover:scale-110 transition-transform">
+                                                    <div className="flex items-center min-w-0 mr-3">
+                                                        <div className="w-9 h-9 rounded-[0.8rem] bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center font-black text-xs mr-3 shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
                                                             #{i + 1}
                                                         </div>
-                                                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 transition-colors">{emp.name}</span>
+                                                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 transition-colors truncate max-w-[110px] sm:max-w-[150px]">{emp.name}</span>
                                                     </div>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 px-2.5 py-1 rounded-lg">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 px-2.5 py-1.5 rounded-lg flex-shrink-0 w-28 text-center">
                                                         {emp.count} Hadir
                                                     </span>
                                                 </div>
@@ -228,21 +332,48 @@ export default function Dashboard({ isEmployee, isGuruMurni, employee, todayAtte
                                         <div className="space-y-3">
                                             {executiveStats.bottomPerformers.map((emp, i) => (
                                                 <div key={i} className="group flex items-center justify-between p-3 rounded-[1.25rem] bg-white dark:bg-card border border-slate-100 dark:border-border hover:border-rose-200 dark:hover:border-rose-500/30 hover:shadow-md transition-all duration-300">
-                                                    <div className="flex items-center">
-                                                        <div className="w-9 h-9 rounded-[0.8rem] bg-slate-50 dark:bg-secondary text-rose-500 border border-slate-100 dark:border-border flex items-center justify-center font-black text-xs mr-3 shadow-sm group-hover:scale-110 group-hover:bg-rose-50 dark:group-hover:bg-rose-500/10 transition-all">
-                                                            <Star className="w-4 h-4 fill-current opacity-40 group-hover:opacity-100 transition-opacity" />
+                                                    <div className="flex items-center min-w-0 mr-3">
+                                                        <div className="w-9 h-9 rounded-[0.8rem] bg-gradient-to-br from-rose-400 to-red-500 text-white flex items-center justify-center font-black text-xs mr-3 shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                                                            #{i + 1}
                                                         </div>
-                                                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-rose-500 transition-colors">{emp.name}</span>
+                                                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-rose-500 transition-colors truncate max-w-[110px] sm:max-w-[150px]">{emp.name}</span>
                                                     </div>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-rose-500 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 px-2.5 py-1 rounded-lg flex items-center">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5 animate-pulse"></span>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-rose-500 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 px-2.5 py-1.5 rounded-lg flex items-center justify-center flex-shrink-0 w-28 text-center">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5 animate-pulse flex-shrink-0"></span>
                                                         {emp.count} Pelanggaran
                                                     </span>
                                                 </div>
                                             ))}
                                             {executiveStats.bottomPerformers.length === 0 && (
-                                                <div className="text-center text-xs text-emerald-500 py-8 font-bold border-2 border-dashed border-emerald-100 dark:border-emerald-500/20 rounded-[1.25rem] bg-emerald-50/50 dark:bg-emerald-500/5">
+                                                <div className="text-center text-xs text-rose-500 py-8 font-bold border-2 border-dashed border-rose-100 dark:border-border rounded-[1.25rem] bg-rose-50/50 dark:bg-rose-500/5">
                                                     ✨ Tidak ada pelanggaran!
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Buka Kunci Presensi */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-violet-600 dark:text-violet-400 flex items-center mb-4 bg-violet-50 dark:bg-violet-500/10 px-3 py-1.5 rounded-full w-max border border-violet-100 dark:border-violet-500/20 shadow-sm">
+                                            <LockOpen className="w-3.5 h-3.5 mr-2" /> Buka Kunci
+                                        </h4>
+                                        <div className="space-y-3">
+                                            {executiveStats.mostUnlocked?.map((emp, i) => (
+                                                <div key={i} className="group flex items-center justify-between p-3 rounded-[1.25rem] bg-white dark:bg-card border border-slate-100 dark:border-border hover:border-violet-200 dark:hover:border-violet-500/30 hover:shadow-md transition-all duration-300">
+                                                    <div className="flex items-center min-w-0 mr-3">
+                                                        <div className="w-9 h-9 rounded-[0.8rem] bg-gradient-to-br from-violet-400 to-indigo-500 text-white flex items-center justify-center font-black text-xs mr-3 shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                                                            #{i + 1}
+                                                        </div>
+                                                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-violet-600 transition-colors truncate max-w-[110px] sm:max-w-[150px]">{emp.name}</span>
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10 border border-violet-100 dark:border-violet-500/20 px-2.5 py-1.5 rounded-lg flex-shrink-0 w-28 text-center">
+                                                        {emp.count} Buka Kunci
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            {(!executiveStats.mostUnlocked || executiveStats.mostUnlocked.length === 0) && (
+                                                <div className="text-center text-xs text-slate-400 py-8 font-bold border-2 border-dashed border-slate-100 dark:border-border rounded-[1.25rem]">
+                                                    Belum ada data buka kunci.
                                                 </div>
                                             )}
                                         </div>
@@ -299,19 +430,37 @@ export default function Dashboard({ isEmployee, isGuruMurni, employee, todayAtte
                                                     <p className="text-[11px] text-blue-400 font-black uppercase tracking-[0.2em] line-clamp-2 max-w-[200px] mx-auto">{todayHoliday.description}</p>
                                                 </div>
                                             ) : !todayAttendance?.check_in ? (
-                                                <Link 
-                                                    href={route('attendance.presensi')} 
-                                                    className="inline-flex items-center justify-center w-full lg:w-auto h-24 px-12 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-black text-xl rounded-3xl shadow-[0_10px_40px_rgba(99,102,241,0.4)] border border-white/10 transition-all hover:scale-[1.03] active:scale-[0.97]"
-                                                >
-                                                    <MapPin className="w-7 h-7 mr-3" /> Presensi Masuk
-                                                </Link>
+                                                isOffline ? (
+                                                    <button 
+                                                        disabled
+                                                        className="inline-flex items-center justify-center w-full lg:w-auto h-24 px-12 bg-slate-800 text-slate-500 font-black text-xl rounded-3xl border border-white/5 cursor-not-allowed opacity-50"
+                                                    >
+                                                        <MapPin className="w-7 h-7 mr-3 text-slate-500" /> Presensi Masuk (Offline)
+                                                    </button>
+                                                ) : (
+                                                    <Link 
+                                                        href={route('attendance.presensi')} 
+                                                        className="inline-flex items-center justify-center w-full lg:w-auto h-24 px-12 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-black text-xl rounded-3xl shadow-[0_10px_40px_rgba(99,102,241,0.4)] border border-white/10 transition-all hover:scale-[1.03] active:scale-[0.97]"
+                                                    >
+                                                        <MapPin className="w-7 h-7 mr-3" /> Presensi Masuk
+                                                    </Link>
+                                                )
                                             ) : !todayAttendance?.check_out ? (
-                                                <Link 
-                                                    href={route('attendance.presensi')} 
-                                                    className="inline-flex items-center justify-center w-full lg:w-auto h-24 px-12 bg-gradient-to-r from-rose-600 to-orange-600 hover:from-rose-500 hover:to-orange-500 text-white font-black text-xl rounded-3xl shadow-[0_10px_40px_rgba(225,29,72,0.4)] border border-white/10 transition-all hover:scale-[1.03] active:scale-[0.97]"
-                                                >
-                                                    <Clock className="w-7 h-7 mr-3" /> Presensi Keluar
-                                                </Link>
+                                                isOffline ? (
+                                                    <button 
+                                                        disabled
+                                                        className="inline-flex items-center justify-center w-full lg:w-auto h-24 px-12 bg-slate-800 text-slate-500 font-black text-xl rounded-3xl border border-white/5 cursor-not-allowed opacity-50"
+                                                    >
+                                                        <Clock className="w-7 h-7 mr-3 text-slate-500" /> Presensi Keluar (Offline)
+                                                    </button>
+                                                ) : (
+                                                    <Link 
+                                                        href={route('attendance.presensi')} 
+                                                        className="inline-flex items-center justify-center w-full lg:w-auto h-24 px-12 bg-gradient-to-r from-rose-600 to-orange-600 hover:from-rose-500 hover:to-orange-500 text-white font-black text-xl rounded-3xl shadow-[0_10px_40px_rgba(225,29,72,0.4)] border border-white/10 transition-all hover:scale-[1.03] active:scale-[0.97]"
+                                                    >
+                                                        <Clock className="w-7 h-7 mr-3" /> Presensi Keluar
+                                                    </Link>
+                                                )
                                             ) : (
                                                 <div className="bg-emerald-500/10 border border-emerald-500/20 px-10 py-8 rounded-[2rem] text-center backdrop-blur-md">
                                                     <div className="bg-gradient-to-br from-emerald-400 to-emerald-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_10px_30px_rgba(16,185,129,0.3)] border border-white/20">
@@ -343,29 +492,50 @@ export default function Dashboard({ isEmployee, isGuruMurni, employee, todayAtte
                                             Anda memiliki {roleData.todayTeachingSchedule.length} kelas hari ini dari total {roleData.totalWeeklyHours} sesi per minggu.
                                         </CardDescription>
                                     </div>
-                                    <Link 
-                                        href={route('attendance.presensi')} 
-                                        className="inline-flex items-center justify-center bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl px-6 h-12 font-bold shadow-lg shadow-indigo-500/30 w-full sm:w-auto transition-transform active:scale-95"
-                                    >
-                                        <Timer className="w-4 h-4 mr-2" /> Presensi Kelas
-                                    </Link>
+                                    {isOffline ? (
+                                        <button 
+                                            disabled
+                                            className="inline-flex items-center justify-center bg-slate-700 text-slate-500 rounded-2xl px-6 h-12 font-bold cursor-not-allowed opacity-50 w-full sm:w-auto"
+                                        >
+                                            <Timer className="w-4 h-4 mr-2" /> Presensi Kelas (Offline)
+                                        </button>
+                                    ) : (
+                                        <Link 
+                                            href={route('attendance.presensi')} 
+                                            className="inline-flex items-center justify-center bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl px-6 h-12 font-bold shadow-lg shadow-indigo-500/30 w-full sm:w-auto transition-transform active:scale-95"
+                                        >
+                                            <Timer className="w-4 h-4 mr-2" /> Presensi Kelas
+                                        </Link>
+                                    )}
                                 </CardHeader>
                                 <CardContent className="p-8 pt-6 relative z-10">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {roleData.todayTeachingSchedule.map((ts, i) => (
-                                            <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-colors flex items-center group/item">
-                                                <div className="h-14 w-14 rounded-[1rem] bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex flex-col items-center justify-center font-black mr-4 shadow-inner ring-1 ring-white/20">
-                                                    <span className="text-[10px] font-black opacity-80 uppercase tracking-widest leading-tight">Jam</span>
-                                                    <span className="text-xl leading-tight">{ts.hour_number}</span>
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-lg font-black text-white group-hover/item:text-indigo-300 transition-colors truncate">{ts.subject}</p>
-                                                    <div className="flex items-center text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                                        <Users className="w-3.5 h-3.5 mr-1.5" /> {ts.class_name}
+                                        {isLoading ? (
+                                            Array.from({ length: 2 }).map((_, i) => (
+                                                <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-center animate-pulse">
+                                                    <div className="h-14 w-14 rounded-[1rem] bg-white/10 mr-4"></div>
+                                                    <div className="flex-1 space-y-2">
+                                                        <div className="h-4 bg-white/10 rounded w-3/4"></div>
+                                                        <div className="h-3 bg-white/10 rounded w-1/2"></div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))
+                                        ) : (
+                                            roleData.todayTeachingSchedule.map((ts, i) => (
+                                                <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-colors flex items-center group/item">
+                                                    <div className="h-14 w-14 rounded-[1rem] bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex flex-col items-center justify-center font-black mr-4 shadow-inner ring-1 ring-white/20">
+                                                        <span className="text-[10px] font-black opacity-80 uppercase tracking-widest leading-tight">Jam</span>
+                                                        <span className="text-xl leading-tight">{ts.hour_number}</span>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-lg font-black text-white group-hover/item:text-indigo-300 transition-colors truncate">{ts.subject}</p>
+                                                        <div className="flex items-center text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                            <Users className="w-3.5 h-3.5 mr-1.5" /> {ts.class_name}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -373,56 +543,172 @@ export default function Dashboard({ isEmployee, isGuruMurni, employee, todayAtte
 
                         {/* Chart Card */}
                         <Card className="border border-white dark:border-border shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white/80 dark:bg-card/80 backdrop-blur-xl overflow-hidden group">
-                            <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between border-b border-slate-50/50 dark:border-border">
+                            <CardHeader className="p-8 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-50/50 dark:border-border">
                                 <div>
-                                    <CardTitle className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Statistik Bulanan</CardTitle>
-                                    <CardDescription className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mt-2 flex items-center">
-                                        Personal Recap <span className="mx-2 w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span> {new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}
+                                    <CardTitle className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                                        {adminStats ? 'Tren & Statistik Kehadiran Sekolah' : 'Statistik Presensi Saya'}
+                                    </CardTitle>
+                                    <CardDescription className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mt-1 flex items-center">
+                                        {adminStats ? 'School Daily Trend' : 'Personal Recap'} <span className="mx-2 w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span> {new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}
                                     </CardDescription>
                                 </div>
-                                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-secondary border border-slate-100 dark:border-border text-slate-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-500/20 group-hover:border-indigo-100 dark:group-hover:border-indigo-500/20 transition-all duration-300 shadow-sm">
-                                    <Activity className="w-5 h-5" />
+                                <div className="flex items-center space-x-2">
+                                    {!adminStats && monthlyStats?.has_jtm && (
+                                        <div className="bg-slate-100 dark:bg-secondary p-1 rounded-xl flex items-center border border-slate-200/60 dark:border-border">
+                                            <button
+                                                type="button"
+                                                onClick={() => setPersonalTab('harian')}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${personalTab === 'harian' ? 'bg-white dark:bg-card text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+                                            >
+                                                Presensi Harian
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPersonalTab('jtm')}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${personalTab === 'jtm' ? 'bg-white dark:bg-card text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+                                            >
+                                                JTM Mengajar
+                                            </button>
+                                        </div>
+                                    )}
+                                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-secondary border border-slate-100 dark:border-border text-slate-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-500/20 group-hover:border-indigo-100 dark:group-hover:border-indigo-500/20 transition-all duration-300 shadow-sm">
+                                        <Activity className="w-5 h-5" />
+                                    </div>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-8 pt-6">
-                                <div className="h-[350px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                                            <defs>
-                                                {chartData.map((entry, index) => (
-                                                    <linearGradient key={`grad-${index}`} id={`colorUv-${index}`} x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="0%" stopColor={entry.color} stopOpacity={1}/>
-                                                        <stop offset="100%" stopColor={entry.color} stopOpacity={0.6}/>
-                                                    </linearGradient>
-                                                ))}
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" opacity={0.6} />
-                                            <XAxis 
-                                                dataKey="name" 
-                                                axisLine={false} 
-                                                tickLine={false} 
-                                                tick={{ fill: '#64748b', fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px' }}
-                                                dy={20}
-                                            />
-                                            <YAxis 
-                                                axisLine={false} 
-                                                tickLine={false} 
-                                                tick={{ fill: '#64748b', fontSize: 11, fontWeight: 900 }}
-                                            />
-                                            <Tooltip 
-                                                cursor={{ fill: 'rgba(248,250,252,0.8)' }}
-                                                contentStyle={{ borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', padding: '16px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)' }}
-                                                itemStyle={{ fontWeight: 900, fontSize: '13px' }}
-                                                labelStyle={{ fontWeight: 800, color: '#64748b', marginBottom: '8px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}
-                                            />
-                                            <Bar dataKey="value" radius={[16, 16, 4, 4]} barSize={56}>
-                                                {chartData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={`url(#colorUv-${index})`} />
-                                                ))}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
+                                {isLoading ? (
+                                    <div className="h-[350px] w-full flex items-end justify-between px-6 pb-2 pt-10">
+                                        <div className="w-[15%] bg-slate-200 dark:bg-slate-800 rounded-t-2xl animate-pulse" style={{ height: '70%' }}></div>
+                                        <div className="w-[15%] bg-slate-200 dark:bg-slate-800 rounded-t-2xl animate-pulse" style={{ height: '30%' }}></div>
+                                        <div className="w-[15%] bg-slate-200 dark:bg-slate-800 rounded-t-2xl animate-pulse" style={{ height: '15%' }}></div>
+                                        <div className="w-[15%] bg-slate-200 dark:bg-slate-800 rounded-t-2xl animate-pulse" style={{ height: '5%' }}></div>
+                                    </div>
+                                ) : adminStats ? (
+                                    <div className="space-y-6">
+                                        {/* Cumulative Badges */}
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                            <div className="bg-emerald-50/50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 p-3 rounded-2xl text-center">
+                                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Tepat Waktu</p>
+                                                <p className="text-xl font-black text-emerald-700 dark:text-emerald-400 mt-1">{managementMonthlyStats?.present || 0}</p>
+                                            </div>
+                                            <div className="bg-amber-50/50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 p-3 rounded-2xl text-center">
+                                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Terlambat</p>
+                                                <p className="text-xl font-black text-amber-700 dark:text-amber-400 mt-1">{managementMonthlyStats?.late || 0}</p>
+                                            </div>
+                                            <div className="bg-blue-50/50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 p-3 rounded-2xl text-center">
+                                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Sakit / Izin</p>
+                                                <p className="text-xl font-black text-blue-700 dark:text-blue-400 mt-1">{(managementMonthlyStats?.sick || 0) + (managementMonthlyStats?.permit || 0)}</p>
+                                            </div>
+                                            <div className="bg-rose-50/50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 p-3 rounded-2xl text-center">
+                                                <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Alpha</p>
+                                                <p className="text-xl font-black text-rose-700 dark:text-rose-400 mt-1">{managementMonthlyStats?.alpha || 0}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Area Trend Chart */}
+                                        <div className="h-[300px] w-full pt-2">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <AreaChart data={dailyTrendStats || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                    <defs>
+                                                        <linearGradient id="colorPresent" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                                        </linearGradient>
+                                                        <linearGradient id="colorLate" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
+                                                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                                                        </linearGradient>
+                                                        <linearGradient id="colorSickPermit" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                                        </linearGradient>
+                                                        <linearGradient id="colorAlpha" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                                                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" opacity={0.6} />
+                                                    <XAxis 
+                                                        dataKey="day" 
+                                                        axisLine={false} 
+                                                        tickLine={false} 
+                                                        tick={{ fill: '#64748b', fontSize: 10, fontWeight: 800 }}
+                                                        dy={10}
+                                                    />
+                                                    <YAxis 
+                                                        axisLine={false} 
+                                                        tickLine={false} 
+                                                        tick={{ fill: '#64748b', fontSize: 10, fontWeight: 800 }}
+                                                        allowDecimals={false}
+                                                    />
+                                                    <Tooltip 
+                                                        contentStyle={{ borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px 16px', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)' }}
+                                                        itemStyle={{ fontWeight: 800, fontSize: '12px' }}
+                                                        labelStyle={{ fontWeight: 900, color: '#0f172a', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase' }}
+                                                    />
+                                                    <Area type="monotone" dataKey="present" name="Tepat Waktu" stroke="#10b981" fillOpacity={1} fill="url(#colorPresent)" strokeWidth={2} />
+                                                    <Area type="monotone" dataKey="late" name="Terlambat" stroke="#f59e0b" fillOpacity={1} fill="url(#colorLate)" strokeWidth={2} />
+                                                    <Area type="monotone" dataKey="sick_permit" name="Sakit/Izin" stroke="#3b82f6" fillOpacity={1} fill="url(#colorSickPermit)" strokeWidth={2} />
+                                                    <Area type="monotone" dataKey="alpha" name="Alpha" stroke="#ef4444" fillOpacity={1} fill="url(#colorAlpha)" strokeWidth={2} />
+                                                </AreaChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {personalTab === 'jtm' && (
+                                            <div className="bg-indigo-50/60 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs">
+                                                <span className="font-extrabold text-indigo-700 dark:text-indigo-300">Target JTM Terjadwal Bulan Ini:</span>
+                                                <span className="font-black text-indigo-900 dark:text-indigo-100 bg-white dark:bg-card px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-border">{monthlyStats?.jtm_scheduled || 0} Jam</span>
+                                            </div>
+                                        )}
+                                        <div className="h-[340px] w-full pt-2">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart 
+                                                    data={personalTab === 'jtm' ? jtmChartData : chartData} 
+                                                    margin={{ top: 25, right: 10, left: -10, bottom: 35 }}
+                                                >
+                                                    <defs>
+                                                        {(personalTab === 'jtm' ? jtmChartData : chartData).map((entry, index) => (
+                                                            <linearGradient key={`grad-p-${index}`} id={`colorUv-p-${index}`} x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor={entry.color} stopOpacity={1}/>
+                                                                <stop offset="100%" stopColor={entry.color} stopOpacity={0.7}/>
+                                                            </linearGradient>
+                                                        ))}
+                                                    </defs>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" opacity={0.6} />
+                                                    <XAxis 
+                                                        dataKey="name" 
+                                                        axisLine={false} 
+                                                        tickLine={false} 
+                                                        interval={0}
+                                                        tick={{ fill: '#475569', fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                                                        dy={10}
+                                                    />
+                                                    <YAxis 
+                                                        axisLine={false} 
+                                                        tickLine={false} 
+                                                        allowDecimals={false}
+                                                        tick={{ fill: '#64748b', fontSize: 11, fontWeight: 900 }}
+                                                    />
+                                                    <Tooltip 
+                                                        cursor={{ fill: 'rgba(248,250,252,0.8)' }}
+                                                        contentStyle={{ borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', padding: '16px', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)' }}
+                                                        itemStyle={{ fontWeight: 900, fontSize: '13px' }}
+                                                        labelStyle={{ fontWeight: 800, color: '#64748b', marginBottom: '8px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}
+                                                    />
+                                                    <Bar dataKey="value" radius={[14, 14, 4, 4]} barSize={52}>
+                                                        {(personalTab === 'jtm' ? jtmChartData : chartData).map((entry, index) => (
+                                                            <Cell key={`cell-p-${index}`} fill={`url(#colorUv-p-${index})`} />
+                                                        ))}
+                                                        <LabelList dataKey="value" position="top" style={{ fill: '#1e293b', fontSize: 12, fontWeight: 900 }} />
+                                                    </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </motion.div>
@@ -471,23 +757,49 @@ export default function Dashboard({ isEmployee, isGuruMurni, employee, todayAtte
                             </CardHeader>
                             <CardContent className="p-8 pt-4 grid grid-cols-2 gap-4">
                                 {(() => {
-                                    const isAdmin = ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Bendahara'].includes(primaryRole);
                                     let actions = [];
                                     
-                                    if (isAdmin) {
+                                    if (primaryRole === 'Super Admin') {
                                         actions = [
                                             { label: 'Monitor Absen', icon: <Activity className="w-6 h-6" />, color: 'from-blue-500 to-indigo-600', shadow: 'shadow-indigo-500/30', route: 'monitoring.attendance' },
-                                            { label: 'Pegawai', icon: <Users className="w-6 h-6" />, color: 'from-emerald-400 to-teal-500', shadow: 'shadow-teal-500/30', route: 'employees.index' },
+                                            { label: 'Data Pegawai', icon: <Users className="w-6 h-6" />, color: 'from-emerald-400 to-teal-500', shadow: 'shadow-teal-500/30', route: 'employees.index' },
                                             { label: 'Persetujuan Cuti', icon: <CheckCircle2 className="w-6 h-6" />, color: 'from-amber-400 to-orange-500', shadow: 'shadow-orange-500/30', route: 'leave-requests.approval' },
-                                            { label: 'Penggajian', icon: <CreditCard className="w-6 h-6" />, color: 'from-purple-500 to-fuchsia-600', shadow: 'shadow-fuchsia-500/30', route: 'payroll.index' },
+                                            { label: 'Pengaturan Sistem', icon: <SettingsIcon className="w-6 h-6" />, color: 'from-purple-500 to-fuchsia-600', shadow: 'shadow-purple-500/30', route: 'settings.index' },
+                                        ];
+                                    } else if (primaryRole === 'Kepala Sekolah') {
+                                        actions = [
+                                            { label: 'Monitor Absen', icon: <Activity className="w-6 h-6" />, color: 'from-blue-500 to-indigo-600', shadow: 'shadow-indigo-500/30', route: 'monitoring.attendance' },
+                                            { label: 'Data Pegawai', icon: <Users className="w-6 h-6" />, color: 'from-emerald-400 to-teal-500', shadow: 'shadow-teal-500/30', route: 'employees.index' },
+                                            { label: 'Persetujuan Cuti', icon: <CheckCircle2 className="w-6 h-6" />, color: 'from-amber-400 to-orange-500', shadow: 'shadow-orange-500/30', route: 'leave-requests.approval' },
+                                            { label: 'Rekap Presensi', icon: <FileText className="w-6 h-6" />, color: 'from-sky-400 to-blue-500', shadow: 'shadow-blue-500/30', route: 'attendance.recap' },
+                                        ];
+                                    } else if (primaryRole === 'Kurikulum') {
+                                        actions = [
+                                            { label: 'Jadwal Mengajar', icon: <CalendarDays className="w-6 h-6" />, color: 'from-indigo-500 to-purple-600', shadow: 'shadow-indigo-500/30', route: 'teaching-schedules.index' },
+                                            { label: 'Bursa Inval', icon: <Briefcase className="w-6 h-6" />, color: 'from-emerald-400 to-teal-500', shadow: 'shadow-teal-500/30', route: 'invals.index' },
+                                            { label: 'Monitor Absen', icon: <Activity className="w-6 h-6" />, color: 'from-blue-500 to-indigo-600', shadow: 'shadow-indigo-500/30', route: 'monitoring.attendance' },
+                                            { label: 'Persetujuan Cuti', icon: <CheckCircle2 className="w-6 h-6" />, color: 'from-amber-400 to-orange-500', shadow: 'shadow-orange-500/30', route: 'leave-requests.approval' },
+                                        ];
+                                    } else if (primaryRole === 'Absensi') {
+                                        actions = [
+                                            { label: 'Presensi Harian', icon: <Clock className="w-6 h-6" />, color: 'from-indigo-500 to-indigo-600', shadow: 'shadow-indigo-500/30', route: 'attendance.presensi' },
+                                            { label: 'Monitor Absen', icon: <Activity className="w-6 h-6" />, color: 'from-blue-500 to-indigo-600', shadow: 'shadow-indigo-500/30', route: 'monitoring.attendance' },
+                                            { label: 'Persetujuan Cuti', icon: <CheckCircle2 className="w-6 h-6" />, color: 'from-amber-400 to-orange-500', shadow: 'shadow-orange-500/30', route: 'leave-requests.approval' },
+                                            { label: 'Rekap Presensi', icon: <FileText className="w-6 h-6" />, color: 'from-emerald-400 to-teal-500', shadow: 'shadow-emerald-500/30', route: 'attendance.recap' },
+                                        ];
+                                    } else if (primaryRole === 'Guru') {
+                                        actions = [
+                                            { label: 'Presensi Kelas', icon: <Clock className="w-6 h-6" />, color: 'from-indigo-500 to-indigo-600', shadow: 'shadow-indigo-500/30', route: 'attendance.presensi' },
+                                            { label: 'Jadwal Saya', icon: <CalendarDays className="w-6 h-6" />, color: 'from-purple-500 to-fuchsia-600', shadow: 'shadow-purple-500/30', route: 'my-schedule.index' },
+                                            { label: 'Bursa Inval', icon: <Briefcase className="w-6 h-6" />, color: 'from-emerald-400 to-teal-500', shadow: 'shadow-teal-500/30', route: 'invals.index' },
+                                            { label: 'Cuti / Izin', icon: <Plus className="w-6 h-6" />, color: 'from-amber-400 to-orange-500', shadow: 'shadow-orange-500/30', route: 'leave-requests.index' },
                                         ];
                                     } else {
                                         actions = [
-                                            primaryRole === 'Guru' ? { label: 'Jadwal', icon: <CalendarDays className="w-6 h-6" />, color: 'from-indigo-500 to-indigo-600', shadow: 'shadow-indigo-500/30', route: 'my-schedule.index' } : null,
-                                            { label: 'Absensi Pribadi', icon: <Clock className="w-6 h-6" />, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/30', route: 'my-attendance.index' },
-                                            { label: 'Slip Gaji', icon: <FileText className="w-6 h-6" />, color: 'from-emerald-400 to-emerald-500', shadow: 'shadow-emerald-500/30', route: 'my-payslip.index' },
-                                            { label: 'Cuti/Izin', icon: <Briefcase className="w-6 h-6" />, color: 'from-amber-400 to-orange-500', shadow: 'shadow-orange-500/30', route: 'leave-requests.index' },
-                                        ].filter(Boolean);
+                                            { label: 'Presensi Harian', icon: <Clock className="w-6 h-6" />, color: 'from-indigo-500 to-indigo-600', shadow: 'shadow-indigo-500/30', route: 'attendance.presensi' },
+                                            { label: 'Absensi Saya', icon: <History className="w-6 h-6" />, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/30', route: 'my-attendance.index' },
+                                            { label: 'Pengajuan Cuti', icon: <Briefcase className="w-6 h-6" />, color: 'from-amber-400 to-orange-500', shadow: 'shadow-orange-500/30', route: 'leave-requests.index' },
+                                        ];
                                     }
 
                                     return actions.map((action, idx) => (
@@ -531,41 +843,66 @@ export default function Dashboard({ isEmployee, isGuruMurni, employee, todayAtte
                             </Card>
                         )}
 
-                        {/* Payroll Overview (Bendahara Only) */}
-                        {roleData?.payrollStats && (
-                            <Card className="border border-white dark:border-border shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] overflow-hidden bg-white/80 dark:bg-card/80 backdrop-blur-xl bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10">
-                                <CardHeader className="px-8 pt-8 pb-2">
+                        {/* Bursa Inval Available Offers (Guru & Kurikulum Role) */}
+                        {roleData?.availableInvalOffers && roleData.availableInvalOffers.length > 0 && (
+                            <Card className="border border-white dark:border-border shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] overflow-hidden bg-white/80 dark:bg-card/80 backdrop-blur-xl">
+                                <CardHeader className="px-8 pt-8 pb-2 flex flex-row items-center justify-between">
                                     <CardTitle className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center">
-                                        <CreditCard className="w-5 h-5 mr-2 text-indigo-600" /> Penggajian Bulan Ini
+                                        <Briefcase className="w-5 h-5 mr-2 text-emerald-500" />
+                                        Bursa Inval Tersedia
                                     </CardTitle>
+                                    <Link href={route('invals.index')} className="text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-700">Lihat Semua</Link>
                                 </CardHeader>
-                                <CardContent className="p-8 pt-4">
-                                    <div className="space-y-4">
-                                        <div>
-                                            <div className="flex justify-between text-[11px] font-black uppercase tracking-widest mb-2 text-slate-500">
-                                                <span>Total Slip</span>
-                                                <span className="text-indigo-600">{roleData.payrollStats.total_this_month}</span>
+                                <CardContent className="p-4 pt-2">
+                                    <div className="space-y-2">
+                                        {roleData.availableInvalOffers.map((offer) => (
+                                            <div key={offer.id} className="flex items-center p-4 rounded-[1.5rem] bg-emerald-50/50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 hover:shadow-sm transition-all duration-300">
+                                                <div className="h-10 w-10 rounded-[1rem] bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center mr-4 shadow-sm font-black text-xs">
+                                                    INVAL
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-black text-slate-900 dark:text-slate-100 truncate">{offer.subject} ({offer.class_name})</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{offer.absent_name} • {offer.date}</p>
+                                                </div>
                                             </div>
-                                            <div className="w-full bg-white dark:bg-slate-800 rounded-full h-3 overflow-hidden shadow-inner border border-slate-100 dark:border-slate-700">
-                                                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full" style={{ width: '100%' }}></div>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between text-[11px] font-black uppercase tracking-widest mb-2 text-slate-500">
-                                                <span>Sudah Dibayar</span>
-                                                <span className="text-emerald-600">{roleData.payrollStats.paid}</span>
-                                            </div>
-                                            <div className="w-full bg-white dark:bg-slate-800 rounded-full h-3 overflow-hidden shadow-inner border border-slate-100 dark:border-slate-700">
-                                                <div className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-3 rounded-full" style={{ width: roleData.payrollStats.total_this_month > 0 ? `${(roleData.payrollStats.paid / roleData.payrollStats.total_this_month) * 100}%` : '0%' }}></div>
-                                            </div>
-                                        </div>
+                                        ))}
                                     </div>
-                                    <Link href={route('payroll.index')} className="mt-6 w-full flex items-center justify-center p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-300 hover:shadow-md transition-all">
-                                        Kelola Penggajian <ArrowUpRight className="w-4 h-4 ml-2" />
-                                    </Link>
                                 </CardContent>
                             </Card>
                         )}
+
+                        {/* Live Attendance Feed (Absensi / Kepsek / Admin Role) */}
+                        {roleData?.todayLatestAttendances && roleData.todayLatestAttendances.length > 0 && (
+                            <Card className="border border-white dark:border-border shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] overflow-hidden bg-white/80 dark:bg-card/80 backdrop-blur-xl">
+                                <CardHeader className="px-8 pt-8 pb-2 flex flex-row items-center justify-between">
+                                    <CardTitle className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center">
+                                        <Clock className="w-5 h-5 mr-2 text-indigo-500" />
+                                        Presensi Terkini Hari Ini
+                                    </CardTitle>
+                                    <Link href={route('monitoring.attendance')} className="text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-700">Monitor Full</Link>
+                                </CardHeader>
+                                <CardContent className="p-4 pt-2">
+                                    <div className="space-y-2">
+                                        {roleData.todayLatestAttendances.map((att) => (
+                                            <div key={att.id} className="flex items-center p-3.5 rounded-[1.5rem] bg-slate-50/80 dark:bg-secondary/80 border border-slate-100 dark:border-border">
+                                                <div className="h-9 w-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mr-3 font-black text-xs">
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-black text-slate-900 dark:text-slate-100 truncate">{att.employee_name}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Jam {att.check_in}</p>
+                                                </div>
+                                                <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${att.status === 'present' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+                                                    {att.status === 'present' ? 'Hadir' : 'Terlambat'}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+
 
                         {/* Recent Activity Mini List */}
                         <Card className="border border-white dark:border-border shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] overflow-hidden bg-white/80 dark:bg-card/80 backdrop-blur-xl">

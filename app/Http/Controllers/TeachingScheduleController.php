@@ -260,4 +260,28 @@ class TeachingScheduleController extends Controller
         $schoolClass->delete();
         return back()->with('message', 'Kelas berhasil dihapus.');
     }
+
+    /**
+     * Bulk delete school classes
+     */
+    public function classBulkDestroy(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:school_classes,id'
+        ]);
+
+        $classes = SchoolClass::withCount('teachingSchedules')->whereIn('id', $request->ids)->get();
+
+        $protected = $classes->filter(fn($c) => $c->teaching_schedules_count > 0);
+
+        if ($protected->isNotEmpty()) {
+            $names = $protected->pluck('name')->join(', ');
+            return back()->with('error', "Kelas berikut tidak dapat dihapus karena masih digunakan di jadwal mengajar: {$names}.");
+        }
+
+        SchoolClass::whereIn('id', $request->ids)->delete();
+
+        return back()->with('message', count($request->ids) . ' kelas berhasil dihapus.');
+    }
 }

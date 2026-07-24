@@ -311,8 +311,17 @@ export default function Index({ employees }) {
                                                                 </span>
                                                             ))}
                                                         </div>
-                                                        {(emp.is_homeroom_teacher || emp.is_extracurricular_builder) && (
+                                                        {(emp.is_homeroom_teacher || emp.is_extracurricular_builder || (emp.position_names || [emp.position?.name]).filter(Boolean).some(name => name.toLowerCase().includes('guru'))) && (
                                                             <div className="flex gap-1 flex-wrap">
+                                                                {(emp.position_names || [emp.position?.name]).filter(Boolean).some(name => name.toLowerCase().includes('guru')) && (
+                                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${
+                                                                        emp.is_certified 
+                                                                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                                                                        : 'bg-rose-50 text-rose-600 border-rose-100'
+                                                                    }`}>
+                                                                        {emp.is_certified ? 'Sertifikasi' : 'Non-Sertifikasi'}
+                                                                    </span>
+                                                                )}
                                                                 {emp.is_homeroom_teacher && <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded font-bold border border-amber-100">Wali: {emp.homeroom_class}</span>}
                                                                 {emp.is_extracurricular_builder && <span className="text-[10px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded font-bold border border-purple-100">Pembina: {emp.extracurricular_name}</span>}
                                                             </div>

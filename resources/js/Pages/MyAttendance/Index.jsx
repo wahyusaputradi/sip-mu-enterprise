@@ -69,6 +69,59 @@ export default function Index({ attendances, stats, filters, employee }) {
                     ))}
                 </div>
 
+                {/* JTM Detailed Breakdown for Teachers */}
+                {stats.jtm_scheduled > 0 && (
+                    <Card className="border border-indigo-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-gradient-to-r from-indigo-900 via-slate-900 to-purple-900 text-white overflow-hidden p-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/10 mb-4">
+                            <div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300 bg-indigo-500/20 px-3 py-1 rounded-full border border-indigo-400/30 inline-block mb-1">
+                                    Rincian Jam Tatap Muka (JTM)
+                                </span>
+                                <h3 className="text-xl font-black text-white">Ringkasan Bebas Mengajar & Inval</h3>
+                            </div>
+                            <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-md border border-white/10 text-right">
+                                <span className="text-[10px] uppercase font-bold text-indigo-200 block">JTM Terjadwal (1 Bulan)</span>
+                                <span className="text-2xl font-black text-amber-300">{stats.jtm_scheduled} Jam</span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                            <div className="bg-white/5 p-3 rounded-xl border border-white/10 text-center">
+                                <span className="text-[10px] font-bold text-slate-300 block uppercase">Hadir X</span>
+                                <span className="text-lg font-black text-emerald-400">{stats.jtm_effective_10}</span>
+                            </div>
+                            <div className="bg-white/5 p-3 rounded-xl border border-white/10 text-center">
+                                <span className="text-[10px] font-bold text-slate-300 block uppercase">Hadir XI</span>
+                                <span className="text-lg font-black text-emerald-400">{stats.jtm_effective_11}</span>
+                            </div>
+                            <div className="bg-white/5 p-3 rounded-xl border border-white/10 text-center">
+                                <span className="text-[10px] font-bold text-slate-300 block uppercase">Hadir XII</span>
+                                <span className="text-lg font-black text-emerald-400">{stats.jtm_effective_12}</span>
+                            </div>
+                            <div className="bg-white/5 p-3 rounded-xl border border-white/10 text-center">
+                                <span className="text-[10px] font-bold text-slate-300 block uppercase">Hadir Total</span>
+                                <span className="text-lg font-black text-emerald-300">{stats.jtm_effective}</span>
+                            </div>
+                            <div className="bg-white/5 p-3 rounded-xl border border-white/10 text-center">
+                                <span className="text-[10px] font-bold text-slate-300 block uppercase">JTM Inval</span>
+                                <span className="text-lg font-black text-cyan-400">{stats.jtm_inval}</span>
+                            </div>
+                            <div className="bg-white/5 p-3 rounded-xl border border-white/10 text-center">
+                                <span className="text-[10px] font-bold text-slate-300 block uppercase">JTM Izin</span>
+                                <span className="text-lg font-black text-blue-400">{stats.jtm_permit}</span>
+                            </div>
+                            <div className="bg-white/5 p-3 rounded-xl border border-white/10 text-center">
+                                <span className="text-[10px] font-bold text-slate-300 block uppercase">JTM Libur</span>
+                                <span className="text-lg font-black text-purple-300">{stats.jtm_holiday}</span>
+                            </div>
+                            <div className="bg-white/5 p-3 rounded-xl border border-white/10 text-center">
+                                <span className="text-[10px] font-bold text-slate-300 block uppercase">JTM Alpa</span>
+                                <span className="text-lg font-black text-rose-400">{stats.jtm_absent}</span>
+                            </div>
+                        </div>
+                    </Card>
+                )}
+
                 {/* Attendance List */}
                 <Card className="border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white/80 backdrop-blur-xl overflow-hidden">
                     <CardHeader className="border-b border-slate-100 p-6">

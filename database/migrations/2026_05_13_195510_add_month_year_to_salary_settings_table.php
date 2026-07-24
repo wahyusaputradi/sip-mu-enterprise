@@ -11,10 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('salary_settings', function (Blueprint $table) {
-            $table->integer('month')->nullable()->after('employee_id');
-            $table->integer('year')->nullable()->after('month');
-        });
+        // No action needed as salary_settings table is dropped.
     }
 
     /**
@@ -22,8 +19,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('salary_settings', function (Blueprint $table) {
-            $table->dropColumn(['month', 'year']);
-        });
+        // No action needed.
     }
 };

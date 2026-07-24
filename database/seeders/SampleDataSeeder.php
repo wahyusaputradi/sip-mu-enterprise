@@ -32,25 +32,11 @@ class SampleDataSeeder extends Seeder
         $positions = [
             [
                 'name' => 'Guru Tetap',
-                'base_salary' => 0, // Using hourly for calculation
-                'hourly_rate' => 25000,
-                'inval_rate' => 30000,
-                'alpha_penalty_rate' => 20000,
-                'allowance_jabatan' => 500000,
-                'allowance_lunch' => 0,
-                'allowance_transport' => 15000,
-                'allowance_homeroom' => 200000,
+                'description' => 'Guru pengampu mata pelajaran reguler',
             ],
             [
                 'name' => 'Waka Kurikulum',
-                'base_salary' => 0,
-                'hourly_rate' => 35000,
-                'inval_rate' => 40000,
-                'alpha_penalty_rate' => 25000,
-                'allowance_jabatan' => 1000000,
-                'allowance_lunch' => 0,
-                'allowance_transport' => 20000,
-                'allowance_homeroom' => 0,
+                'description' => 'Wakil kepala sekolah bidang kurikulum',
             ],
         ];
 
@@ -96,19 +82,21 @@ class SampleDataSeeder extends Seeder
                  try { $user->assignRole($data['role']); } catch (\Exception $e) {}
             }
 
-            Employee::updateOrCreate(
+            $employee = Employee::updateOrCreate(
                 ['nik' => $data['nik']],
                 [
                     'user_id' => $user->id,
-                    'position_id' => $data['position_id'],
                     'name' => $data['name'],
                     'status' => 'active',
                     'is_homeroom_teacher' => $data['is_homeroom_teacher'],
                     'homeroom_class' => $data['homeroom_class'] ?? null,
-                    'bpjs_deduction' => 50000,
-                    'cooperative_deduction' => 25000,
                 ]
             );
+
+            // Sync position with is_primary = true
+            $employee->positions()->sync([
+                $data['position_id'] => ['is_primary' => true]
+            ]);
         }
 
         // 4. Create Sample Attendance for current month

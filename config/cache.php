@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('CACHE_STORE', 'database'),
+    'default' => class_exists(\Redis::class) ? env('CACHE_STORE', 'database') : 'database',
 
     /*
     |--------------------------------------------------------------------------

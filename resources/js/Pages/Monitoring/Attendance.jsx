@@ -28,7 +28,7 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
 
     const [editingAttendance, setEditingAttendance] = useState(null);
     const [unlockModal, setUnlockModal] = useState(false);
-    const [unlockData, setUnlockData] = useState({ employee_id: '', type: 'daily_checkin', teaching_schedule_id: '', reason: '', expires_in_minutes: '15' });
+    const [unlockData, setUnlockData] = useState({ employee_id: '', type: 'daily_checkin', teaching_schedule_id: '', reason: '', expires_in_minutes: '15', is_lateness_violation: true });
     const [unlockProcessing, setUnlockProcessing] = useState(false);
 
     // Get teaching schedules for selected employee
@@ -51,7 +51,7 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
         if (payload.type !== 'teaching') payload.teaching_schedule_id = null;
         router.post(route('attendance.unlock'), payload, {
             preserveScroll: true,
-            onSuccess: () => { setUnlockModal(false); setUnlockData({ employee_id: '', type: 'daily_checkin', teaching_schedule_id: '', reason: '', expires_in_minutes: '15' }); },
+            onSuccess: () => { setUnlockModal(false); setUnlockData({ employee_id: '', type: 'daily_checkin', teaching_schedule_id: '', reason: '', expires_in_minutes: '15', is_lateness_violation: true }); },
             onFinish: () => setUnlockProcessing(false),
         });
     };
@@ -236,7 +236,12 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
                                                     ) : <span className="text-slate-400 font-semibold">--:--</span>}
                                                 </TableCell>
                                                 <TableCell className="hidden md:table-cell">
-                                                    {att.campus_name ? (
+                                                    {att.is_dinas_luar ? (
+                                                        <div className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border shadow-sm text-emerald-600 bg-emerald-50 border-emerald-100/50">
+                                                            <MapPin className="w-3.5 h-3.5 mr-1.5 text-emerald-500" />
+                                                            Dinas Luar
+                                                        </div>
+                                                    ) : att.campus_name ? (
                                                         <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border shadow-sm ${
                                                             att.campus_name === 'Di Luar Jangkauan' 
                                                             ? 'text-rose-600 bg-rose-50 border-rose-100/50' 
@@ -470,6 +475,17 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
                                         )}
 
                                         <div className="space-y-3">
+                                            <Label className="text-slate-700 font-bold flex items-center text-sm">Kebijakan Keterlambatan</Label>
+                                            <Select value={String(unlockData.is_lateness_violation)} onValueChange={(v) => setUnlockData(d => ({...d, is_lateness_violation: v === 'true'}))}>
+                                                <SelectTrigger className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="rounded-2xl shadow-xl border-slate-100">
+                                                    <SelectItem value="true" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50">Tandai Sebagai Pelanggaran Keterlambatan</SelectItem>
+                                                    <SelectItem value="false" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50">Tidak Tandai Sebagai Pelanggaran Keterlambatan</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="space-y-3">
                                             <Label className="text-slate-700 font-bold flex items-center text-sm">Batas Waktu Akses</Label>
                                             <Select value={unlockData.expires_in_minutes} onValueChange={(v) => setUnlockData(d => ({...d, expires_in_minutes: v}))}>
                                                 <SelectTrigger className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"><SelectValue /></SelectTrigger>
@@ -551,6 +567,13 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
                                                                         {u.teaching_schedule?.subject}
                                                                     </div>
                                                                 )}
+                                                                <div className={`flex items-center text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border shadow-sm ${
+                                                                    u.is_lateness_violation 
+                                                                    ? 'bg-rose-50 text-rose-700 border-rose-100/50' 
+                                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-100/50'
+                                                                }`}>
+                                                                    {u.is_lateness_violation ? 'Tandai Terlambat' : 'Bebas Terlambat'}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use App\Services\AttendanceRecapService;
 
 class AttendanceController extends Controller
 {
@@ -26,15 +27,33 @@ class AttendanceController extends Controller
 
         $campusLocations = CampusLocation::all();
 
-        // Personal Stats (Optimized Query)
+        // Personal Stats via AttendanceRecapService
         $monthlyStatsRaw = $employee ? Attendance::where('employee_id', $employee->id)
             ->whereMonth('date', Carbon::now()->month)
+            ->whereYear('date', Carbon::now()->year)
             ->selectRaw('status, count(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status')->toArray() : [];
 
+        $personalRecap = null;
+        if ($employee) {
+            $currentMonth = Carbon::now()->month;
+            $currentYear = Carbon::now()->year;
+            $monthlyRecap = AttendanceRecapService::getMonthlyRecap($currentMonth, $currentYear, 'all');
+            $allRecaps = $monthlyRecap['recapData'] ?? [];
+            foreach ($allRecaps as $rc) {
+                if (isset($rc['id']) && $rc['id'] == $employee->id) {
+                    $personalRecap = $rc;
+                    break;
+                }
+            }
+        }
+
         // Admin/Management stats — for roles with management access
         $adminStats = null;
+        $managementMonthlyStats = null;
+        $dailyTrendStats = [];
+
         if ($user->hasAnyRole(['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Bendahara'])) {
             $adminStats = [
                 'total_employees' => Employee::count(),
@@ -50,6 +69,67 @@ class AttendanceController extends Controller
                     'end_date' => \Carbon\Carbon::parse($l->end_date)->format('d M Y'),
                 ]),
             ];
+
+            // School-wide monthly stats
+            $mgmtStatsRaw = Attendance::whereMonth('date', Carbon::now()->month)
+                ->whereYear('date', Carbon::now()->year)
+                ->selectRaw('status, count(*) as count')
+                ->groupBy('status')
+                ->pluck('count', 'status')->toArray();
+
+            $managementMonthlyStats = [
+                'present' => $mgmtStatsRaw['present'] ?? 0,
+                'late' => $mgmtStatsRaw['late'] ?? 0,
+                'sick' => $mgmtStatsRaw['sick'] ?? 0,
+                'permit' => $mgmtStatsRaw['permit'] ?? 0,
+                'alpha' => $mgmtStatsRaw['alpha'] ?? 0,
+            ];
+
+            // Daily attendance trend for the current month up to today
+            $currentMonth = Carbon::now()->month;
+            $currentYear = Carbon::now()->year;
+            $daysInMonth = Carbon::now()->daysInMonth;
+
+            $dailyRaw = Attendance::whereMonth('date', $currentMonth)
+                ->whereYear('date', $currentYear)
+                ->selectRaw('date, status, count(*) as count')
+                ->groupBy('date', 'status')
+                ->get()
+                ->groupBy(function($item) {
+                    return Carbon::parse($item->date)->format('Y-m-d');
+                });
+
+            for ($d = 1; $d <= $daysInMonth; $d++) {
+                $dt = Carbon::createFromDate($currentYear, $currentMonth, $d);
+                if ($dt->isFuture()) {
+                    break;
+                }
+
+                $dateStr = $dt->toDateString();
+                $dayRecords = $dailyRaw->get($dateStr, collect());
+
+                $pCount = 0;
+                $lCount = 0;
+                $spCount = 0;
+                $aCount = 0;
+
+                foreach ($dayRecords as $rec) {
+                    if ($rec->status === 'present') $pCount += $rec->count;
+                    elseif ($rec->status === 'late') $lCount += $rec->count;
+                    elseif (in_array($rec->status, ['sick', 'permit'])) $spCount += $rec->count;
+                    elseif ($rec->status === 'alpha') $aCount += $rec->count;
+                }
+
+                $dailyTrendStats[] = [
+                    'day' => $dt->format('d M'),
+                    'date' => $dateStr,
+                    'present' => $pCount,
+                    'late' => $lCount,
+                    'sick_permit' => $spCount,
+                    'alpha' => $aCount,
+                    'total' => $pCount + $lCount + $spCount + $aCount,
+                ];
+            }
         }
 
         // Executive Stats - For top level management
@@ -99,10 +179,21 @@ class AttendanceController extends Controller
                 ->limit(3)
                 ->get();
 
+            $mostUnlocked = \Illuminate\Support\Facades\DB::table('attendance_unlocks')
+                ->join('employees', 'attendance_unlocks.employee_id', '=', 'employees.id')
+                ->whereMonth('attendance_unlocks.date', Carbon::now()->month)
+                ->whereYear('attendance_unlocks.date', Carbon::now()->year)
+                ->select('employees.name', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+                ->groupBy('employees.id', 'employees.name')
+                ->orderByDesc('count')
+                ->limit(3)
+                ->get();
+
             $executiveStats = [
                 'dailyOverview' => $dailyOverview,
                 'topPerformers' => $topPerformers,
                 'bottomPerformers' => $bottomPerformers,
+                'mostUnlocked' => $mostUnlocked,
             ];
         }
 
@@ -140,6 +231,48 @@ class AttendanceController extends Controller
             ];
         }
 
+        // Kurikulum stats
+        if ($user->hasAnyRole(['Kurikulum', 'Super Admin', 'Kepala Sekolah'])) {
+            $roleData['openBursaInvalCount'] = \App\Models\SubstituteTeaching::whereNull('substitute_employee_id')->count();
+            $roleData['totalTeachingSchedules'] = \App\Models\TeachingSchedule::count();
+        }
+
+        // Admin Absensi / Monitoring stats
+        if ($user->hasAnyRole(['Absensi', 'Super Admin', 'Kepala Sekolah'])) {
+            $todayCheckedInCount = Attendance::whereDate('date', Carbon::today())->count();
+            $totalActiveEmployees = Employee::where('status', 'active')->count();
+            $roleData['unrecordedTodayCount'] = max(0, $totalActiveEmployees - $todayCheckedInCount);
+            $roleData['todayLatestAttendances'] = Attendance::with('employee')
+                ->whereDate('date', Carbon::today())
+                ->orderBy('check_in', 'desc')
+                ->take(4)
+                ->get()
+                ->map(fn($att) => [
+                    'id' => $att->id,
+                    'employee_name' => $att->employee->name ?? 'Pegawai',
+                    'check_in' => $att->check_in ? Carbon::parse($att->check_in)->format('H:i') : '-',
+                    'status' => $att->status,
+                ]);
+        }
+
+        // Guru stats
+        if ($employee && ($primaryRole === 'Guru' || $user->hasRole('Guru'))) {
+            $roleData['availableInvalOffers'] = \App\Models\SubstituteTeaching::with(['absentEmployee', 'teachingSchedule.schoolClass'])
+                ->whereNull('substitute_employee_id')
+                ->where('absent_employee_id', '!=', $employee->id)
+                ->where('date', '>=', Carbon::today()->toDateString())
+                ->orderBy('date', 'asc')
+                ->take(3)
+                ->get()
+                ->map(fn($sub) => [
+                    'id' => $sub->id,
+                    'date' => Carbon::parse($sub->date)->format('d M Y'),
+                    'absent_name' => $sub->absentEmployee->name ?? 'Guru',
+                    'subject' => $sub->teachingSchedule->subject ?? 'Mapel',
+                    'class_name' => $sub->teachingSchedule->schoolClass->name ?? '-',
+                ]);
+        }
+
         $isGuruMurni = false;
         if ($employee) {
             $employee->load('positions');
@@ -154,15 +287,24 @@ class AttendanceController extends Controller
             'todayHoliday' => $todayHoliday,
             'campusLocations' => $campusLocations,
             'adminStats' => $adminStats,
+            'managementMonthlyStats' => $managementMonthlyStats,
+            'dailyTrendStats' => $dailyTrendStats,
             'executiveStats' => $executiveStats,
             'primaryRole' => $primaryRole,
             'roleData' => $roleData,
             'monthlyStats' => [
-                'present' => $monthlyStatsRaw['present'] ?? 0,
-                'late' => $monthlyStatsRaw['late'] ?? 0,
-                'alpha' => $monthlyStatsRaw['alpha'] ?? 0,
-                'sick' => $monthlyStatsRaw['sick'] ?? 0,
-                'permit' => $monthlyStatsRaw['permit'] ?? 0,
+                'present' => $personalRecap['present'] ?? ($monthlyStatsRaw['present'] ?? 0),
+                'late' => $personalRecap['late'] ?? ($monthlyStatsRaw['late'] ?? 0),
+                'alpha' => $personalRecap['alpha'] ?? ($monthlyStatsRaw['alpha'] ?? 0),
+                'sick' => $personalRecap['sick'] ?? ($monthlyStatsRaw['sick'] ?? 0),
+                'permit' => $personalRecap['permit'] ?? ($monthlyStatsRaw['permit'] ?? 0),
+                'jtm_scheduled' => $personalRecap['jtm_scheduled'] ?? 0,
+                'jtm_present' => $personalRecap['jtm_present'] ?? 0,
+                'jtm_inval' => $personalRecap['jtm_inval'] ?? 0,
+                'jtm_permit' => $personalRecap['jtm_permit'] ?? 0,
+                'jtm_holiday' => $personalRecap['jtm_holiday'] ?? 0,
+                'jtm_absent' => $personalRecap['jtm_absent'] ?? 0,
+                'has_jtm' => ($personalRecap['jtm_scheduled'] ?? 0) > 0,
             ],
         ]);
     }
@@ -197,54 +339,75 @@ class AttendanceController extends Controller
         // ── Holiday Check ──
         $todayHoliday = \App\Models\Holiday::where('date', $today->toDateString())->first();
         if ($todayHoliday) {
-            return back()->withErrors(['message' => "Hari ini adalah Hari Libur ({$todayHoliday->name}). Presensi tidak dapat dilakukan."]);
+            return back()->withErrors(['message' => "Hari ini adalah Hari Libur ({$todayHoliday->description}). Presensi tidak dapat dilakukan."]);
         }
+
+        $onDinasLuar = \App\Models\LeaveRequest::where('employee_id', $employee->id)
+            ->where('type', 'izin_dinas_luar')
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->where(function ($query) use ($now) {
+                $query->where('duration_type', 'full_day')
+                    ->orWhere(function ($q) use ($now) {
+                        $currentTime = $now->toTimeString();
+                        $q->where('duration_type', 'partial')
+                          ->where('start_time', '<=', $currentTime)
+                          ->where('end_time', '>=', $currentTime);
+                    });
+            })
+            ->exists();
 
         // ── Geofencing ──
-        $campus = CampusLocation::findOrFail($request->campus_location_id);
-        $distance = $this->haversineDistance(
-            $request->latitude, $request->longitude,
-            (float)$campus->latitude, (float)$campus->longitude
-        );
+        if (!$onDinasLuar) {
+            $campus = CampusLocation::findOrFail($request->campus_location_id);
+            $distance = $this->haversineDistance(
+                $request->latitude, $request->longitude,
+                (float)$campus->latitude, (float)$campus->longitude
+            );
 
-        if ($distance > $campus->radius) {
-            return back()->withErrors(['message' => "Lokasi Anda berada di luar radius {$campus->name} (" . round($distance) . "m dari pusat, batas {$campus->radius}m). Presensi ditolak."]);
-        }
-
-        // ── Time blocking ──
-        $settings = \App\Models\SystemSetting::pluck('value', 'key');
-        $batasTerlambatMenit = (int)($settings['batas_waktu_maksimal_terlambat'] ?? 10);
-        $jamMasukSetting = $settings['jam_masuk'] ?? '07:00';
-        $jamMasuk = Carbon::createFromFormat('H:i', $jamMasukSetting);
-        $jamBatas = $jamMasuk->copy()->addMinutes($batasTerlambatMenit);
-        $batasAwal = $jamMasuk->copy()->subMinutes(10); // Batas awal 10 menit sebelum jam masuk
-
-        if ($now->lt($batasAwal)) {
-            return back()->withErrors(['message' => "Belum waktunya presensi masuk. Presensi baru dibuka pada pukul " . $batasAwal->format('H:i')]);
+            if ($distance > $campus->radius) {
+                return back()->withErrors(['message' => "Lokasi Anda berada di luar radius {$campus->name} (" . round($distance) . "m dari pusat, batas {$campus->radius}m). Presensi ditolak."]);
+            }
         }
 
         $status = 'present';
 
-        if ($now->gt($jamBatas)) {
-            // Check for unlock token
-            $unlock = \App\Models\AttendanceUnlock::where('employee_id', $employee->id)
-                ->whereDate('date', $today)
-                ->where('type', 'daily_checkin')
-                ->where('used', false)
-                ->where(function ($query) use ($now) {
-                    $query->whereNull('expires_at')->orWhere('expires_at', '>=', $now);
-                })
-                ->first();
+        if (!$onDinasLuar) {
+            // ── Time blocking ──
+            $settings = \App\Models\SystemSetting::pluck('value', 'key');
+            $batasTerlambatMenit = (int)($settings['batas_waktu_maksimal_terlambat'] ?? 10);
+            $jamMasukSetting = $settings['jam_masuk'] ?? '07:00';
+            $jamMasuk = Carbon::createFromFormat('H:i', $jamMasukSetting);
+            $jamBatas = $jamMasuk->copy()->addMinutes($batasTerlambatMenit);
+            $bufferPresensiMasuk = (int)($settings['buffer_presensi_masuk'] ?? 10);
+            $batasAwal = $jamMasuk->copy()->subMinutes($bufferPresensiMasuk);
 
-            if (!$unlock) {
-                return back()->withErrors(['message' => "Batas presensi masuk ({$jamMasukSetting} + {$batasTerlambatMenit} menit) telah terlewat. Hubungi Admin Presensi/Kurikulum untuk membuka akses."]);
+            if ($now->lt($batasAwal)) {
+                return back()->withErrors(['message' => "Belum waktunya presensi masuk. Presensi baru dibuka pada pukul " . $batasAwal->format('H:i')]);
             }
 
-            // Mark unlock as used
-            $unlock->update(['used' => true]);
-            $status = 'late';
-        } elseif ($now->gt($jamMasuk)) {
-            $status = 'late';
+            if ($now->gt($jamBatas)) {
+                // Check for unlock token
+                $unlock = \App\Models\AttendanceUnlock::where('employee_id', $employee->id)
+                    ->whereDate('date', $today)
+                    ->where('type', 'daily_checkin')
+                    ->where('used', false)
+                    ->where(function ($query) use ($now) {
+                        $query->whereNull('expires_at')->orWhere('expires_at', '>=', $now);
+                    })
+                    ->first();
+
+                if (!$unlock) {
+                    return back()->withErrors(['message' => "Batas presensi masuk ({$jamMasukSetting} + {$batasTerlambatMenit} menit) telah terlewat. Hubungi Admin Presensi/Kurikulum untuk membuka akses."]);
+                }
+
+                // Mark unlock as used
+                $unlock->update(['used' => true]);
+                $status = $unlock->is_lateness_violation ? 'late' : 'present';
+            } elseif ($now->gt($jamMasuk)) {
+                $status = 'late';
+            }
         }
 
         $photoPath = null;
@@ -277,6 +440,7 @@ class AttendanceController extends Controller
             'campus_location_id' => $request->campus_location_id,
             'photo_check_in' => $photoPath,
             'status' => $status,
+            'is_dinas_luar' => $onDinasLuar,
         ]);
 
         $msg = $status === 'late' ? 'Presensi masuk berhasil (Terlambat).' : 'Presensi masuk berhasil!';
@@ -306,49 +470,78 @@ class AttendanceController extends Controller
         // ── Holiday Check ──
         $todayHoliday = \App\Models\Holiday::where('date', Carbon::today()->toDateString())->first();
         if ($todayHoliday) {
-            return back()->withErrors(['message' => "Hari ini adalah Hari Libur ({$todayHoliday->name}). Presensi tidak dapat dilakukan."]);
+            return back()->withErrors(['message' => "Hari ini adalah Hari Libur ({$todayHoliday->description}). Presensi tidak dapat dilakukan."]);
         }
+
+        $onDinasLuar = \App\Models\LeaveRequest::where('employee_id', $employee->id)
+            ->where('type', 'izin_dinas_luar')
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', Carbon::today())
+            ->whereDate('end_date', '>=', Carbon::today())
+            ->where(function ($query) {
+                $now = Carbon::now();
+                $query->where('duration_type', 'full_day')
+                    ->orWhere(function ($q) use ($now) {
+                        $currentTime = $now->toTimeString();
+                        $q->where('duration_type', 'partial')
+                          ->where('start_time', '<=', $currentTime)
+                          ->where('end_time', '>=', $currentTime);
+                    });
+            })
+            ->exists();
 
         // ── Geofencing ──
-        $campus = CampusLocation::findOrFail($request->campus_location_id);
-        $distance = $this->haversineDistance(
-            $request->latitude, $request->longitude,
-            (float)$campus->latitude, (float)$campus->longitude
-        );
+        if (!$onDinasLuar) {
+            $campus = CampusLocation::findOrFail($request->campus_location_id);
+            $distance = $this->haversineDistance(
+                $request->latitude, $request->longitude,
+                (float)$campus->latitude, (float)$campus->longitude
+            );
 
-        if ($distance > $campus->radius) {
-            return back()->withErrors(['message' => "Lokasi Anda berada di luar radius {$campus->name} (" . round($distance) . "m dari pusat, batas {$campus->radius}m). Presensi ditolak."]);
+            if ($distance > $campus->radius) {
+                return back()->withErrors(['message' => "Lokasi Anda berada di luar radius {$campus->name} (" . round($distance) . "m dari pusat, batas {$campus->radius}m). Presensi ditolak."]);
+            }
         }
 
-        // Validasi jam pulang
-        $settings = \App\Models\SystemSetting::pluck('value', 'key');
-        $jamKeluarSetting = $settings['jam_keluar'] ?? '14:40';
-        $jamKeluar = Carbon::createFromFormat('H:i', $jamKeluarSetting);
-        $batasTerlambatMenit = (int)($settings['batas_waktu_maksimal_terlambat'] ?? 10);
-        $jamBatas = $jamKeluar->copy()->addMinutes($batasTerlambatMenit);
-        $now = Carbon::now();
+        if (!$onDinasLuar) {
+            // Validasi jam pulang
+            $settings = \App\Models\SystemSetting::pluck('value', 'key');
+            $jamKeluarSetting = $settings['jam_keluar'] ?? '14:40';
+            $jamKeluar = Carbon::createFromFormat('H:i', $jamKeluarSetting);
+            $bufferPresensiKeluar = (int)($settings['buffer_presensi_keluar'] ?? 10);
+            $jamBatas = $jamKeluar->copy()->addMinutes($bufferPresensiKeluar);
+            $now = Carbon::now();
 
-        if ($now->lt($jamKeluar)) {
-            return back()->withErrors(['message' => 'Belum waktunya jam pulang. Jam keluar adalah ' . $jamKeluarSetting]);
-        }
+            $todayStr = Carbon::today()->toDateString();
+            $hasIzinPulangCepat = \App\Models\LeaveRequest::where('employee_id', $employee->id)
+                ->where('status', 'approved')
+                ->where('type', 'izin_pulang_cepat')
+                ->whereDate('start_date', '<=', $todayStr)
+                ->whereDate('end_date', '>=', $todayStr)
+                ->exists();
 
-        if ($now->gt($jamBatas)) {
-            // Check for unlock token
-            $unlock = \App\Models\AttendanceUnlock::where('employee_id', $employee->id)
-                ->whereDate('date', Carbon::today())
-                ->where('type', 'daily_checkout')
-                ->where('used', false)
-                ->where(function ($query) use ($now) {
-                    $query->whereNull('expires_at')->orWhere('expires_at', '>=', $now);
-                })
-                ->first();
-
-            if (!$unlock) {
-                return back()->withErrors(['message' => "Batas presensi keluar ({$jamKeluarSetting} + {$batasTerlambatMenit} menit) telah terlewat. Hubungi Admin Presensi/Kurikulum untuk membuka akses."]);
+            if ($now->lt($jamKeluar) && !$hasIzinPulangCepat) {
+                return back()->withErrors(['message' => 'Belum waktunya jam pulang. Jam keluar adalah ' . $jamKeluarSetting]);
             }
 
-            // Mark unlock as used
-            $unlock->update(['used' => true]);
+            if ($now->gt($jamBatas)) {
+                // Check for unlock token
+                $unlock = \App\Models\AttendanceUnlock::where('employee_id', $employee->id)
+                    ->whereDate('date', Carbon::today())
+                    ->where('type', 'daily_checkout')
+                    ->where('used', false)
+                    ->where(function ($query) use ($now) {
+                        $query->whereNull('expires_at')->orWhere('expires_at', '>=', $now);
+                    })
+                    ->first();
+
+                if (!$unlock) {
+                    return back()->withErrors(['message' => "Batas presensi keluar ({$jamKeluarSetting} + {$bufferPresensiKeluar} menit) telah terlewat. Hubungi Admin Presensi/Kurikulum untuk membuka akses."]);
+                }
+
+                // Mark unlock as used
+                $unlock->update(['used' => true]);
+            }
         }
 
         $photoPath = $attendance->photo_check_out;
@@ -377,6 +570,7 @@ class AttendanceController extends Controller
         $attendance->update([
             'check_out' => Carbon::now()->toTimeString(),
             'photo_check_out' => $photoPath,
+            'is_dinas_luar' => $attendance->is_dinas_luar || $onDinasLuar,
         ]);
 
         return back()->with(['message' => 'Presensi keluar berhasil!']);
@@ -578,143 +772,21 @@ class AttendanceController extends Controller
 
     public function recap(Request $request)
     {
-        $month = $request->input('month', Carbon::now()->month);
-        $year = $request->input('year', Carbon::now()->year);
-        $roleFilter = $request->input('role', 'all'); // 'all', 'Guru', 'Staff'
+        $month = (int) $request->input('month', Carbon::now()->month);
+        $year = (int) $request->input('year', Carbon::now()->year);
+        $roleFilter = $request->input('role', 'all');
 
-        $query = Employee::with(['positions', 'user.roles'])->where('status', 'active');
-        $employees = $query->get();
-
-        if ($roleFilter === 'Guru') {
-            $employees = $employees->filter(function($emp) {
-                return $emp->teachingSchedules()->exists();
-            });
-        } elseif ($roleFilter === 'Staff') {
-            $employees = $employees->filter(function($emp) {
-                return !$emp->teachingSchedules()->exists();
-            });
-        }
-
-        // Calculate recap
-        $recap = [];
-        $totalStats = [
-            'present' => 0,
-            'late' => 0,
-            'permit' => 0,
-            'sick' => 0,
-            'alpha' => 0
-        ];
-
-        // Get working days (weekdays minus holidays)
-        $daysInMonth = Carbon::create($year, $month, 1)->daysInMonth;
-        $workingDaysDates = [];
-        $holidays = \App\Models\Holiday::whereMonth('date', $month)->whereYear('date', $year)->pluck('date')->map(fn($d) => Carbon::parse($d)->format('Y-m-d'))->toArray();
-
-        $validHolidayCount = 0;
-        foreach ($holidays as $hDate) {
-            if (Carbon::parse($hDate)->isWeekday()) {
-                $validHolidayCount++;
-            }
-        }
-
-        for ($i = 1; $i <= $daysInMonth; $i++) {
-            $date = Carbon::create($year, $month, $i);
-            // Assuming Monday-Friday workweek. If Saturday is included, adjust here.
-            // Some schools work Saturday. Let's assume Mon-Sat or Mon-Fri? We'll assume Mon-Fri for typical.
-            // But wait, the system has teaching schedules on Saturday?
-            // "if ($todayDow >= 1 && $todayDow <= 5)" in PresensiController means Mon-Fri! So working days are Mon-Fri.
-            if ($date->isWeekday()) {
-                if (!in_array($date->format('Y-m-d'), $holidays)) {
-                    $workingDaysDates[] = $date->format('Y-m-d');
-                }
-            }
-        }
-
-        foreach ($employees as $emp) {
-            $attendances = Attendance::where('employee_id', $emp->id)
-                ->whereMonth('date', $month)
-                ->whereYear('date', $year)
-                ->get()
-                ->keyBy(fn($a) => Carbon::parse($a->date)->format('Y-m-d'));
-            
-            $leaves = \App\Models\LeaveRequest::where('employee_id', $emp->id)
-                ->where('status', 'approved')
-                ->where(function ($q) use ($month, $year) {
-                    $q->whereMonth('start_date', $month)->whereYear('start_date', $year)
-                      ->orWhereMonth('end_date', $month)->whereYear('end_date', $year);
-                })->get();
-
-            $presentCount = 0;
-            $lateCount = 0;
-            $permitCount = 0;
-            $sickCount = 0;
-            $alphaCount = 0;
-            $teaching_hours = $attendances->sum('teaching_hours');
-
-            // Count valid holidays as present for payroll calculation
-            $holidayCount = $validHolidayCount;
-
-            // Only evaluate attendance against working days
-            foreach ($workingDaysDates as $wDate) {
-                if ($attendances->has($wDate)) {
-                    $att = $attendances->get($wDate);
-                    if ($att->status === 'present') $presentCount++;
-                    elseif ($att->status === 'late') $lateCount++;
-                    elseif ($att->status === 'alpha') $alphaCount++;
-                    elseif ($att->status === 'permit') $permitCount++;
-                    elseif ($att->status === 'sick') $sickCount++;
-                } else {
-                    // Check if on leave
-                    $onLeave = false;
-                    foreach ($leaves as $leave) {
-                        $start = Carbon::parse($leave->start_date);
-                        $end = Carbon::parse($leave->end_date);
-                        $current = Carbon::parse($wDate);
-                        if ($current->betweenIncluded($start, $end)) {
-                            $onLeave = true;
-                            if ($leave->type === 'Sakit' || $leave->type === 'sakit') $sickCount++;
-                            else $permitCount++;
-                            break;
-                        }
-                    }
-                    if (!$onLeave) {
-                        $alphaCount++;
-                    }
-                }
-            }
-
-            $recap[] = [
-                'id' => $emp->id,
-                'name' => $emp->name,
-                'nik' => $emp->nik ?? $emp->nip,
-                'photo_path' => $emp->photo_path,
-                'position' => $emp->positions->where('pivot.is_primary', true)->first()?->name ?? ($emp->positions->first()?->name ?? '-'),
-                'position_names' => $emp->positions->pluck('name')->toArray(),
-                'is_guru' => $emp->teachingSchedules()->exists(),
-                'present' => $presentCount + $holidayCount,
-                'late' => $lateCount,
-                'permit' => $permitCount,
-                'sick' => $sickCount,
-                'alpha' => $alphaCount,
-                'teaching_hours' => $teaching_hours,
-                'holiday_count' => $holidayCount,
-            ];
-
-            $totalStats['present'] += $presentCount + $holidayCount;
-            $totalStats['late'] += $lateCount;
-            $totalStats['permit'] += $permitCount;
-            $totalStats['sick'] += $sickCount;
-            $totalStats['alpha'] += $alphaCount;
-        }
+        $result = AttendanceRecapService::getMonthlyRecap($month, $year, $roleFilter);
 
         return Inertia::render('Monitoring/Recap', [
-            'recapData' => collect($recap)->sortBy('name')->values()->all(),
-            'totalStats' => $totalStats,
+            'recapData' => $result['recapData'],
+            'totalStats' => $result['totalStats'],
             'filters' => [
                 'month' => $month,
                 'year' => $year,
                 'role' => $roleFilter,
-            ]
+            ],
+            'periodLabel' => $result['periodLabel'],
         ]);
     }
 
@@ -735,122 +807,24 @@ class AttendanceController extends Controller
 
     public function exportPdf(Request $request)
     {
-        $month = $request->input('month', Carbon::now()->month);
-        $year = $request->input('year', Carbon::now()->year);
+        $month = (int) $request->input('month', Carbon::now()->month);
+        $year = (int) $request->input('year', Carbon::now()->year);
         $roleFilter = $request->input('role', 'all');
 
-        $employees = Employee::with(['positions', 'user.roles'])->where('status', 'active')->get();
+        $result = AttendanceRecapService::getMonthlyRecap($month, $year, $roleFilter);
 
-        if ($roleFilter === 'Guru') {
-            $employees = $employees->filter(fn($emp) => $emp->teachingSchedules()->exists());
-        } elseif ($roleFilter === 'Staff') {
-            $employees = $employees->filter(fn($emp) => !$emp->teachingSchedules()->exists());
-        }
-
-        // Get working days
-        $daysInMonth = Carbon::create($year, $month, 1)->daysInMonth;
-        $workingDaysDates = [];
-        $holidays = \App\Models\Holiday::whereMonth('date', $month)->whereYear('date', $year)->pluck('date')->map(fn($d) => Carbon::parse($d)->format('Y-m-d'))->toArray();
-
-        $validHolidayCount = 0;
-        foreach ($holidays as $hDate) {
-            if (Carbon::parse($hDate)->isWeekday()) {
-                $validHolidayCount++;
-            }
-        }
-
-        for ($i = 1; $i <= $daysInMonth; $i++) {
-            $date = Carbon::create($year, $month, $i);
-            if ($date->isWeekday()) {
-                if (!in_array($date->format('Y-m-d'), $holidays)) {
-                    $workingDaysDates[] = $date->format('Y-m-d');
-                }
-            }
-        }
-
-        $recapData = [];
-        $stats = ['present' => 0, 'late' => 0, 'permit' => 0, 'sick' => 0, 'alpha' => 0];
-
-        foreach ($employees->sortBy('name') as $emp) {
-            $attendances = Attendance::where('employee_id', $emp->id)
-                ->whereMonth('date', $month)
-                ->whereYear('date', $year)
-                ->get()
-                ->keyBy(fn($a) => Carbon::parse($a->date)->format('Y-m-d'));
-
-            $leaves = \App\Models\LeaveRequest::where('employee_id', $emp->id)
-                ->where('status', 'approved')
-                ->where(function ($q) use ($month, $year) {
-                    $q->whereMonth('start_date', $month)->whereYear('start_date', $year)
-                      ->orWhereMonth('end_date', $month)->whereYear('end_date', $year);
-                })->get();
-
-            $presentCount = 0;
-            $lateCount = 0;
-            $permitCount = 0;
-            $sickCount = 0;
-            $alphaCount = 0;
-            $holidayCount = $validHolidayCount;
-
-            foreach ($workingDaysDates as $wDate) {
-                if ($attendances->has($wDate)) {
-                    $att = $attendances->get($wDate);
-                    if ($att->status === 'present') $presentCount++;
-                    elseif ($att->status === 'late') $lateCount++;
-                    elseif ($att->status === 'alpha') $alphaCount++;
-                    elseif ($att->status === 'permit') $permitCount++;
-                    elseif ($att->status === 'sick') $sickCount++;
-                } else {
-                    $onLeave = false;
-                    foreach ($leaves as $leave) {
-                        $start = Carbon::parse($leave->start_date);
-                        $end = Carbon::parse($leave->end_date);
-                        $current = Carbon::parse($wDate);
-                        if ($current->betweenIncluded($start, $end)) {
-                            $onLeave = true;
-                            if ($leave->type === 'Sakit' || $leave->type === 'sakit') $sickCount++;
-                            else $permitCount++;
-                            break;
-                        }
-                    }
-                    if (!$onLeave) {
-                        $alphaCount++;
-                    }
-                }
-            }
-
-            $recapData[] = [
-                'nik' => $emp->nik ?? $emp->nip,
-                'name' => $emp->name,
-                'position' => $emp->positions->where('pivot.is_primary', true)->first()?->name ?? ($emp->positions->first()?->name ?? '-'),
-                'present' => $presentCount + $holidayCount,
-                'late' => $lateCount,
-                'permit' => $permitCount,
-                'sick' => $sickCount,
-                'alpha' => $alphaCount,
-                'teaching_hours' => $attendances->sum('teaching_hours'),
-            ];
-
-            $stats['present'] += $presentCount + $holidayCount;
-            $stats['late'] += $lateCount;
-            $stats['permit'] += $permitCount;
-            $stats['sick'] += $sickCount;
-            $stats['alpha'] += $alphaCount;
-        }
-
-        $months = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-        $monthName = $months[$month];
+        $recapData = $result['recapData'];
+        $stats = $result['totalStats'];
+        $monthName = $result['monthName'];
+        $periodLabel = $result['periodLabel'];
         $printDate = Carbon::now()->translatedFormat('d F Y, H:i');
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.attendance-recap', compact('recapData', 'stats', 'monthName', 'year', 'printDate'));
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.attendance-recap', compact('recapData', 'stats', 'monthName', 'year', 'printDate', 'periodLabel'));
         $pdf->setPaper('A4', 'landscape');
 
         return $pdf->download("Rekap_Presensi_{$monthName}_{$year}.pdf");
     }
 
-    /**
-     * Unlock attendance for a blocked employee (Admin Presensi/Kurikulum).
-     */
     public function unlockAttendance(Request $request)
     {
         $request->validate([
@@ -859,15 +833,20 @@ class AttendanceController extends Controller
             'teaching_schedule_id' => 'nullable|exists:teaching_schedules,id',
             'reason' => 'nullable|string|max:500',
             'expires_in_minutes' => 'required|integer|in:15,30,60',
+            'is_lateness_violation' => 'nullable|boolean',
         ]);
 
         $today = Carbon::today();
+        $now = Carbon::now();
 
-        // Check if unlock already exists
+        // Check if active (non-expired and unused) unlock already exists
         $query = \App\Models\AttendanceUnlock::where('employee_id', $request->employee_id)
             ->whereDate('date', $today)
             ->where('type', $request->type)
-            ->where('used', false);
+            ->where('used', false)
+            ->where(function ($q) use ($now) {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>=', $now);
+            });
 
         if ($request->type === 'teaching' && $request->teaching_schedule_id) {
             $query->where('teaching_schedule_id', $request->teaching_schedule_id);
@@ -884,6 +863,7 @@ class AttendanceController extends Controller
             'teaching_schedule_id' => $request->teaching_schedule_id,
             'unlocked_by' => Auth::id(),
             'reason' => $request->reason,
+            'is_lateness_violation' => $request->has('is_lateness_violation') ? (bool)$request->is_lateness_violation : true,
             'expires_at' => Carbon::now()->addMinutes((int) $request->expires_in_minutes),
         ]);
 

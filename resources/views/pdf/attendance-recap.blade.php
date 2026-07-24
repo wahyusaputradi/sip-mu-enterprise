@@ -58,7 +58,7 @@
     <div class="header">
         <h1>SMK MANBAUL ULUM CIREBON</h1>
         <h2>Rekapitulasi Presensi Bulanan</h2>
-        <p>Periode: {{ $monthName }} {{ $year }} &mdash; Dicetak pada {{ $printDate }}</p>
+        <p>Periode: {{ $periodLabel }} &mdash; Dicetak pada {{ $printDate }}</p>
     </div>
 
     <div class="stats-row">
@@ -106,7 +106,7 @@
                 <th>Izin</th>
                 <th>Sakit</th>
                 <th>Alpha</th>
-                <th>Jam Ajar</th>
+                <th>Rincian JTM (H/I/Iv/L/A/T)</th>
             </tr>
         </thead>
         <tbody>
@@ -121,11 +121,15 @@
                 <td><span class="badge badge-izin">{{ $item['permit'] }}</span></td>
                 <td><span class="badge badge-sakit">{{ $item['sick'] }}</span></td>
                 <td><span class="badge badge-alpa">{{ $item['alpha'] }}</span></td>
-                <td>{{ $item['teaching_hours'] }}</td>
+                <td>{{ $item['is_guru'] ? "{$item['jtm_effective']} (X:{$item['jtm_effective_10']}, XI:{$item['jtm_effective_11']}, XII:{$item['jtm_effective_12']}) / {$item['jtm_permit']} / {$item['jtm_inval']} / {$item['jtm_holiday']} / {$item['jtm_absent']} / {$item['jtm_scheduled']}" : '—' }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
+
+    <div style="margin-top: 8px; font-size: 8px; color: #64748b; font-weight: 600;">
+        * Keterangan Rincian JTM (H/I/Iv/L/A/T): H = Hadir (Efektif, rincian per kelas X/XI/XII dalam kurung), I = Izin/Sakit/Cuti, Iv = Inval (Pengganti), L = Libur Sekolah/Tanggal Merah, A = Alpha, T = Terjadwal (Total)
+    </div>
 
     <div class="footer">
         <div class="footer-left">

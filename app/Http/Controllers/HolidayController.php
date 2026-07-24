@@ -9,12 +9,42 @@ class HolidayController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'date' => 'required|date|unique:holidays,date',
+            'mode' => 'required|in:single,range',
             'description' => 'required|string|max:255',
             'is_national_holiday' => 'required|boolean',
+            'date' => 'required_if:mode,single|nullable|date',
+            'start_date' => 'required_if:mode,range|nullable|date',
+            'end_date' => 'required_if:mode,range|nullable|date|after_or_equal:start_date',
         ]);
 
-        \App\Models\Holiday::create($request->all());
+        $isNational = (bool) $request->is_national_holiday;
+        $desc = $request->description;
+
+        if ($request->mode === 'single') {
+            $date = \Carbon\Carbon::parse($request->date);
+            \App\Models\Holiday::updateOrCreate(
+                ['date' => $date],
+                [
+                    'description' => $desc,
+                    'is_national_holiday' => $isNational
+                ]
+            );
+        } else {
+            $start = \Carbon\Carbon::parse($request->start_date);
+            $end = \Carbon\Carbon::parse($request->end_date);
+
+            $current = $start->copy();
+            while ($current->lte($end)) {
+                \App\Models\Holiday::updateOrCreate(
+                    ['date' => $current->copy()],
+                    [
+                        'description' => $desc,
+                        'is_national_holiday' => $isNational
+                    ]
+                );
+                $current->addDay();
+            }
+        }
 
         return back()->with('message', 'Hari libur berhasil ditambahkan.');
     }
@@ -37,5 +67,17 @@ class HolidayController extends Controller
         $holiday->delete();
 
         return back()->with('message', 'Hari libur berhasil dihapus.');
+    }
+
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:holidays,id',
+        ]);
+
+        \App\Models\Holiday::whereIn('id', $request->ids)->delete();
+
+        return back()->with('message', 'Hari libur terpilih berhasil dihapus.');
     }
 }

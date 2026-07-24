@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Edit2, Trash2, School, AlertCircle, Sparkles, Search, Download, Upload, FileSpreadsheet } from 'lucide-react';
+import { Plus, Edit2, Trash2, School, AlertCircle, Sparkles, Search, Download, Upload, FileSpreadsheet, CheckSquare, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Classes({ classes, teachers }) {
@@ -17,6 +17,8 @@ export default function Classes({ classes, teachers }) {
     const [selected, setSelected] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [checkedIds, setCheckedIds] = useState([]);
+    const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
     const itemsPerPage = 50;
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
@@ -54,6 +56,26 @@ export default function Classes({ classes, teachers }) {
 
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
     const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    
+    const allChecked = paginated.length > 0 && paginated.every(c => checkedIds.includes(c.id));
+    const toggleAll = () => {
+        if (allChecked) {
+            setCheckedIds(prev => prev.filter(id => !paginated.find(c => c.id === id)));
+        } else {
+            const newIds = [...checkedIds];
+            paginated.forEach(c => {
+                if (!newIds.includes(c.id)) newIds.push(c.id);
+            });
+            setCheckedIds(newIds);
+        }
+    };
+    const toggleOne = (id) => setCheckedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+    const handleBulkDelete = () => {
+        router.post(route('school-classes.bulk-destroy'), { ids: checkedIds }, {
+            onSuccess: () => { setIsBulkDeleteOpen(false); setCheckedIds([]); }
+        });
+    };
 
     const openCreate = () => { clearErrors(); reset(); setIsEditMode(false); setIsFormOpen(true); };
     const openEdit = (cls) => {
@@ -104,6 +126,11 @@ export default function Classes({ classes, teachers }) {
                         <Button onClick={handleImportClick} className="bg-white border-2 border-indigo-600 text-indigo-700 hover:bg-indigo-50 font-bold h-11 rounded-xl shadow-sm transition-all">
                             <Upload className="w-4 h-4 mr-2" /> Import
                         </Button>
+                        {checkedIds.length > 0 && (
+                            <Button onClick={() => setIsBulkDeleteOpen(true)} variant="outline" className="rounded-xl border-rose-200 text-rose-600 font-bold hover:bg-rose-50 h-11">
+                                <Trash2 className="w-4 h-4 mr-2" /> Hapus ({checkedIds.length})
+                            </Button>
+                        )}
                         <Button onClick={openCreate} className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold h-11 rounded-xl shadow-lg hover:-translate-y-0.5 transition-all">
                             <Plus className="w-5 h-5 sm:mr-2" /><span className="hidden sm:inline">Tambah Kelas</span>
                         </Button>
@@ -128,6 +155,11 @@ export default function Classes({ classes, teachers }) {
                             <Table>
                                 <TableHeader className="bg-slate-50/50 border-b border-slate-100">
                                     <TableRow className="hover:bg-transparent">
+                                        <TableHead className="w-12 px-4 text-center">
+                                            <button onClick={toggleAll} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                                                {allChecked ? <CheckSquare className="w-5 h-5 text-indigo-600" /> : <Square className="w-5 h-5" />}
+                                            </button>
+                                        </TableHead>
                                         <TableHead className="font-black text-slate-900 py-5 px-6">Nama Kelas</TableHead>
                                         <TableHead className="font-black text-slate-900">Wali Kelas</TableHead>
                                         <TableHead className="font-black text-slate-900">Tingkat</TableHead>
@@ -137,42 +169,50 @@ export default function Classes({ classes, teachers }) {
                                 </TableHeader>
                                 <TableBody>
                                     <AnimatePresence>
-                                        {paginated.map((cls) => (
-                                            <motion.tr key={cls.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                                                className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50/50">
-                                                <TableCell className="px-6 py-4">
-                                                    <div className="flex items-center space-x-3">
-                                                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-black">
-                                                            <School className="w-4 h-4" />
+                                        {paginated.map((cls) => {
+                                            const isChecked = checkedIds.includes(cls.id);
+                                            return (
+                                                <motion.tr key={cls.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                                    className={`group hover:bg-slate-50/50 transition-colors border-b border-slate-50/50 ${isChecked ? 'bg-indigo-50/40' : ''}`}>
+                                                    <TableCell className="px-4 text-center">
+                                                        <button onClick={() => toggleOne(cls.id)} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                                                            {isChecked ? <CheckSquare className="w-5 h-5 text-indigo-600" /> : <Square className="w-5 h-5" />}
+                                                        </button>
+                                                    </TableCell>
+                                                    <TableCell className="px-6 py-4">
+                                                        <div className="flex items-center space-x-3">
+                                                            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-black">
+                                                                <School className="w-4 h-4" />
+                                                            </div>
+                                                            <span className="font-bold text-slate-900">{cls.name}</span>
                                                         </div>
-                                                        <span className="font-bold text-slate-900">{cls.name}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {cls.homeroom_teacher ? (
-                                                        <span className="font-bold text-slate-700">{cls.homeroom_teacher.name}</span>
-                                                    ) : <span className="text-slate-300">—</span>}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {cls.level ? (
-                                                        <span className="font-bold text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-lg border border-blue-100">{cls.level}</span>
-                                                    ) : <span className="text-slate-300">—</span>}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {cls.major ? (
-                                                        <span className="font-bold text-sm bg-purple-50 text-purple-700 px-3 py-1 rounded-lg border border-purple-100">{cls.major}</span>
-                                                    ) : <span className="text-slate-300">—</span>}
-                                                </TableCell>
-                                                <TableCell className="px-6 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <Button onClick={() => openEdit(cls)} variant="outline" size="icon" className="h-8 w-8 rounded-xl border-slate-200 hover:bg-indigo-50 hover:text-indigo-600"><Edit2 className="w-4 h-4" /></Button>
-                                                        <Button onClick={() => openDelete(cls)} variant="outline" size="icon" className="h-8 w-8 rounded-xl border-slate-200 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="w-4 h-4" /></Button>
-                                                    </div>
-                                                </TableCell>
-                                            </motion.tr>
-                                        ))}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {cls.homeroom_teacher ? (
+                                                            <span className="font-bold text-slate-700">{cls.homeroom_teacher.name}</span>
+                                                        ) : <span className="text-slate-300">—</span>}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {cls.level ? (
+                                                            <span className="font-bold text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-lg border border-blue-100">{cls.level}</span>
+                                                        ) : <span className="text-slate-300">—</span>}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {cls.major ? (
+                                                            <span className="font-bold text-sm bg-purple-50 text-purple-700 px-3 py-1 rounded-lg border border-purple-100">{cls.major}</span>
+                                                        ) : <span className="text-slate-300">—</span>}
+                                                    </TableCell>
+                                                    <TableCell className="px-6 text-right">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <Button onClick={() => openEdit(cls)} variant="outline" size="icon" className="h-8 w-8 rounded-xl border-slate-200 hover:bg-indigo-50 hover:text-indigo-600"><Edit2 className="w-4 h-4" /></Button>
+                                                            <Button onClick={() => openDelete(cls)} variant="outline" size="icon" className="h-8 w-8 rounded-xl border-slate-200 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="w-4 h-4" /></Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </motion.tr>
+                                            );
+                                        })}
                                         {filtered.length === 0 && (
-                                            <TableRow><TableCell colSpan={4} className="text-center py-16">
+                                            <TableRow><TableCell colSpan={6} className="text-center py-16">
                                                 <div className="flex flex-col items-center text-slate-400">
                                                     <School className="w-12 h-12 mb-3 text-slate-200" />
                                                     <p className="font-bold text-slate-500">Belum ada data kelas</p>
@@ -279,6 +319,25 @@ export default function Classes({ classes, teachers }) {
                     <div className="flex flex-col gap-3">
                         <Button onClick={handleDelete} disabled={processing} className="w-full rounded-xl font-bold h-12 bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200">Ya, Hapus</Button>
                         <Button variant="outline" onClick={() => setIsDeleteOpen(false)} className="w-full rounded-xl font-bold h-12 border-slate-200">Batal</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Bulk Delete Modal */}
+            <Dialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+                <DialogContent className="max-w-sm rounded-[2rem] p-8 text-center border-none shadow-2xl">
+                    <div className="mx-auto w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mb-5">
+                        <Trash2 className="w-8 h-8 text-rose-600" />
+                    </div>
+                    <DialogTitle className="text-xl font-black text-slate-900 mb-2">Hapus {checkedIds.length} Kelas?</DialogTitle>
+                    <DialogDescription className="text-slate-500 font-medium mb-6">
+                        Kelas yang masih memiliki jadwal mengajar aktif akan dilindungi secara otomatis dan tidak akan terhapus.
+                    </DialogDescription>
+                    <div className="flex flex-col gap-3">
+                        <Button onClick={handleBulkDelete} disabled={processing} className="w-full rounded-xl font-bold h-12 bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200">
+                            {processing ? 'Menghapus...' : 'Ya, Hapus Semua'}
+                        </Button>
+                        <Button variant="outline" onClick={() => setIsBulkDeleteOpen(false)} className="w-full rounded-xl font-bold h-12 border-slate-200">Batal</Button>
                     </div>
                 </DialogContent>
             </Dialog>

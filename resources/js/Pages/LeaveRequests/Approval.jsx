@@ -129,7 +129,18 @@ export default function Approval({ leaveRequests }) {
                                 <motion.tr key={lr.id} initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="group hover:bg-slate-50/50 transition-colors border-b-slate-50">
                                     <TableCell className="px-6 lg:px-8 py-4"><div className="flex items-center space-x-3"><div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-700 font-bold text-sm">{lr.employee?.name?.charAt(0)||'?'}</div><span className="font-bold text-slate-900 text-sm">{lr.employee?.name||'-'}</span></div></TableCell>
                                     <TableCell><span className={`font-bold px-3 py-1.5 rounded-full text-xs uppercase tracking-wider ${t.bg} ${t.text} border ${t.border}`}>{t.label}</span></TableCell>
-                                    <TableCell><div className="flex flex-col"><span className="text-sm font-bold text-slate-900">{fmt(lr.start_date)}</span><span className="text-xs font-semibold text-slate-500">s/d {fmt(lr.end_date)}</span></div></TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-slate-900">{fmt(lr.start_date)}</span>
+                                            {lr.duration_type === 'partial' ? (
+                                                <span className="text-xs font-black text-indigo-600 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100/30 w-max mt-1">
+                                                    ⏱️ {lr.start_time?.substring(0, 5)} - {lr.end_time?.substring(0, 5)}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs font-semibold text-slate-500">s/d {fmt(lr.end_date)}</span>
+                                            )}
+                                        </div>
+                                    </TableCell>
                                     <TableCell className="max-w-[200px]"><div className="flex items-start space-x-2"><FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" /><p className="text-sm font-medium text-slate-600 line-clamp-2">{lr.reason}</p></div></TableCell>
                                     <TableCell className="text-center">{lr.attachment_path ? <button onClick={()=>setPreviewAttachment(lr)} className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-full border border-indigo-100 transition-colors"><Paperclip className="w-3 h-3" />Lihat</button> : <span className="text-xs text-slate-400">—</span>}</TableCell>
                                     <TableCell className="text-center"><div className="flex justify-center">

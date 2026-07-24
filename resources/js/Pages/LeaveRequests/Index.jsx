@@ -33,7 +33,7 @@ export default function Index({ leaveRequests, hasEmployee }) {
     const [filterMonth, setFilterMonth] = useState(String(now.getMonth() + 1));
     const [filterYear, setFilterYear] = useState(String(now.getFullYear()));
     // Form state
-    const [formData, setFormData] = useState({ start_date: '', end_date: '', type: 'cuti', reason: '', attachment: null, remove_attachment: false });
+    const [formData, setFormData] = useState({ start_date: '', end_date: '', type: 'cuti', duration_type: 'full_day', start_time: '', end_time: '', reason: '', attachment: null, remove_attachment: false });
     const [fileName, setFileName] = useState('');
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState({});
@@ -52,15 +52,44 @@ export default function Index({ leaveRequests, hasEmployee }) {
         });
     }, [leaveRequests, filterMonth, filterYear]);
 
-    const resetForm = () => { setFormData({ start_date: '', end_date: '', type: 'cuti', reason: '', attachment: null, remove_attachment: false }); setFileName(''); setErrors({}); };
+    const resetForm = () => { setFormData({ start_date: '', end_date: '', type: 'cuti', duration_type: 'full_day', start_time: '', end_time: '', reason: '', attachment: null, remove_attachment: false }); setFileName(''); setErrors({}); };
     const openCreate = () => { resetForm(); setEditingId(null); setIsFormOpen(true); };
-    const openEdit = (lr) => { setFormData({ start_date: lr.start_date, end_date: lr.end_date, type: lr.type, reason: lr.reason || '', attachment: null, remove_attachment: false }); setFileName(lr.attachment_name || ''); setErrors({}); setEditingId(lr.id); setIsFormOpen(true); };
+    const openEdit = (lr) => { setFormData({ start_date: lr.start_date, end_date: lr.end_date, type: lr.type, duration_type: lr.duration_type || 'full_day', start_time: lr.start_time ? lr.start_time.substring(0, 5) : '', end_time: lr.end_time ? lr.end_time.substring(0, 5) : '', reason: lr.reason || '', attachment: null, remove_attachment: false }); setFileName(lr.attachment_name || ''); setErrors({}); setEditingId(lr.id); setIsFormOpen(true); };
+
+    const handleDurationTypeChange = (val) => {
+        if (val === 'partial') {
+            setFormData(prev => ({
+                ...prev,
+                duration_type: val,
+                end_date: prev.start_date,
+            }));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                duration_type: val,
+            }));
+        }
+    };
+
+    const handleStartDateChange = (val) => {
+        if (formData.duration_type === 'partial') {
+            setFormData(prev => ({ ...prev, start_date: val, end_date: val }));
+        } else {
+            setFormData(prev => ({ ...prev, start_date: val }));
+        }
+    };
 
     const submitForm = (e) => {
         e.preventDefault(); setProcessing(true);
         const fd = new FormData();
         fd.append('start_date', formData.start_date); fd.append('end_date', formData.end_date);
-        fd.append('type', formData.type); fd.append('reason', formData.reason);
+        fd.append('type', formData.type);
+        fd.append('duration_type', formData.type === 'izin_dinas_luar' ? formData.duration_type : 'full_day');
+        if (formData.type === 'izin_dinas_luar' && formData.duration_type === 'partial') {
+            fd.append('start_time', formData.start_time);
+            fd.append('end_time', formData.end_time);
+        }
+        fd.append('reason', formData.reason);
         if (formData.attachment) fd.append('attachment', formData.attachment);
         if (formData.remove_attachment) fd.append('remove_attachment', '1');
         if (editingId) fd.append('_method', 'PUT');
@@ -146,7 +175,18 @@ export default function Index({ leaveRequests, hasEmployee }) {
                             {filtered.map((lr) => { const t = ti(lr.type); return (
                                 <motion.tr key={lr.id} initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="group hover:bg-slate-50/50 transition-colors border-b-slate-50">
                                     <TableCell className="px-6 lg:px-8 py-4"><span className={`font-bold px-3 py-1.5 rounded-full text-xs uppercase tracking-wider ${t.bg} ${t.text} border ${t.border}`}>{t.label}</span></TableCell>
-                                    <TableCell><div className="flex flex-col"><span className="text-sm font-bold text-slate-900">{fmt(lr.start_date)}</span><span className="text-xs font-semibold text-slate-500">s/d {fmt(lr.end_date)}</span></div></TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-slate-900">{fmt(lr.start_date)}</span>
+                                            {lr.duration_type === 'partial' ? (
+                                                <span className="text-xs font-black text-indigo-600 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100/30 w-max mt-1">
+                                                    ⏱️ {lr.start_time?.substring(0, 5)} - {lr.end_time?.substring(0, 5)}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs font-semibold text-slate-500">s/d {fmt(lr.end_date)}</span>
+                                            )}
+                                        </div>
+                                    </TableCell>
                                     <TableCell className="max-w-[200px]"><div className="flex items-start space-x-2"><FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" /><p className="text-sm font-medium text-slate-600 line-clamp-2">{lr.reason}</p></div></TableCell>
                                     <TableCell className="text-center">{lr.attachment_path ? <button onClick={()=>setPreviewAttachment(lr)} className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-full border border-indigo-100 transition-colors"><Paperclip className="w-3 h-3" />Lihat</button> : <span className="text-xs text-slate-400">—</span>}</TableCell>
                                     <TableCell className="text-center"><div className="flex justify-center">
@@ -179,12 +219,97 @@ export default function Index({ leaveRequests, hasEmployee }) {
                     </div>
                     <form onSubmit={submitForm} className="px-6 py-5 sm:px-8 sm:py-6 bg-slate-50 space-y-4 overflow-y-auto flex-1" encType="multipart/form-data">
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5"><Label className="font-bold text-slate-700 text-sm">Tanggal Mulai</Label><Input type="date" value={formData.start_date} onChange={e=>setFormData({...formData,start_date:e.target.value})} required className="rounded-xl border-slate-200 focus-visible:ring-purple-500 h-10 font-semibold text-slate-700" />{errors.start_date && <p className="text-rose-500 text-xs font-bold">{errors.start_date}</p>}</div>
-                            <div className="space-y-1.5"><Label className="font-bold text-slate-700 text-sm">Tanggal Selesai</Label><Input type="date" value={formData.end_date} onChange={e=>setFormData({...formData,end_date:e.target.value})} required className="rounded-xl border-slate-200 focus-visible:ring-purple-500 h-10 font-semibold text-slate-700" />{errors.end_date && <p className="text-rose-500 text-xs font-bold">{errors.end_date}</p>}</div>
+                            <div className="space-y-1.5">
+                                <Label className="font-bold text-slate-700 text-sm">Tanggal Mulai</Label>
+                                <Input 
+                                    type="date" 
+                                    value={formData.start_date} 
+                                    onChange={e => handleStartDateChange(e.target.value)} 
+                                    required 
+                                    className="rounded-xl border-slate-200 focus-visible:ring-purple-500 h-10 font-semibold text-slate-700" 
+                                />
+                                {errors.start_date && <p className="text-rose-500 text-xs font-bold">{errors.start_date}</p>}
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label className="font-bold text-slate-700 text-sm">Tanggal Selesai</Label>
+                                <Input 
+                                    type="date" 
+                                    value={formData.end_date} 
+                                    onChange={e => setFormData({...formData, end_date: e.target.value})} 
+                                    required 
+                                    disabled={formData.duration_type === 'partial'}
+                                    className="rounded-xl border-slate-200 focus-visible:ring-purple-500 h-10 font-semibold text-slate-700 disabled:bg-slate-100/80 disabled:text-slate-400" 
+                                />
+                                {errors.end_date && <p className="text-rose-500 text-xs font-bold">{errors.end_date}</p>}
+                            </div>
                         </div>
-                        <div className="space-y-1.5"><Label className="font-bold text-slate-700 text-sm">Jenis Pengajuan</Label>
-                            <Select value={formData.type} onValueChange={v=>setFormData({...formData,type:v})}><SelectTrigger className="rounded-xl border-slate-200 h-10 font-semibold"><SelectValue /></SelectTrigger><SelectContent className="rounded-xl shadow-xl"><SelectItem value="cuti" className="font-semibold">Cuti</SelectItem><SelectItem value="izin_pribadi" className="font-semibold">Izin Pribadi</SelectItem><SelectItem value="izin_dinas_luar" className="font-semibold">Izin Dinas Luar</SelectItem><SelectItem value="izin_pulang_cepat" className="font-semibold">Izin Pulang Cepat</SelectItem><SelectItem value="sakit" className="font-semibold">Sakit</SelectItem></SelectContent></Select>
-                        {errors.type && <p className="text-rose-500 text-xs font-bold">{errors.type}</p>}</div>
+                        <div className="space-y-1.5">
+                            <Label className="font-bold text-slate-700 text-sm">Jenis Pengajuan</Label>
+                            <Select 
+                                value={formData.type} 
+                                onValueChange={v => setFormData({...formData, type: v, duration_type: v === 'izin_dinas_luar' ? formData.duration_type : 'full_day'})}
+                            >
+                                <SelectTrigger className="rounded-xl border-slate-200 h-10 font-semibold">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl shadow-xl">
+                                    <SelectItem value="cuti" className="font-semibold">Cuti</SelectItem>
+                                    <SelectItem value="izin_pribadi" className="font-semibold">Izin Pribadi</SelectItem>
+                                    <SelectItem value="izin_dinas_luar" className="font-semibold">Izin Dinas Luar</SelectItem>
+                                    <SelectItem value="izin_pulang_cepat" className="font-semibold">Izin Pulang Cepat</SelectItem>
+                                    <SelectItem value="sakit" className="font-semibold">Sakit</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {errors.type && <p className="text-rose-500 text-xs font-bold">{errors.type}</p>}
+                        </div>
+
+                        {/* Pilihan Durasi khusus untuk Izin Dinas Luar */}
+                        {formData.type === 'izin_dinas_luar' && (
+                            <div className="space-y-3 p-3.5 bg-white border border-slate-100 rounded-xl">
+                                <div className="space-y-1.5">
+                                    <Label className="font-bold text-slate-700 text-sm">Durasi Dinas Luar</Label>
+                                    <Select 
+                                        value={formData.duration_type} 
+                                        onValueChange={handleDurationTypeChange}
+                                    >
+                                        <SelectTrigger className="rounded-xl border-slate-200 h-10 font-semibold bg-white">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl shadow-xl">
+                                            <SelectItem value="full_day" className="font-semibold">Satu Hari Penuh</SelectItem>
+                                            <SelectItem value="partial" className="font-semibold">Rentang Jam</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                {formData.duration_type === 'partial' && (
+                                    <div className="grid grid-cols-2 gap-3 pt-1">
+                                        <div className="space-y-1.5">
+                                            <Label className="font-bold text-slate-700 text-sm">Jam Mulai</Label>
+                                            <Input 
+                                                type="time" 
+                                                value={formData.start_time} 
+                                                onChange={e => setFormData({...formData, start_time: e.target.value})} 
+                                                required 
+                                                className="rounded-xl border-slate-200 focus-visible:ring-purple-500 h-10 font-semibold text-slate-700" 
+                                            />
+                                            {errors.start_time && <p className="text-rose-500 text-xs font-bold">{errors.start_time}</p>}
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="font-bold text-slate-700 text-sm">Jam Selesai</Label>
+                                            <Input 
+                                                type="time" 
+                                                value={formData.end_time} 
+                                                onChange={e => setFormData({...formData, end_time: e.target.value})} 
+                                                required 
+                                                className="rounded-xl border-slate-200 focus-visible:ring-purple-500 h-10 font-semibold text-slate-700" 
+                                            />
+                                            {errors.end_time && <p className="text-rose-500 text-xs font-bold">{errors.end_time}</p>}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="space-y-1.5"><Label className="font-bold text-slate-700 text-sm">Keterangan</Label><Textarea value={formData.reason} onChange={e=>setFormData({...formData,reason:e.target.value})} required placeholder="Jelaskan alasan pengajuan..." className="rounded-xl border-slate-200 focus-visible:ring-purple-500 min-h-[80px] font-medium resize-none" />{errors.reason && <p className="text-rose-500 text-xs font-bold">{errors.reason}</p>}</div>
                         <div className="space-y-1.5"><Label className="font-bold text-slate-700 text-sm">Lampiran <span className="text-slate-400 font-medium">(Opsional)</span></Label>
                             {!fileName ? <div onClick={()=>fileInputRef.current?.click()} className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-purple-400 rounded-2xl p-4 cursor-pointer transition-colors bg-white/60 hover:bg-purple-50/30 group"><Upload className="w-6 h-6 text-slate-300 group-hover:text-purple-400 mb-1 transition-colors" /><p className="text-xs font-bold text-slate-500 group-hover:text-purple-600">Klik untuk upload</p></div>

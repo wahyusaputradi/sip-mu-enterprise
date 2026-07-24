@@ -14,12 +14,6 @@ return new class extends Migration
         Schema::create('positions', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->decimal('base_salary', 15, 2)->default(0);
-            $table->decimal('allowance_jabatan', 15, 2)->default(0);
-            $table->decimal('allowance_homeroom', 15, 2)->default(0);
-            $table->decimal('allowance_certification', 15, 2)->default(0);
-            $table->decimal('allowance_lunch', 15, 2)->default(0);
-            $table->decimal('allowance_transport', 15, 2)->default(0);
             $table->timestamps();
         });
     }

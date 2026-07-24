@@ -33,6 +33,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // Single Device Login: Hapus sesi perangkat lain untuk user yang baru login ini
+        \Illuminate\Support\Facades\DB::table('sessions')
+            ->where('user_id', \Illuminate\Support\Facades\Auth::id())
+            ->where('id', '!=', $request->session()->getId())
+            ->delete();
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

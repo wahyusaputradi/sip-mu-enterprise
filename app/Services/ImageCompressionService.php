@@ -32,12 +32,13 @@ class ImageCompressionService
         $outputFormat = config('image.output_format', 'jpg');
         $outputFilename = $filename . '.' . $outputFormat;
         $storagePath = $directory . '/' . $outputFilename;
+        $disk = config('filesystems.default', 'public');
 
         // If compression is disabled, store original file
         if (!config('image.enabled', true)) {
             $originalExt = $file->getClientOriginalExtension();
             $originalFilename = $filename . '.' . $originalExt;
-            return $file->storeAs($directory, $originalFilename, 'public');
+            return $file->storeAs($directory, $originalFilename, $disk);
         }
 
         try {
@@ -48,11 +49,17 @@ class ImageCompressionService
             // Resize maintaining aspect ratio (scale down only)
             $image->scaleDown(width: $config['max_width'], height: $config['max_height']);
 
-            // Encode to JPEG with specified quality
-            $encoded = $image->toJpeg($config['quality']);
+            // Encode to dynamic format with fallback
+            try {
+                $encoded = $outputFormat === 'webp'
+                    ? $image->toWebp($config['quality'])
+                    : $image->toJpeg($config['quality']);
+            } catch (\Throwable $e) {
+                Log::warning("WebP encoding failed, falling back to JPEG: " . $e->getMessage());
+                $encoded = $image->toJpeg($config['quality']);
+            }
 
             // Store the compressed image
-            $disk = config('filesystems.default', 'public');
             Storage::disk($disk)->put($storagePath, (string) $encoded);
 
             $compressedSize = Storage::disk($disk)->size($storagePath);
@@ -79,7 +86,7 @@ class ImageCompressionService
             // Fallback: store original file without compression
             $originalExt = $file->getClientOriginalExtension();
             $fallbackFilename = $filename . '.' . $originalExt;
-            return $file->storeAs($directory, $fallbackFilename, 'public');
+            return $file->storeAs($directory, $fallbackFilename, $disk);
         }
     }
 
@@ -122,8 +129,15 @@ class ImageCompressionService
             // Resize maintaining aspect ratio (scale down only)
             $image->scaleDown(width: $config['max_width'], height: $config['max_height']);
 
-            // Encode to JPEG with specified quality
-            $encoded = $image->toJpeg($config['quality']);
+            // Encode to dynamic format with fallback
+            try {
+                $encoded = $outputFormat === 'webp'
+                    ? $image->toWebp($config['quality'])
+                    : $image->toJpeg($config['quality']);
+            } catch (\Throwable $e) {
+                Log::warning("WebP encoding failed, falling back to JPEG: " . $e->getMessage());
+                $encoded = $image->toJpeg($config['quality']);
+            }
 
             // Store the compressed image
             Storage::disk($disk)->put($storagePath, (string) $encoded);
@@ -183,8 +197,15 @@ class ImageCompressionService
             // Resize maintaining aspect ratio (scale down only)
             $image->scaleDown(width: $config['max_width'], height: $config['max_height']);
 
-            // Encode to JPEG
-            $encoded = $image->toJpeg($config['quality']);
+            // Encode to dynamic format with fallback
+            try {
+                $encoded = $outputFormat === 'webp'
+                    ? $image->toWebp($config['quality'])
+                    : $image->toJpeg($config['quality']);
+            } catch (\Throwable $e) {
+                Log::warning("WebP encoding failed, falling back to JPEG: " . $e->getMessage());
+                $encoded = $image->toJpeg($config['quality']);
+            }
 
             // Determine new path (change extension to output format)
             $pathInfo = pathinfo($storagePath);

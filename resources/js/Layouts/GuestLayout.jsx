@@ -38,7 +38,7 @@ export default function GuestLayout({ children, title = "SIP MU Enterprise" }) {
                             className="text-5xl font-extrabold leading-tight mb-6"
                         >
                             Sistem Terintegrasi <br/>
-                            <span className="text-indigo-400">Presensi & Payroll.</span>
+                            <span className="text-indigo-400">Presensi & Kehadiran.</span>
                         </motion.h1>
                         <motion.p 
                             initial={{ x: -30, opacity: 0 }}
@@ -46,7 +46,7 @@ export default function GuestLayout({ children, title = "SIP MU Enterprise" }) {
                             transition={{ delay: 0.9, duration: 0.8 }}
                             className="text-lg text-indigo-200/80 leading-relaxed"
                         >
-                            Efisiensi operasional pendidikan melalui manajemen kehadiran cerdas dan pengolahan gaji otomatis yang akurat.
+                            Efisiensi operasional pendidikan melalui manajemen kehadiran cerdas dan pencatatan presensi digital yang akurat.
                         </motion.p>
                     </div>
 

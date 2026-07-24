@@ -29,8 +29,8 @@ class EmployeesImport implements ToCollection
      * 4: Jenis Kelamin, 5: Tempat Lahir, 6: Tanggal Lahir,
      * 7: Email Login, 8: No WhatsApp, 9: Jabatan,
      * 10: Tanggal Mulai Kerja, 11: Ijazah Terakhir, 12: Bidang Studi,
-     * 13: Jam KBM, 14: Wali Kelas (Y/T), 15: Kelas Wali,
-     * 16: Pembina Eskul (Y/T), 17: Nama Eskul, 18: Status
+     * 13: Jam KBM, 14: Status Sertifikasi, 15: Wali Kelas (Y/T), 16: Kelas Wali,
+     * 17: Pembina Eskul (Y/T), 18: Nama Eskul, 19: Status
      */
     public function collection(Collection $rows)
     {
@@ -75,11 +75,12 @@ class EmployeesImport implements ToCollection
                 $education        = $this->clean($row[11] ?? null);
                 $subject          = $this->clean($row[12] ?? null);
                 $teachingHours    = is_numeric($row[13] ?? null) ? (int) $row[13] : null;
-                $isHomeroom       = $this->parseBoolean($row[14] ?? 'T');
-                $homeroomClass    = $isHomeroom ? $this->clean($row[15] ?? null) : null;
-                $isExtracurricular = $this->parseBoolean($row[16] ?? 'T');
-                $extracurricularName = $isExtracurricular ? $this->clean($row[17] ?? null) : null;
-                $status           = $this->parseStatus($row[18] ?? 'Aktif');
+                $isCertified      = (Str::lower(trim($row[14] ?? '')) === 'sertifikasi');
+                $isHomeroom       = $this->parseBoolean($row[15] ?? 'T');
+                $homeroomClass    = $isHomeroom ? $this->clean($row[16] ?? null) : null;
+                $isExtracurricular = $this->parseBoolean($row[17] ?? 'T');
+                $extracurricularName = $isExtracurricular ? $this->clean($row[18] ?? null) : null;
+                $status           = $this->parseStatus($row[19] ?? 'Aktif');
 
                 // --- Step 3: Handle User Account ---
                 if (empty($email)) {
@@ -145,6 +146,7 @@ class EmployeesImport implements ToCollection
                         'education'                => $education,
                         'subject'                  => $subject,
                         'teaching_hours'           => $teachingHours,
+                        'is_certified'             => $isCertified,
                         'is_homeroom_teacher'      => $isHomeroom,
                         'homeroom_class'           => $homeroomClass,
                         'is_extracurricular_builder' => $isExtracurricular,

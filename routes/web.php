@@ -3,19 +3,22 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\EmployeeController;
-use App\Http\Controllers\PayrollController;
+
 use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\SubstituteTeachingController;
 use App\Http\Controllers\SystemSettingController;
-use App\Http\Controllers\SalarySettingController;
+
 use App\Http\Controllers\PositionController;
 use App\Http\Controllers\CampusLocationController;
 use App\Http\Controllers\UserAuthorityController;
 use App\Http\Controllers\TeachingScheduleController;
 use App\Http\Controllers\MyScheduleController;
 use App\Http\Controllers\MyAttendanceController;
-use App\Http\Controllers\MyPayslipController;
+use App\Http\Controllers\AttendancePhotoController;
+
+
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\MediaStreamController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -30,6 +33,9 @@ Route::get('/', function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+
+    // Media stream route (available for all authenticated users, internally authorized)
+    Route::get('/media/stream', [MediaStreamController::class, 'stream'])->name('media.stream');
 
     // ══════════════════════════════════════════════════
     // AREA PRIBADI — Semua role yang login
@@ -56,10 +62,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Rekap Absensi Pribadi
     Route::get('/my-attendance', [MyAttendanceController::class, 'index'])->name('my-attendance.index');
 
-    // Slip Gaji Pribadi
-    Route::get('/my-payslip', [MyPayslipController::class, 'index'])->name('my-payslip.index');
-    Route::get('/my-payslip/{payroll}', [MyPayslipController::class, 'show'])->name('my-payslip.show');
-    Route::get('/my-payslip/{payroll}/download', [MyPayslipController::class, 'downloadSlip'])->name('my-payslip.download');
+
+
+
 
     // Notifications (Polling)
     Route::get('/notifications/unread', [NotificationController::class, 'getUnread'])->name('notifications.unread');
@@ -88,6 +93,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/monitoring/export-pdf', [AttendanceController::class, 'exportMonitoringPdf'])->name('monitoring.export-pdf');
         Route::put('/attendance/{attendance}', [AttendanceController::class, 'update'])->name('attendance.update');
         Route::post('/attendance/unlock', [AttendanceController::class, 'unlockAttendance'])->name('attendance.unlock');
+
+        // Kelola Foto Presensi
+        Route::get('/monitoring/photos', [AttendancePhotoController::class, 'index'])->name('monitoring.photos.index');
+        Route::post('/monitoring/photos/download', [AttendancePhotoController::class, 'downloadZip'])->name('monitoring.photos.download');
+        Route::delete('/monitoring/photos/{type}/{id}', [AttendancePhotoController::class, 'destroy'])->name('monitoring.photos.destroy');
+        Route::post('/monitoring/photos/bulk-destroy', [AttendancePhotoController::class, 'bulkDestroy'])->name('monitoring.photos.bulk-destroy');
     });
 
     Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi'])->group(function () {
@@ -110,17 +121,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('positions/import', [PositionController::class, 'import'])->name('positions.import');
         Route::post('positions/bulk-destroy', [PositionController::class, 'bulkDestroy'])->name('positions.bulk-destroy');
         Route::resource('positions', PositionController::class);
+
+        // Routes for Salary Settings and Payroll have been removed.
     });
 
     // ══════════════════════════════════════════════════
     // AREA MANAJEMEN — Jadwal Mengajar & Data Kelas
     // ══════════════════════════════════════════════════
-    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum'])->group(function () {
+    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi'])->group(function () {
         Route::get('/teaching-schedules', [TeachingScheduleController::class, 'index'])->name('teaching-schedules.index');
+        Route::get('/teaching-schedules/export/excel', [TeachingScheduleController::class, 'export'])->name('teaching-schedules.export');
+    });
+
+    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum'])->group(function () {
         Route::post('/teaching-schedules', [TeachingScheduleController::class, 'store'])->name('teaching-schedules.store');
         Route::put('/teaching-schedules/{teachingSchedule}', [TeachingScheduleController::class, 'update'])->name('teaching-schedules.update');
         Route::delete('/teaching-schedules/{teachingSchedule}', [TeachingScheduleController::class, 'destroy'])->name('teaching-schedules.destroy');
-        Route::get('/teaching-schedules/export/excel', [TeachingScheduleController::class, 'export'])->name('teaching-schedules.export');
         Route::post('/teaching-schedules/import/excel', [TeachingScheduleController::class, 'import'])->name('teaching-schedules.import');
 
         // Persetujuan Cuti/Izin
@@ -133,46 +149,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/school-classes/template', [TeachingScheduleController::class, 'classTemplate'])->name('school-classes.template');
         Route::get('/school-classes/export', [TeachingScheduleController::class, 'classExport'])->name('school-classes.export');
         Route::post('/school-classes/import', [TeachingScheduleController::class, 'classImport'])->name('school-classes.import');
+        Route::post('/school-classes/bulk-destroy', [TeachingScheduleController::class, 'classBulkDestroy'])->name('school-classes.bulk-destroy');
         Route::get('/school-classes', [TeachingScheduleController::class, 'classIndex'])->name('school-classes.index');
         Route::post('/school-classes', [TeachingScheduleController::class, 'classStore'])->name('school-classes.store');
         Route::put('/school-classes/{schoolClass}', [TeachingScheduleController::class, 'classUpdate'])->name('school-classes.update');
         Route::delete('/school-classes/{schoolClass}', [TeachingScheduleController::class, 'classDestroy'])->name('school-classes.destroy');
     });
 
-    // ══════════════════════════════════════════════════
-    // AREA MANAJEMEN — Penggajian
-    // ══════════════════════════════════════════════════
-    Route::middleware(['role:Super Admin|Bendahara'])->group(function () {
-        Route::get('/payroll', [PayrollController::class, 'index'])->name('payroll.index');
-        Route::post('/payroll/generate', [PayrollController::class, 'generate'])->name('payroll.generate');
-        Route::post('/payroll/bulk-update-status', [PayrollController::class, 'updateStatus'])->name('payroll.bulk-update-status');
-        Route::get('/payroll/{payroll}/edit', [PayrollController::class, 'edit'])->name('payroll.edit');
-        Route::put('/payroll/{payroll}', [PayrollController::class, 'update'])->name('payroll.update');
-        Route::get('/payroll/{payroll}/slip', [PayrollController::class, 'downloadSlip'])->name('payroll.slip');
-        Route::get('/payroll/{payroll}/detail', [PayrollController::class, 'show'])->name('payroll.show');
-        Route::post('/payroll/{payroll}/whatsapp', [PayrollController::class, 'sendWhatsApp'])->name('payroll.whatsapp');
-        Route::post('/payroll/whatsapp/bulk', [PayrollController::class, 'sendBulkWhatsApp'])->name('payroll.whatsapp.bulk');
 
-        Route::get('salary-settings', [SalarySettingController::class, 'index'])->name('salary-settings.index');
-        Route::put('salary-settings/global', [SalarySettingController::class, 'updateGlobal'])->name('salary-settings.update-global');
-        Route::put('salary-settings/positions/{position}', [SalarySettingController::class, 'updatePosition'])->name('salary-settings.update-position');
-        Route::put('salary-settings/employees/{employee}', [SalarySettingController::class, 'updateEmployee'])->name('salary-settings.update-employee');
-        Route::put('salary-settings/period-date', [SalarySettingController::class, 'updatePayrollDates'])->name('salary-settings.update-period-date');
-        Route::put('salary-settings/cutoff-date', [SalarySettingController::class, 'updateCutoffDate'])->name('salary-settings.update-cutoff-date');
-
-        // Export, Import, Template Routes for Salary Settings
-        Route::get('salary-settings/global/export', [SalarySettingController::class, 'exportGlobal'])->name('salary-settings.export-global');
-        Route::post('salary-settings/global/import', [SalarySettingController::class, 'importGlobal'])->name('salary-settings.import-global');
-        Route::get('salary-settings/global/template', [SalarySettingController::class, 'templateGlobal'])->name('salary-settings.template-global');
-
-        Route::get('salary-settings/positions/export', [SalarySettingController::class, 'exportPositions'])->name('salary-settings.export-positions');
-        Route::post('salary-settings/positions/import', [SalarySettingController::class, 'importPositions'])->name('salary-settings.import-positions');
-        Route::get('salary-settings/positions/template', [SalarySettingController::class, 'templatePositions'])->name('salary-settings.template-positions');
-
-        Route::get('salary-settings/employees/export', [SalarySettingController::class, 'exportEmployees'])->name('salary-settings.export-employees');
-        Route::post('salary-settings/employees/import', [SalarySettingController::class, 'importEmployees'])->name('salary-settings.import-employees');
-        Route::get('salary-settings/employees/template', [SalarySettingController::class, 'templateEmployees'])->name('salary-settings.template-employees');
-    });
 
     // ══════════════════════════════════════════════════
     // KONFIGURASI — Super Admin Only
@@ -182,6 +166,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/settings', [SystemSettingController::class, 'index'])->name('settings.index');
         Route::post('/settings', [SystemSettingController::class, 'update'])->name('settings.update');
         Route::post('/holidays', [\App\Http\Controllers\HolidayController::class, 'store'])->name('holidays.store');
+        Route::post('/holidays/bulk-destroy', [\App\Http\Controllers\HolidayController::class, 'bulkDestroy'])->name('holidays.bulk-destroy');
         Route::put('/holidays/{holiday}', [\App\Http\Controllers\HolidayController::class, 'update'])->name('holidays.update');
         Route::delete('/holidays/{holiday}', [\App\Http\Controllers\HolidayController::class, 'destroy'])->name('holidays.destroy');
 
@@ -190,12 +175,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/user-authority/{user}', [UserAuthorityController::class, 'update'])->name('user-authority.update');
         Route::post('/user-authority/bulk-reset-password', [UserAuthorityController::class, 'bulkResetPassword'])->name('user-authority.bulk-reset-password');
 
-        // Backup & Restore
-        Route::get('/backups', [\App\Http\Controllers\BackupController::class, 'index'])->name('backups.index');
-        Route::post('/backups', [\App\Http\Controllers\BackupController::class, 'create'])->name('backups.create');
-        Route::get('/backups/download', [\App\Http\Controllers\BackupController::class, 'download'])->name('backups.download');
-        Route::delete('/backups', [\App\Http\Controllers\BackupController::class, 'destroy'])->name('backups.destroy');
-        Route::post('/backups/restore-db', [\App\Http\Controllers\BackupController::class, 'restoreDatabase'])->name('backups.restore-db');
+
     });
 });
 

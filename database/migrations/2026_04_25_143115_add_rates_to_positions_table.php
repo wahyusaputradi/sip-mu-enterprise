@@ -11,11 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('positions', function (Blueprint $table) {
-            $table->decimal('hourly_rate', 15, 2)->default(0)->after('base_salary');
-            $table->decimal('inval_rate', 15, 2)->default(0)->after('hourly_rate');
-            $table->decimal('alpha_penalty_rate', 15, 2)->default(0)->after('inval_rate');
-        });
+        // No action needed as rates are being purged.
     }
 
     /**
@@ -23,8 +19,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('positions', function (Blueprint $table) {
-            $table->dropColumn(['hourly_rate', 'inval_rate', 'alpha_penalty_rate']);
-        });
+        // No action needed.
     }
 };

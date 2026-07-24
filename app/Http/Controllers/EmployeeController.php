@@ -19,7 +19,7 @@ class EmployeeController extends Controller
 {
     public function index()
     {
-        $employees = Employee::with('positions')->get()->map(function ($emp) {
+        $employees = Employee::with('positions')->orderBy('name', 'asc')->get()->map(function ($emp) {
             // Attach primary position name for easy display
             $emp->position_names = $emp->positions->pluck('name')->toArray();
             $emp->primary_position_name = $emp->positions->where('pivot.is_primary', true)->first()?->name ?? ($emp->positions->first()?->name ?? '-');
@@ -64,6 +64,7 @@ class EmployeeController extends Controller
             'homeroom_class' => 'nullable|string|max:255',
             'is_extracurricular_builder' => 'boolean',
             'extracurricular_name' => 'nullable|string|max:255',
+            'is_certified' => 'boolean',
         ]);
 
         $userId = null;
@@ -119,6 +120,7 @@ class EmployeeController extends Controller
             'homeroom_class' => $validated['homeroom_class'] ?? null,
             'is_extracurricular_builder' => $validated['is_extracurricular_builder'] ?? false,
             'extracurricular_name' => $validated['extracurricular_name'] ?? null,
+            'is_certified' => $validated['is_certified'] ?? false,
         ]);
 
         // Sync positions with pivot data
@@ -173,6 +175,7 @@ class EmployeeController extends Controller
             'homeroom_class' => 'nullable|string|max:255',
             'is_extracurricular_builder' => 'boolean',
             'extracurricular_name' => 'nullable|string|max:255',
+            'is_certified' => 'boolean',
         ]);
 
         if ($request->email) {
@@ -237,6 +240,7 @@ class EmployeeController extends Controller
             'homeroom_class' => $validated['homeroom_class'] ?? null,
             'is_extracurricular_builder' => $validated['is_extracurricular_builder'] ?? false,
             'extracurricular_name' => $validated['extracurricular_name'] ?? null,
+            'is_certified' => $validated['is_certified'] ?? false,
         ]);
 
         // Sync positions with pivot data
@@ -251,38 +255,25 @@ class EmployeeController extends Controller
 
     public function destroy(Employee $employee)
     {
-        $disk = config('filesystems.default', 'public');
-        if ($employee->photo_path && Storage::disk($disk)->exists($employee->photo_path)) {
-            Storage::disk($disk)->delete($employee->photo_path);
-        }
-        if ($employee->user) {
-            $employee->user->delete();
-        }
-        $employee->positions()->detach();
-        $employee->delete();
-        
-        return back()->with('message', 'Data pegawai berhasil dihapus.');
+        \Illuminate\Support\Facades\DB::transaction(function () use ($employee) {
+            $employee->purgeWithRelations();
+        });
+
+        return back()->with('message', 'Data pegawai beserta seluruh riwayat presensi dan berkasnya berhasil dihapus.');
     }
 
     public function bulkDestroy(Request $request)
     {
         $request->validate(['ids' => 'required|array', 'ids.*' => 'integer|exists:employees,id']);
 
-        $employees = Employee::whereIn('id', $request->ids)->get();
-
-        foreach ($employees as $employee) {
-            $disk = config('filesystems.default', 'public');
-            if ($employee->photo_path && Storage::disk($disk)->exists($employee->photo_path)) {
-                Storage::disk($disk)->delete($employee->photo_path);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
+            $employees = Employee::whereIn('id', $request->ids)->get();
+            foreach ($employees as $employee) {
+                $employee->purgeWithRelations();
             }
-            if ($employee->user) {
-                $employee->user->delete();
-            }
-            $employee->positions()->detach();
-            $employee->delete();
-        }
+        });
 
-        return back()->with('message', count($request->ids) . ' pegawai berhasil dihapus.');
+        return back()->with('message', count($request->ids) . ' pegawai beserta seluruh riwayat presensi dan berkasnya berhasil dihapus.');
     }
 
     public function export()

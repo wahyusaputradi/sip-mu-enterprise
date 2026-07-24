@@ -13,7 +13,9 @@ return new class extends Migration
     public function up(): void
     {
         // First, update the type enum to include new types
-        DB::statement("ALTER TABLE leave_requests MODIFY COLUMN `type` ENUM('cuti', 'izin', 'sakit', 'izin_pribadi', 'izin_dinas_luar') NOT NULL DEFAULT 'cuti'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE leave_requests MODIFY COLUMN `type` ENUM('cuti', 'izin', 'sakit', 'izin_pribadi', 'izin_dinas_luar') NOT NULL DEFAULT 'cuti'");
+        }
 
         // Migrate old 'izin' values to 'izin_pribadi'
         DB::table('leave_requests')->where('type', 'izin')->update(['type' => 'izin_pribadi']);
@@ -33,6 +35,8 @@ return new class extends Migration
             $table->dropColumn(['attachment_path', 'attachment_name']);
         });
 
-        DB::statement("ALTER TABLE leave_requests MODIFY COLUMN `type` ENUM('cuti', 'izin', 'sakit') NOT NULL DEFAULT 'cuti'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE leave_requests MODIFY COLUMN `type` ENUM('cuti', 'izin', 'sakit') NOT NULL DEFAULT 'cuti'");
+        }
     }
 };

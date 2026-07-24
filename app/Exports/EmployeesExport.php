@@ -39,6 +39,7 @@ class EmployeesExport implements WithEvents
                 $emp->subject ?? '',
                 $emp->ukg_number ?? '',
                 $emp->teaching_hours ?? '',
+                $emp->is_certified ? 'Sertifikasi' : 'Non-Sertifikasi',
                 $emp->is_homeroom_teacher ? 'Y' : 'T',
                 $emp->homeroom_class ?? '',
                 $emp->is_extracurricular_builder ? 'Y' : 'T',
@@ -69,6 +70,7 @@ class EmployeesExport implements WithEvents
             'Bidang Studi',
             'No UKG',
             'Jam KBM',
+            'Status Sertifikasi',
             'Wali Kelas (Y/T)',
             'Kelas Wali',
             'Pembina Eskul (Y/T)',
@@ -82,9 +84,9 @@ class EmployeesExport implements WithEvents
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $lastCol = 'U'; // 21 columns
+                $lastCol = 'V'; // 22 columns
                 $headers = $this->getHeaders();
-                $colLetters = range('A', 'U');
+                $colLetters = range('A', 'V');
 
                 // ─── Row 1: Title ───
                 $sheet->setCellValue('A1', 'DATA PEGAWAI - SIP MU Enterprise');
@@ -149,8 +151,8 @@ class EmployeesExport implements WithEvents
                     'A' => 22, 'B' => 20, 'C' => 20, 'D' => 30, 'E' => 16,
                     'F' => 16, 'G' => 16, 'H' => 30, 'I' => 18, 'J' => 22,
                     'K' => 18, 'L' => 18, 'M' => 22, 'N' => 20, 'O' => 16,
-                    'P' => 10, 'Q' => 16, 'R' => 14, 'S' => 18, 'T' => 18,
-                    'U' => 12,
+                    'P' => 10, 'Q' => 20, 'R' => 16, 'S' => 14, 'T' => 18,
+                    'U' => 18, 'V' => 12,
                 ];
                 foreach ($widths as $col => $w) {
                     $sheet->getColumnDimension($col)->setWidth($w);

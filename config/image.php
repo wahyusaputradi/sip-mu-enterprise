@@ -33,7 +33,7 @@ return [
     | kompresi terbaik untuk foto. Gunakan 'webp' untuk penghematan lebih.
     |
     */
-    'output_format' => 'jpg',
+    'output_format' => 'webp',
 
     /*
     |--------------------------------------------------------------------------

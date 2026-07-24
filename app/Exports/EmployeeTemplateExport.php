@@ -30,11 +30,12 @@ class EmployeeTemplateExport implements WithEvents
             'Ijazah Terakhir',                            // Col L (11)
             'Bidang Studi',                               // Col M (12)
             'Jam KBM',                                    // Col N (13)
-            'Wali Kelas (Y/T)',                           // Col O (14)
-            'Kelas Wali',                                 // Col P (15)
-            'Pembina Eskul (Y/T)',                        // Col Q (16)
-            'Nama Eskul',                                 // Col R (17)
-            'Status (Aktif/Non-Aktif)',                    // Col S (18)
+            'Status Sertifikasi (Sertifikasi/Non-Sertifikasi)', // Col O (14)
+            'Wali Kelas (Y/T)',                           // Col P (15)
+            'Kelas Wali',                                 // Col Q (16)
+            'Pembina Eskul (Y/T)',                        // Col R (17)
+            'Nama Eskul',                                 // Col S (18)
+            'Status (Aktif/Non-Aktif)',                    // Col T (19)
         ];
     }
 
@@ -55,6 +56,7 @@ class EmployeeTemplateExport implements WithEvents
             'S1 Pendidikan Informatika', // Ijazah Terakhir
             'Pemrograman Web',           // Bidang Studi
             '24',                        // Jam KBM
+            'Non-Sertifikasi',           // Status Sertifikasi
             'Y',                         // Wali Kelas
             'X RPL 1',                   // Kelas Wali
             'T',                         // Pembina Eskul
@@ -68,7 +70,7 @@ class EmployeeTemplateExport implements WithEvents
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $lastCol = 'S';
+                $lastCol = 'T';
                 $headers = $this->getHeaders();
                 $sample = $this->getSampleData();
 
@@ -92,7 +94,7 @@ class EmployeeTemplateExport implements WithEvents
                 $sheet->getStyle('A3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFFBEB');
 
                 // ─── Row 4: Headers ───
-                $colLetters = range('A', 'S');
+                $colLetters = range('A', 'T');
                 foreach ($headers as $i => $header) {
                     $cell = $colLetters[$i] . '4';
                     $sheet->setCellValue($cell, $header);
@@ -134,8 +136,8 @@ class EmployeeTemplateExport implements WithEvents
                 $widths = [
                     'A' => 22, 'B' => 22, 'C' => 22, 'D' => 30, 'E' => 18,
                     'F' => 16, 'G' => 20, 'H' => 30, 'I' => 18, 'J' => 22,
-                    'K' => 22, 'L' => 26, 'M' => 20, 'N' => 10, 'O' => 16,
-                    'P' => 14, 'Q' => 18, 'R' => 18, 'S' => 20,
+                    'K' => 22, 'L' => 26, 'M' => 20, 'N' => 10, 'O' => 24,
+                    'P' => 16, 'Q' => 14, 'R' => 18, 'S' => 18, 'T' => 20,
                 ];
                 foreach ($widths as $col => $w) {
                     $sheet->getColumnDimension($col)->setWidth($w);
@@ -151,24 +153,32 @@ class EmployeeTemplateExport implements WithEvents
                 $genderValidation->setError('Pilih: Laki-laki atau Perempuan');
                 $sheet->setDataValidation('E6:E1000', $genderValidation);
 
-                // ─── Data Validation: Dropdown for Wali Kelas (O6:O1000) ───
-                $ynValidation = $sheet->getCell('O6')->getDataValidation();
+                // ─── Data Validation: Dropdown for Status Sertifikasi (O6:O1000) ───
+                $sertifikasiValidation = $sheet->getCell('O6')->getDataValidation();
+                $sertifikasiValidation->setType(DataValidation::TYPE_LIST);
+                $sertifikasiValidation->setAllowBlank(false);
+                $sertifikasiValidation->setShowDropDown(true);
+                $sertifikasiValidation->setFormula1('"Sertifikasi,Non-Sertifikasi"');
+                $sheet->setDataValidation('O6:O1000', $sertifikasiValidation);
+
+                // ─── Data Validation: Dropdown for Wali Kelas (P6:P1000) ───
+                $ynValidation = $sheet->getCell('P6')->getDataValidation();
                 $ynValidation->setType(DataValidation::TYPE_LIST);
                 $ynValidation->setAllowBlank(false);
                 $ynValidation->setShowDropDown(true);
                 $ynValidation->setFormula1('"Y,T"');
-                $sheet->setDataValidation('O6:O1000', $ynValidation);
+                $sheet->setDataValidation('P6:P1000', $ynValidation);
 
-                // ─── Data Validation: Dropdown for Pembina Eskul (Q6:Q1000) ───
-                $sheet->setDataValidation('Q6:Q1000', clone $ynValidation);
+                // ─── Data Validation: Dropdown for Pembina Eskul (R6:R1000) ───
+                $sheet->setDataValidation('R6:R1000', clone $ynValidation);
 
-                // ─── Data Validation: Dropdown for Status (S6:S1000) ───
-                $statusValidation = $sheet->getCell('S6')->getDataValidation();
+                // ─── Data Validation: Dropdown for Status (T6:T1000) ───
+                $statusValidation = $sheet->getCell('T6')->getDataValidation();
                 $statusValidation->setType(DataValidation::TYPE_LIST);
                 $statusValidation->setAllowBlank(false);
                 $statusValidation->setShowDropDown(true);
                 $statusValidation->setFormula1('"Aktif,Non-Aktif"');
-                $sheet->setDataValidation('S6:S1000', $statusValidation);
+                $sheet->setDataValidation('T6:T1000', $statusValidation);
 
                 // ─── Data Validation: Dropdown for Jabatan (J6:J1000) ───
                 $positions = Position::orderBy('name')->pluck('name')->toArray();

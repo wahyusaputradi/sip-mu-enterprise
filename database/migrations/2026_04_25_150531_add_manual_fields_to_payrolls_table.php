@@ -11,11 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('payrolls', function (Blueprint $table) {
-            $table->decimal('allowance_other', 15, 2)->default(0)->after('gross_salary');
-            $table->decimal('deduction_other', 15, 2)->default(0)->after('total_deductions');
-            $table->text('notes')->nullable()->after('status');
-        });
+        // No action needed as payrolls table is dropped.
     }
 
     /**
@@ -23,8 +19,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('payrolls', function (Blueprint $table) {
-            $table->dropColumn(['allowance_other', 'deduction_other', 'notes']);
-        });
+        // No action needed.
     }
 };

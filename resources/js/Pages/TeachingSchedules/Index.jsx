@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,23 @@ const SUBJECT_COLORS = [
 const hashColor = (str) => { let h = 0; for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h); return SUBJECT_COLORS[Math.abs(h) % SUBJECT_COLORS.length]; };
 
 export default function Index({ teachers, schoolClasses, schedules, hourSlots, dayLabels, todaySchedules, monitorStats, todayDow }) {
+    const user = usePage().props.auth.user;
+    const roleMappings = {
+        'Administrator (IT)': ['Super Admin', 'Kepala Sekolah'],
+        'HRD / Bendahara': ['Bendahara', 'Absensi', 'Karyawan'],
+        'Kurikulum / Admin': ['Kurikulum', 'Absensi'],
+        'Guru / Karyawan Staf': ['Guru', 'Karyawan']
+    };
+    let baseRoles = user?.roles || [];
+    let expandedRoles = [...baseRoles];
+    baseRoles.forEach(role => {
+        if (roleMappings[role]) {
+            expandedRoles = [...expandedRoles, ...roleMappings[role]];
+        }
+    });
+    const roles = [...new Set(expandedRoles)];
+    const canManage = roles.some(r => ['Super Admin', 'Kepala Sekolah', 'Kurikulum'].includes(r));
+
     const [activeTab, setActiveTab] = useState('manage');
     const [selectedTeacher, setSelectedTeacher] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -57,6 +74,7 @@ export default function Index({ teachers, schoolClasses, schedules, hourSlots, d
     const getSlot = (day, hour) => teacherSchedules.find(s => s.day_of_week === day && s.hour_number === hour);
 
     const openAdd = (day, hour) => {
+        if (!canManage) return;
         clearErrors(); reset();
         setSlotContext({ day, hour });
         setData({ employee_id: selectedTeacher, school_class_id: '', day_of_week: day, hour_number: hour, subject: '' });
@@ -64,6 +82,7 @@ export default function Index({ teachers, schoolClasses, schedules, hourSlots, d
     };
 
     const openEdit = (slot) => {
+        if (!canManage) return;
         clearErrors();
         setEditingSlot(slot);
         setData({ employee_id: slot.employee_id, school_class_id: slot.school_class_id || '', day_of_week: slot.day_of_week, hour_number: slot.hour_number, subject: slot.subject });
@@ -72,10 +91,14 @@ export default function Index({ teachers, schoolClasses, schedules, hourSlots, d
         setIsFormOpen(true);
     };
 
-    const openDelete = (slot) => { setEditingSlot(slot); setIsDeleteOpen(true); };
+    const openDelete = (slot) => { 
+        if (!canManage) return;
+        setEditingSlot(slot); setIsDeleteOpen(true); 
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (!canManage) return;
         if (editingSlot) {
             put(route('teaching-schedules.update', editingSlot.id), { onSuccess: () => { setIsFormOpen(false); reset(); } });
         } else {
@@ -84,6 +107,7 @@ export default function Index({ teachers, schoolClasses, schedules, hourSlots, d
     };
 
     const handleDelete = () => {
+        if (!canManage) return;
         destroy(route('teaching-schedules.destroy', editingSlot.id), { onSuccess: () => { setIsDeleteOpen(false); setEditingSlot(null); } });
     };
 
@@ -93,13 +117,13 @@ export default function Index({ teachers, schoolClasses, schedules, hourSlots, d
     };
 
     const handleImportClick = () => {
-        if (!selectedTeacher) return;
+        if (!canManage || !selectedTeacher) return;
         fileInputRef.current?.click();
     };
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
-        if (!file || !selectedTeacher) return;
+        if (!canManage || !file || !selectedTeacher) return;
 
         const formData = new FormData();
         formData.append('file', file);
@@ -175,9 +199,11 @@ export default function Index({ teachers, schoolClasses, schedules, hourSlots, d
                                     <Button onClick={handleExport} variant="outline" className="flex-1 lg:flex-none border-slate-200 hover:bg-slate-50 font-bold h-11 rounded-xl text-indigo-600">
                                         <Download className="w-4 h-4 mr-2" /> Export Template
                                     </Button>
-                                    <Button onClick={handleImportClick} className="flex-1 lg:flex-none bg-indigo-600 hover:bg-indigo-700 font-bold h-11 rounded-xl shadow-lg shadow-indigo-200">
-                                        <Upload className="w-4 h-4 mr-2" /> Import Excel
-                                    </Button>
+                                    {canManage && (
+                                        <Button onClick={handleImportClick} className="flex-1 lg:flex-none bg-indigo-600 hover:bg-indigo-700 font-bold h-11 rounded-xl shadow-lg shadow-indigo-200">
+                                            <Upload className="w-4 h-4 mr-2" /> Import Excel
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                         </Card>
@@ -186,7 +212,9 @@ export default function Index({ teachers, schoolClasses, schedules, hourSlots, d
                             <Card className="border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white/80 backdrop-blur-xl overflow-hidden">
                                 <CardHeader className="border-b border-slate-100 p-6">
                                     <CardTitle className="text-lg font-black text-slate-900">Grid Jadwal Mingguan</CardTitle>
-                                    <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">Klik sel kosong untuk menambah jadwal • Klik jadwal untuk edit/hapus</CardDescription>
+                                    <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                        {canManage ? 'Klik sel kosong untuk menambah jadwal • Klik jadwal untuk edit/hapus' : 'Tampilan Jadwal Mengajar Guru (Read-Only)'}
+                                    </CardDescription>
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <div className="overflow-x-auto">
@@ -213,22 +241,35 @@ export default function Index({ teachers, schoolClasses, schedules, hourSlots, d
                                                             return (
                                                                 <td key={h} className="py-1.5 px-1">
                                                                     {slot ? (
-                                                                        <button onClick={() => openEdit(slot)} className="w-full group">
-                                                                            <div className={`bg-gradient-to-br ${hashColor(slot.subject)} text-white rounded-xl p-2 text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer min-h-[52px] flex flex-col items-center justify-center relative overflow-hidden`}>
+                                                                        canManage ? (
+                                                                            <button onClick={() => openEdit(slot)} className="w-full group">
+                                                                                <div className={`bg-gradient-to-br ${hashColor(slot.subject)} text-white rounded-xl p-2 text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer min-h-[52px] flex flex-col items-center justify-center relative overflow-hidden`}>
+                                                                                    <div className="text-[9px] font-bold opacity-80 uppercase tracking-wider line-clamp-1">{slot.subject}</div>
+                                                                                    <div className="text-[11px] font-black line-clamp-1">{slot.class_name}</div>
+                                                                                    
+                                                                                    {/* Hover Overlay Delete */}
+                                                                                    <div onClick={(e) => { e.stopPropagation(); openDelete(slot); }} 
+                                                                                         className="absolute inset-0 bg-rose-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                                                                                        <Trash2 className="w-4 h-4 text-white" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </button>
+                                                                        ) : (
+                                                                            <div className={`bg-gradient-to-br ${hashColor(slot.subject)} text-white rounded-xl p-2 text-center shadow-md min-h-[52px] flex flex-col items-center justify-center relative overflow-hidden`}>
                                                                                 <div className="text-[9px] font-bold opacity-80 uppercase tracking-wider line-clamp-1">{slot.subject}</div>
                                                                                 <div className="text-[11px] font-black line-clamp-1">{slot.class_name}</div>
-                                                                                
-                                                                                {/* Hover Overlay Delete */}
-                                                                                <div onClick={(e) => { e.stopPropagation(); openDelete(slot); }} 
-                                                                                     className="absolute inset-0 bg-rose-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                                                                                    <Trash2 className="w-4 h-4 text-white" />
-                                                                                </div>
                                                                             </div>
-                                                                        </button>
+                                                                        )
                                                                     ) : (
-                                                                        <button onClick={() => openAdd(parseInt(d), parseInt(h))} className="w-full min-h-[52px] border-2 border-dashed border-slate-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/30 transition-all flex items-center justify-center group">
-                                                                            <Plus className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
-                                                                        </button>
+                                                                        canManage ? (
+                                                                            <button onClick={() => openAdd(parseInt(d), parseInt(h))} className="w-full min-h-[52px] border-2 border-dashed border-slate-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/30 transition-all flex items-center justify-center group">
+                                                                                <Plus className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                                                                            </button>
+                                                                        ) : (
+                                                                            <div className="w-full min-h-[52px] border border-slate-100/80 rounded-xl bg-slate-50/40 flex items-center justify-center">
+                                                                                <span className="text-[10px] font-bold text-slate-300">-</span>
+                                                                            </div>
+                                                                        )
                                                                     )}
                                                                 </td>
                                                             );

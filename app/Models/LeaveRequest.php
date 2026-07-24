@@ -14,6 +14,9 @@ class LeaveRequest extends Model
         'start_date',
         'end_date',
         'type',
+        'duration_type',
+        'start_time',
+        'end_time',
         'reason',
         'attachment_path',
         'attachment_name',
@@ -28,8 +31,7 @@ class LeaveRequest extends Model
         if (!$this->attachment_path) {
             return null;
         }
-        $disk = config('filesystems.default', 'public');
-        return \Illuminate\Support\Facades\Storage::disk($disk)->url($this->attachment_path);
+        return route('media.stream', ['path' => $this->attachment_path]);
     }
 
     /**

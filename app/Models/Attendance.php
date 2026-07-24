@@ -22,6 +22,11 @@ class Attendance extends Model
         'teaching_hours',
         'inval_hours',
         'status',
+        'is_dinas_luar',
+    ];
+
+    protected $casts = [
+        'is_dinas_luar' => 'boolean',
     ];
 
     protected $appends = ['photo_check_in_url', 'photo_check_out_url'];
@@ -31,8 +36,7 @@ class Attendance extends Model
         if (!$this->photo_check_in) {
             return null;
         }
-        $disk = config('filesystems.default', 'public');
-        return \Illuminate\Support\Facades\Storage::disk($disk)->url($this->photo_check_in);
+        return route('media.stream', ['path' => $this->photo_check_in]);
     }
 
     public function getPhotoCheckOutUrlAttribute()
@@ -40,8 +44,7 @@ class Attendance extends Model
         if (!$this->photo_check_out) {
             return null;
         }
-        $disk = config('filesystems.default', 'public');
-        return \Illuminate\Support\Facades\Storage::disk($disk)->url($this->photo_check_out);
+        return route('media.stream', ['path' => $this->photo_check_out]);
     }
 
     public function employee()

@@ -48,11 +48,28 @@ class PresensiController extends Controller
         $now = Carbon::now();
         $todayDow = $now->dayOfWeekIso; // 1=Monday..5=Friday
 
+        $onDinasLuar = \App\Models\LeaveRequest::where('employee_id', $employee->id)
+            ->where('type', 'izin_dinas_luar')
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->where(function ($query) use ($now) {
+                $query->where('duration_type', 'full_day')
+                    ->orWhere(function ($q) use ($now) {
+                        $currentTime = $now->toTimeString();
+                        $q->where('duration_type', 'partial')
+                          ->where('start_time', '<=', $currentTime)
+                          ->where('end_time', '>=', $currentTime);
+                    });
+            })
+            ->exists();
+
         // ── Settings ──
         $settings = SystemSetting::pluck('value', 'key');
         $jamMasuk = $settings['jam_masuk'] ?? '07:00';
         $jamKeluar = $settings['jam_keluar'] ?? '14:40';
         $batasTerlambatMenit = (int)($settings['batas_waktu_maksimal_terlambat'] ?? 10);
+        $teachingLateTolerance = (int)($settings['teaching_late_tolerance'] ?? 10);
 
         // ── Holiday Check ──
         $todayHoliday = Holiday::where('date', $today->toDateString())->first();
@@ -130,10 +147,11 @@ class PresensiController extends Controller
         $dailyCheckinBlockReason = '';
         $dailyCheckinTooEarly = false;
         $dailyCheckinEarlyTime = '';
-        if ($requiresDailyAttendance && !$attendance) {
+        if ($requiresDailyAttendance && !$attendance && !$onDinasLuar) {
             $jamMasukCarbon = Carbon::createFromFormat('H:i', $jamMasuk);
             $batasCheckin = $jamMasukCarbon->copy()->addMinutes($batasTerlambatMenit);
-            $batasAwalCheckin = $jamMasukCarbon->copy()->subMinutes(10);
+            $bufferPresensiMasuk = (int)($settings['buffer_presensi_masuk'] ?? 10);
+            $batasAwalCheckin = $jamMasukCarbon->copy()->subMinutes($bufferPresensiMasuk);
             
             if ($now->lt($batasAwalCheckin)) {
                 $dailyCheckinTooEarly = true;
@@ -153,22 +171,40 @@ class PresensiController extends Controller
         $dailyCheckoutBlocked = false;
         $dailyCheckoutBlockReason = '';
 
-        if ($attendance && !$attendance->check_out) {
-            $dailyCheckoutAvailable = $currentTimeStr >= $jamKeluar;
+        // Cek apakah ada Izin Pulang Cepat yang disetujui untuk hari ini
+        $todayStr = $today->toDateString();
+        $hasIzinPulangCepat = \App\Models\LeaveRequest::where('employee_id', $employee->id)
+            ->where('status', 'approved')
+            ->where('type', 'izin_pulang_cepat')
+            ->whereDate('start_date', '<=', $todayStr)
+            ->whereDate('end_date', '>=', $todayStr)
+            ->exists();
 
-            if ($dailyCheckoutAvailable) {
+        if ($attendance && !$attendance->check_out) {
+            $dailyCheckoutAvailable = ($currentTimeStr >= $jamKeluar) || $hasIzinPulangCepat || $onDinasLuar;
+
+            if ($dailyCheckoutAvailable && !$onDinasLuar) {
                 $jamKeluarCarbon = Carbon::createFromFormat('H:i', $jamKeluar);
-                $batasCheckout = $jamKeluarCarbon->copy()->addMinutes($batasTerlambatMenit);
+                $bufferPresensiKeluar = (int)($settings['buffer_presensi_keluar'] ?? 10);
+                $batasCheckout = $jamKeluarCarbon->copy()->addMinutes($bufferPresensiKeluar);
                 
                 if ($now->gt($batasCheckout)) {
                     $hasUnlock = $unlocks->where('type', 'daily_checkout')->isNotEmpty();
                     if (!$hasUnlock) {
                         $dailyCheckoutBlocked = true;
-                        $dailyCheckoutBlockReason = "Batas presensi keluar ({$jamKeluar} + {$batasTerlambatMenit} menit) telah terlewat. Hubungi Admin Presensi/Kurikulum.";
+                        $dailyCheckoutBlockReason = "Batas presensi keluar ({$jamKeluar} + {$bufferPresensiKeluar} menit) telah terlewat. Hubungi Admin Presensi/Kurikulum.";
                     }
                 }
             }
         }
+
+        // Fetch all approved Dinas Luar for today to check per-slot overlaps
+        $todayDinasLuar = \App\Models\LeaveRequest::where('employee_id', $employee->id)
+            ->where('type', 'izin_dinas_luar')
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->get();
 
         // ── Build schedule data with time-block status ──
         $scheduleData = [];
@@ -178,28 +214,46 @@ class PresensiController extends Controller
                 $hasAttended = $teachingAttendances->has($schedule->id);
                 $attendanceTime = $hasAttended ? $teachingAttendances[$schedule->id]->time : null;
 
+                $isInval = in_array($schedule->id, $invalScheduleIds);
                 $blocked = false;
                 $blockReason = '';
+                $notYet = false;
+
+                $slotOnDinasLuar = false;
+                if ($slot) {
+                    $slotOnDinasLuar = $todayDinasLuar->contains(function ($lr) use ($slot) {
+                        if ($lr->duration_type === 'full_day') {
+                            return true;
+                        }
+                        return $lr->start_time <= $slot['end'] && $lr->end_time >= $slot['start'];
+                    });
+                }
+
+                $slotStart = $slot ? Carbon::createFromFormat('H:i', $slot['start']) : null;
+                $slotEnd = $slot ? Carbon::createFromFormat('H:i', $slot['end']) : null;
+                $isPastSlot = $slotEnd ? $now->gt($slotEnd) : false;
 
                 if (!$hasAttended && $slot) {
-                    $slotStart = Carbon::createFromFormat('H:i', $slot['start']);
-                    $slotEnd = Carbon::createFromFormat('H:i', $slot['end']);
-                    $slotDeadline = $slotStart->copy()->addMinutes($batasTerlambatMenit);
+                    $slotDeadline = $slotStart->copy()->addMinutes($teachingLateTolerance);
 
-                    if ($now->gt($slotDeadline)) {
+                    // If it is an inval schedule or on Dinas Luar, bypass the slot deadline block
+                    if (!$isInval && !$slotOnDinasLuar && $now->gt($slotDeadline)) {
                         // Past deadline — check for unlock
                         $hasUnlock = $unlocks->where('type', 'teaching')
                             ->where('teaching_schedule_id', $schedule->id)
                             ->isNotEmpty();
                         if (!$hasUnlock) {
                             $blocked = true;
-                            $blockReason = "Batas presensi Jam ke-{$schedule->hour_number} ({$slot['start']} + {$batasTerlambatMenit} menit) telah terlewat.";
+                            $blockReason = "Batas presensi Jam ke-{$schedule->hour_number} ({$slot['start']} + {$teachingLateTolerance} menit) telah terlewat.";
                         }
                     }
 
                     // Not yet started
                     $notYet = $now->lt($slotStart);
                 }
+
+                $showDinasLuarBadge = false;
+                $isDinasLuarActive = !$hasAttended && $slotOnDinasLuar;
 
                 $scheduleData[] = [
                     'id' => $schedule->id,
@@ -213,7 +267,9 @@ class PresensiController extends Controller
                     'blocked' => $blocked,
                     'block_reason' => $blockReason,
                     'not_yet' => $notYet ?? false,
-                    'is_inval' => in_array($schedule->id, $invalScheduleIds),
+                    'is_dinas_luar' => $showDinasLuarBadge,
+                    'is_dinas_luar_active' => $isDinasLuarActive,
+                    'is_inval' => $isInval,
                     'original_teacher_name' => $schedule->employee ? $schedule->employee->name : null,
                 ];
             }
@@ -230,11 +286,12 @@ class PresensiController extends Controller
         });
 
         return Inertia::render('Attendance/Presensi', [
+            'serverTimestamp' => now()->getTimestampMs(),
             'requiresDailyAttendance' => $requiresDailyAttendance,
             'hasTeachingSchedule' => $hasTeachingSchedule,
             'isGuruMurni' => $isGuruMurni,
             'isHoliday' => $isHoliday,
-            'holidayInfo' => $todayHoliday ? ['name' => $todayHoliday->name, 'date' => $todayHoliday->date] : null,
+            'holidayInfo' => $todayHoliday ? ['name' => $todayHoliday->description, 'date' => $todayHoliday->date] : null,
             'today' => $today->translatedFormat('l, d F Y'),
             'currentTime' => $currentTimeStr,
             'attendance' => $attendance ? [
@@ -253,6 +310,9 @@ class PresensiController extends Controller
                 'jam_masuk' => $jamMasuk,
                 'jam_keluar' => $jamKeluar,
                 'batas_terlambat' => $batasTerlambatMenit,
+                'batas_terlambat_mengajar' => $teachingLateTolerance,
+                'buffer_presensi_masuk' => (int)($settings['buffer_presensi_masuk'] ?? 10),
+                'buffer_presensi_keluar' => (int)($settings['buffer_presensi_keluar'] ?? 10),
             ],
             'dailyCheckinBlocked' => $dailyCheckinBlocked,
             'dailyCheckinBlockReason' => $dailyCheckinBlockReason,
@@ -263,6 +323,7 @@ class PresensiController extends Controller
             'dailyCheckoutBlockReason' => $dailyCheckoutBlockReason,
             'activeUnlocks' => $activeUnlocks,
             'userRoles' => $roles,
+            'hasApprovedDinasLuar' => $onDinasLuar,
         ]);
     }
 
@@ -289,10 +350,35 @@ class PresensiController extends Controller
         $today = Carbon::today();
         $now = Carbon::now();
 
+
+        // ── Fetch schedule first to check partial dinas luar time overlap ──
+        $schedule = TeachingSchedule::findOrFail($request->teaching_schedule_id);
+        $hourSlots = TeachingSchedule::hourSlots();
+        $slot = $hourSlots[$schedule->hour_number] ?? null;
+
+        $onDinasLuar = \App\Models\LeaveRequest::where('employee_id', $employee->id)
+            ->where('type', 'izin_dinas_luar')
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->where(function ($query) use ($slot) {
+                $query->where('duration_type', 'full_day')
+                    ->orWhere(function ($q) use ($slot) {
+                        if ($slot) {
+                            $q->where('duration_type', 'partial')
+                              ->where('start_time', '<=', $slot['end'])
+                              ->where('end_time', '>=', $slot['start']);
+                        } else {
+                            $q->whereRaw('1 = 0');
+                        }
+                    });
+            })
+            ->exists();
+
         // ── Holiday Check ──
         $todayHoliday = Holiday::where('date', $today->toDateString())->first();
         if ($todayHoliday) {
-            return back()->withErrors(['message' => "Hari ini adalah Hari Libur ({$todayHoliday->name}). Presensi tidak dapat dilakukan."]);
+            return back()->withErrors(['message' => "Hari ini adalah Hari Libur ({$todayHoliday->description}). Presensi tidak dapat dilakukan."]);
         }
 
         // ── Check duplicate ──
@@ -306,14 +392,16 @@ class PresensiController extends Controller
         }
 
         // ── Geofencing validation ──
-        $campus = CampusLocation::findOrFail($request->campus_location_id);
-        $distance = $this->haversineDistance(
-            $request->latitude, $request->longitude,
-            (float)$campus->latitude, (float)$campus->longitude
-        );
+        if (!$onDinasLuar) {
+            $campus = CampusLocation::findOrFail($request->campus_location_id);
+            $distance = $this->haversineDistance(
+                $request->latitude, $request->longitude,
+                (float)$campus->latitude, (float)$campus->longitude
+            );
 
-        if ($distance > $campus->radius) {
-            return back()->withErrors(['message' => "Lokasi Anda berada di luar radius {$campus->name} (" . round($distance) . "m dari pusat, batas {$campus->radius}m). Presensi ditolak."]);
+            if ($distance > $campus->radius) {
+                return back()->withErrors(['message' => "Lokasi Anda berada di luar radius {$campus->name} (" . round($distance) . "m dari pusat, batas {$campus->radius}m). Presensi ditolak."]);
+            }
         }
 
         // ── Check if it's an inval schedule ──
@@ -322,31 +410,29 @@ class PresensiController extends Controller
             ->where('date', $today->toDateString())
             ->where('status', 'approved')
             ->exists();
-
-        // ── Time validation ──
-        $schedule = TeachingSchedule::findOrFail($request->teaching_schedule_id);
         
         // ── Validation: User must either own the schedule or be an approved substitute ──
         if ($schedule->employee_id !== $employee->id && !$isInval) {
             return back()->withErrors(['message' => 'Anda tidak memiliki hak untuk melakukan presensi pada jadwal ini.']);
         }
 
-        $hourSlots = TeachingSchedule::hourSlots();
-        $slot = $hourSlots[$schedule->hour_number] ?? null;
         $settings = SystemSetting::pluck('value', 'key');
-        $batasTerlambatMenit = (int)($settings['batas_waktu_maksimal_terlambat'] ?? 10);
+        $teachingLateTolerance = (int)($settings['teaching_late_tolerance'] ?? 10);
 
         $status = 'present';
 
-        if ($slot) {
+        if (!$onDinasLuar && $slot) {
             $slotStart = Carbon::createFromFormat('H:i', $slot['start']);
-            $slotDeadline = $slotStart->copy()->addMinutes($batasTerlambatMenit);
+            $slotDeadline = $slotStart->copy()->addMinutes($teachingLateTolerance);
 
             if ($now->lt($slotStart)) {
                 return back()->withErrors(['message' => "Belum waktunya jam pelajaran ke-{$schedule->hour_number}. Sesi baru dimulai pada pukul " . $slot['start']]);
             }
 
-            if ($now->gt($slotDeadline)) {
+            if ($isInval) {
+                // Inval teacher is always present, not late and not blocked by deadline
+                $status = 'present';
+            } elseif ($now->gt($slotDeadline)) {
                 // Check for unlock token
                 $unlock = AttendanceUnlock::where('employee_id', $employee->id)
                     ->whereDate('date', $today)
@@ -359,12 +445,12 @@ class PresensiController extends Controller
                     ->first();
 
                 if (!$unlock) {
-                    return back()->withErrors(['message' => "Batas waktu presensi Jam ke-{$schedule->hour_number} ({$slot['start']} + {$batasTerlambatMenit} menit) telah terlewat. Hubungi Admin Presensi/Kurikulum."]);
+                    return back()->withErrors(['message' => "Batas waktu presensi Jam ke-{$schedule->hour_number} ({$slot['start']} + {$teachingLateTolerance} menit) telah terlewat. Hubungi Admin Presensi/Kurikulum."]);
                 }
 
                 // Mark unlock as used
                 $unlock->update(['used' => true]);
-                $status = 'late';
+                $status = $unlock->is_lateness_violation ? 'late' : 'present';
             } elseif ($now->gt($slotStart)) {
                 $status = 'late';
             }
@@ -401,6 +487,7 @@ class PresensiController extends Controller
             'longitude' => $request->longitude,
             'campus_location_id' => $request->campus_location_id,
             'status' => $status,
+            'is_dinas_luar' => $onDinasLuar,
         ]);
 
         // Increment teaching_hours on daily attendance record
@@ -412,10 +499,17 @@ class PresensiController extends Controller
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
                 'campus_location_id' => $request->campus_location_id,
+                'is_dinas_luar' => $onDinasLuar,
             ]
         );
         
-        if (!$isInval) {
+        if ($onDinasLuar && !$dailyAtt->is_dinas_luar) {
+            $dailyAtt->update(['is_dinas_luar' => true]);
+        }
+
+        if ($isInval) {
+            $dailyAtt->increment('inval_hours', 1);
+        } else {
             $dailyAtt->increment('teaching_hours', 1);
         }
 

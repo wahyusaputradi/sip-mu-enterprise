@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { motion } from 'framer-motion';
-import { ShieldCheck, ArrowRight, Fingerprint, CreditCard, BarChart3, Clock, GraduationCap, CalendarDays, Phone, Globe, MapPin, Play, Camera, Images } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Fingerprint, BarChart3, Clock, GraduationCap, CalendarDays, Phone, Globe, MapPin, Play, Camera, Images, ClipboardCheck } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -14,8 +14,8 @@ const InstagramIcon = () => (
 export default function Welcome({ auth }) {
     const features = [
         { title: "Smart Attendance", desc: "Presensi Geofencing & Swafoto untuk akurasi kehadiran guru dan staf.", icon: <Fingerprint className="w-6 h-6" />, color: "from-indigo-500 to-blue-600" },
-        { title: "Automated Payroll", desc: "Kalkulasi gaji otomatis terintegrasi dengan data kehadiran.", icon: <CreditCard className="w-6 h-6" />, color: "from-emerald-500 to-teal-600" },
-        { title: "Dynamic Reporting", desc: "Generate slip gaji PDF dan rekapitulasi kehadiran bulanan.", icon: <BarChart3 className="w-6 h-6" />, color: "from-amber-500 to-orange-600" },
+        { title: "Monitoring Real-time", desc: "Pantau kehadiran seluruh pegawai secara langsung dari dashboard.", icon: <ClipboardCheck className="w-6 h-6" />, color: "from-emerald-500 to-teal-600" },
+        { title: "Dynamic Reporting", desc: "Generate rekapitulasi kehadiran bulanan dan export ke Excel/PDF.", icon: <BarChart3 className="w-6 h-6" />, color: "from-amber-500 to-orange-600" },
         { title: "Leave Management", desc: "Pengajuan cuti dan izin digital dengan alur persetujuan.", icon: <Clock className="w-6 h-6" />, color: "from-purple-500 to-violet-600" },
         { title: "Jadwal Mengajar", desc: "Manajemen jadwal mengajar terintegrasi dengan presensi per jam.", icon: <GraduationCap className="w-6 h-6" />, color: "from-rose-500 to-pink-600" },
         { title: "Kalender Akademik", desc: "Pengelolaan hari libur dan kalender akademik sekolah.", icon: <CalendarDays className="w-6 h-6" />, color: "from-sky-500 to-cyan-600" },
@@ -31,7 +31,7 @@ export default function Welcome({ auth }) {
 
     return (
         <div className="min-h-screen bg-white text-gray-900 flex flex-col selection:bg-indigo-100">
-            <Head title="SIP MU Enterprise - Sistem Informasi Presensi & Payroll" />
+            <Head title="SIP MU Enterprise - Sistem Informasi Presensi & Kehadiran" />
 
             {/* Navbar */}
             <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 shadow-sm">
@@ -77,11 +77,11 @@ export default function Welcome({ auth }) {
                             <ShieldCheck className="w-4 h-4 mr-2" /> SMK Manbaul Ulum Cirebon
                         </span>
                         <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold tracking-tight text-gray-900 mb-8 leading-[1.1]">
-                            Kelola Presensi & Payroll<br />
+                            Kelola Presensi & Kehadiran<br />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">SIP MU Enterprise.</span>
                         </h1>
                         <p className="max-w-2xl mx-auto text-lg sm:text-xl text-gray-500 mb-10 leading-relaxed">
-                            Solusi terintegrasi untuk mengotomatisasi administrasi kehadiran guru, karyawan, dan perhitungan gaji secara real-time.
+                            Solusi terintegrasi untuk mengotomatisasi pencatatan kehadiran guru, karyawan, jadwal mengajar, dan manajemen SDM secara real-time.
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                             <Link href={route('login')}>
@@ -122,12 +122,12 @@ export default function Welcome({ auth }) {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                         <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
                             <span className="text-sm font-bold text-indigo-600 uppercase tracking-widest mb-4 block">Tentang Aplikasi</span>
-                            <h2 className="text-3xl lg:text-4xl font-extrabold text-gray-900 mb-6 leading-tight">Sistem Informasi Presensi & Payroll Terintegrasi</h2>
+                            <h2 className="text-3xl lg:text-4xl font-extrabold text-gray-900 mb-6 leading-tight">Sistem Informasi Presensi & Kehadiran Terintegrasi</h2>
                             <p className="text-gray-500 leading-relaxed mb-6">
-                                SIP MU Enterprise adalah platform digital yang dirancang khusus untuk SMK Manbaul Ulum Cirebon dalam mengelola administrasi kehadiran, jadwal mengajar, penggajian, dan manajemen SDM secara efisien dan akurat.
+                                SIP MU Enterprise adalah platform digital yang dirancang khusus untuk SMK Manbaul Ulum Cirebon dalam mengelola administrasi kehadiran, jadwal mengajar, pengajuan izin/cuti, dan manajemen SDM secara efisien dan akurat.
                             </p>
                             <div className="space-y-4">
-                                {['Presensi berbasis GPS & Geofencing', 'Jadwal mengajar real-time', 'Slip gaji otomatis (PDF)', 'Role-based access control'].map((item, i) => (
+                                {['Presensi berbasis GPS & Geofencing', 'Jadwal mengajar real-time', 'Rekap kehadiran bulanan (Excel/PDF)', 'Role-based access control'].map((item, i) => (
                                     <div key={i} className="flex items-center space-x-3">
                                         <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
                                             <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
@@ -223,11 +223,11 @@ export default function Welcome({ auth }) {
                                 <ApplicationLogo className="h-12 w-12 bg-white/10 rounded-xl p-1.5" />
                                 <div>
                                     <h3 className="text-lg font-extrabold">SIP MU <span className="text-indigo-400">Enterprise</span></h3>
-                                    <p className="text-slate-400 text-xs font-medium">Sistem Informasi Presensi & Payroll</p>
+                                    <p className="text-slate-400 text-xs font-medium">Sistem Informasi Presensi & Kehadiran</p>
                                 </div>
                             </div>
                             <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                                Aplikasi resmi SMK Manbaul Ulum Cirebon untuk manajemen presensi, penggajian, dan administrasi SDM secara digital.
+                                Aplikasi resmi SMK Manbaul Ulum Cirebon untuk manajemen presensi, kehadiran, dan administrasi SDM secara digital.
                             </p>
                             <a href="https://smkmucirebon.sch.id/" target="_blank" rel="noopener noreferrer"
                                 className="inline-flex items-center px-4 py-2 bg-indigo-600/20 text-indigo-400 rounded-xl text-sm font-bold hover:bg-indigo-600/30 transition-colors border border-indigo-500/20">
