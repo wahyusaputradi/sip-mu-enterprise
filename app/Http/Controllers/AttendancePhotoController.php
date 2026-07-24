@@ -25,8 +25,9 @@ class AttendancePhotoController extends Controller
         $campusId = $request->input('campus_location_id');
         $photoType = $request->input('photo_type', 'all');
 
-        // Query Daily Attendance
-        $dailyQuery = Attendance::with(['employee.positions', 'campusLocation'])
+        // Query Daily Attendance with targeted column selection & lightweight eager loading
+        $dailyQuery = Attendance::select(['id', 'employee_id', 'date', 'check_in', 'check_out', 'photo_check_in', 'photo_check_out', 'latitude', 'longitude', 'campus_location_id'])
+            ->with(['employee:id,name,nik,nip', 'campusLocation:id,name'])
             ->whereBetween('date', [$startDate, $endDate]);
 
         if ($search) {
@@ -38,8 +39,9 @@ class AttendancePhotoController extends Controller
             $dailyQuery->where('campus_location_id', $campusId);
         }
 
-        // Query Teaching Attendance
-        $teachingQuery = TeachingAttendance::with(['employee.positions', 'campusLocation', 'teachingSchedule.schoolClass'])
+        // Query Teaching Attendance with targeted column selection & lightweight eager loading
+        $teachingQuery = TeachingAttendance::select(['id', 'employee_id', 'date', 'time', 'photo', 'latitude', 'longitude', 'campus_location_id', 'teaching_schedule_id'])
+            ->with(['employee:id,name,nik,nip', 'campusLocation:id,name', 'teachingSchedule:id,school_class_id,hour_number,subject', 'teachingSchedule.schoolClass:id,name'])
             ->whereBetween('date', [$startDate, $endDate]);
 
         if ($search) {
@@ -154,11 +156,22 @@ class AttendancePhotoController extends Controller
 
         // ONLY compute file sizes for current visible page items to avoid N+1 Storage I/O bottleneck
         $currentPageSearchResults->transform(function ($item) use ($disk, &$totalSizeFiltered) {
-            if (!empty($item['photo_path']) && Storage::disk($disk)->exists($item['photo_path'])) {
-                $size = Storage::disk($disk)->size($item['photo_path']);
-                $item['size_bytes'] = $size;
-                $item['size_human'] = $this->formatBytes($size);
-                $totalSizeFiltered += $size;
+            $path = $item['photo_path'] ?? '';
+            if (!empty($path)) {
+                $size = 0;
+                if (Storage::disk($disk)->exists($path)) {
+                    $size = Storage::disk($disk)->size($path);
+                } elseif (Storage::disk('public')->exists($path)) {
+                    $size = Storage::disk('public')->size($path);
+                } elseif (file_exists(storage_path('app/public/' . $path))) {
+                    $size = filesize(storage_path('app/public/' . $path));
+                }
+                
+                if ($size > 0) {
+                    $item['size_bytes'] = $size;
+                    $item['size_human'] = $this->formatBytes($size);
+                    $totalSizeFiltered += $size;
+                }
             }
             return $item;
         });
@@ -225,33 +238,46 @@ class AttendancePhotoController extends Controller
         $addedCount = 0;
 
         foreach ($selectedPhotos as $photo) {
-            $path = $photo['photo_path'];
+            $path = $photo['photo_path'] ?? null;
+            if (!$path) continue;
+
+            $fileContent = null;
             try {
                 if (Storage::disk($disk)->exists($path)) {
                     $fileContent = Storage::disk($disk)->get($path);
-                    $ext = pathinfo($path, PATHINFO_EXTENSION) ?: 'jpg';
-                    
-                    $empName = Str::slug($photo['employee_name'] ?? 'pegawai', '_');
-                    $dateStr = $photo['date'] ?? date('Y-m-d');
-                    
-                    $folder = 'lainnya';
-                    $filename = "{$dateStr}_{$empName}.{$ext}";
-
-                    if (($photo['type'] ?? '') === 'daily_in') {
-                        $folder = 'presensi_harian/masuk';
-                    } elseif (($photo['type'] ?? '') === 'daily_out') {
-                        $folder = 'presensi_harian/pulang';
-                    } elseif (($photo['type'] ?? '') === 'teaching') {
-                        $hour = $photo['hour_number'] ?? 'x';
-                        $folder = "presensi_mengajar/jam_ke_{$hour}";
-                        $filename = "{$dateStr}_{$empName}_jam_{$hour}.{$ext}";
-                    }
-
-                    $zip->addFromString("{$folder}/{$filename}", $fileContent);
-                    $addedCount++;
+                } elseif (Storage::disk('public')->exists($path)) {
+                    $fileContent = Storage::disk('public')->get($path);
+                } elseif (Storage::disk('local')->exists($path)) {
+                    $fileContent = Storage::disk('local')->get($path);
+                } elseif (file_exists(storage_path('app/public/' . $path))) {
+                    $fileContent = file_get_contents(storage_path('app/public/' . $path));
+                } elseif (file_exists(public_path('storage/' . $path))) {
+                    $fileContent = file_get_contents(public_path('storage/' . $path));
                 }
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning("Skipped unreadable photo in ZIP download: {$path}. Error: " . $e->getMessage());
+                \Illuminate\Support\Facades\Log::warning("Could not read photo for ZIP: {$path}. Error: " . $e->getMessage());
+            }
+
+            if ($fileContent) {
+                $ext = pathinfo($path, PATHINFO_EXTENSION) ?: 'jpg';
+                $empName = Str::slug($photo['employee_name'] ?? 'pegawai', '_');
+                $dateStr = $photo['date'] ?? date('Y-m-d');
+                
+                $folder = 'lainnya';
+                $filename = "{$dateStr}_{$empName}.{$ext}";
+
+                if (($photo['type'] ?? '') === 'daily_in') {
+                    $folder = 'presensi_harian/masuk';
+                } elseif (($photo['type'] ?? '') === 'daily_out') {
+                    $folder = 'presensi_harian/pulang';
+                } elseif (($photo['type'] ?? '') === 'teaching') {
+                    $hour = $photo['hour_number'] ?? 'x';
+                    $folder = "presensi_mengajar/jam_ke_{$hour}";
+                    $filename = "{$dateStr}_{$empName}_jam_{$hour}.{$ext}";
+                }
+
+                $zip->addFromString("{$folder}/{$filename}", $fileContent);
+                $addedCount++;
             }
         }
 
@@ -266,6 +292,7 @@ class AttendancePhotoController extends Controller
 
         return response()->download($zipFilePath, 'Unduh_Foto_Presensi_' . Carbon::now()->format('d_M_Y_H_i') . '.zip')->deleteFileAfterSend(true);
     }
+
 
 
     /**
