@@ -243,24 +243,40 @@ class AttendancePhotoController extends Controller
             if (!$path) continue;
 
             $fileContent = null;
+            $ext = 'jpg';
+
             try {
-                if (Storage::disk($disk)->exists($path)) {
-                    $fileContent = Storage::disk($disk)->get($path);
-                } elseif (Storage::disk('public')->exists($path)) {
-                    $fileContent = Storage::disk('public')->get($path);
-                } elseif (Storage::disk('local')->exists($path)) {
-                    $fileContent = Storage::disk('local')->get($path);
-                } elseif (file_exists(storage_path('app/public/' . $path))) {
-                    $fileContent = file_get_contents(storage_path('app/public/' . $path));
-                } elseif (file_exists(public_path('storage/' . $path))) {
-                    $fileContent = file_get_contents(public_path('storage/' . $path));
+                // Case 1: Base64 Data URI String (camera swafoto/liveness)
+                if (str_starts_with($path, 'data:image/')) {
+                    $commaPos = strpos($path, ',');
+                    if ($commaPos !== false) {
+                        $base64Data = substr($path, $commaPos + 1);
+                        $fileContent = base64_decode($base64Data);
+                        if (preg_match('/^data:image\/(\w+);base64,/', substr($path, 0, 50), $matches)) {
+                            $ext = $matches[1] === 'jpeg' ? 'jpg' : $matches[1];
+                        }
+                    }
+                } 
+                // Case 2: Disk Storage Files
+                else {
+                    $ext = pathinfo($path, PATHINFO_EXTENSION) ?: 'jpg';
+                    if (Storage::disk($disk)->exists($path)) {
+                        $fileContent = Storage::disk($disk)->get($path);
+                    } elseif (Storage::disk('public')->exists($path)) {
+                        $fileContent = Storage::disk('public')->get($path);
+                    } elseif (Storage::disk('local')->exists($path)) {
+                        $fileContent = Storage::disk('local')->get($path);
+                    } elseif (file_exists(storage_path('app/public/' . $path))) {
+                        $fileContent = file_get_contents(storage_path('app/public/' . $path));
+                    } elseif (file_exists(public_path('storage/' . $path))) {
+                        $fileContent = file_get_contents(public_path('storage/' . $path));
+                    }
                 }
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning("Could not read photo for ZIP: {$path}. Error: " . $e->getMessage());
+                \Illuminate\Support\Facades\Log::warning("Could not read photo for ZIP: " . substr($path, 0, 40) . ". Error: " . $e->getMessage());
             }
 
             if ($fileContent) {
-                $ext = pathinfo($path, PATHINFO_EXTENSION) ?: 'jpg';
                 $empName = Str::slug($photo['employee_name'] ?? 'pegawai', '_');
                 $dateStr = $photo['date'] ?? date('Y-m-d');
                 
@@ -281,6 +297,7 @@ class AttendancePhotoController extends Controller
                 $addedCount++;
             }
         }
+
 
         $zip->close();
 

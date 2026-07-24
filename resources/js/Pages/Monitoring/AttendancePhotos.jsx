@@ -135,15 +135,22 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
         });
     };
 
-    // Bulk ZIP Download
     const handleBulkDownload = async () => {
         if (selectedPhotos.length === 0) return;
         
         const toastId = toast.loading('Menyiapkan kompresi ZIP untuk unduhan...');
         
         try {
+            const formattedPhotos = selectedPhotos.map(p => ({
+                photo_path: p.photo_path || '',
+                type: p.type || 'daily_in',
+                employee_name: p.employee_name || 'Pegawai',
+                date: p.date || new Date().toISOString().slice(0, 10),
+                hour_number: p.hour_number || ''
+            }));
+
             const response = await axios.post(route('monitoring.photos.download'), {
-                photos: selectedPhotos
+                photos: formattedPhotos
             }, {
                 responseType: 'blob'
             });
@@ -168,7 +175,7 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
             
-            toast.success('ZIP berhasil diunduh.', { id: toastId });
+            toast.success('ZIP foto presensi berhasil diunduh.', { id: toastId });
         } catch (error) {
             console.error(error);
             let errorMsg = 'Gagal mengunduh ZIP presensi.';
@@ -189,6 +196,7 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
             }
         }
     };
+
 
     // Visual badge styles for photo types
     const getTypeStyles = (type) => {
