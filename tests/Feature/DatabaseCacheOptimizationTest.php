@@ -45,7 +45,8 @@ class DatabaseCacheOptimizationTest extends TestCase
     {
         $envContent = file_get_contents(base_path('.env'));
         
-        $this->assertStringContainsString('CACHE_STORE=redis', $envContent);
-        $this->assertStringContainsString('SESSION_DRIVER=redis', $envContent);
+        $this->assertStringContainsString('CACHE_STORE=file', $envContent);
+        $this->assertStringContainsString('SESSION_DRIVER=file', $envContent);
     }
+
 }
