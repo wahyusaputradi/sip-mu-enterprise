@@ -12,7 +12,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE leave_requests MODIFY COLUMN type VARCHAR(50) NOT NULL");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE leave_requests MODIFY COLUMN type VARCHAR(50) NOT NULL");
+        } else {
+            Schema::table('leave_requests', function (Blueprint $table) {
+                $table->string('type', 50)->change();
+            });
+        }
     }
 
     /**
@@ -20,6 +26,13 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE leave_requests MODIFY COLUMN type VARCHAR(50) NOT NULL");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE leave_requests MODIFY COLUMN type VARCHAR(50) NOT NULL");
+        } else {
+            Schema::table('leave_requests', function (Blueprint $table) {
+                $table->string('type', 50)->change();
+            });
+        }
     }
+
 };
