@@ -155,29 +155,33 @@ class AttendanceController extends Controller
                 ['name' => 'Belum Absen', 'value' => $unrecorded, 'color' => '#94a3b8'],
             ];
 
-            // Top Performers (Most 'present' this month)
-            $topPerformers = \Illuminate\Support\Facades\DB::table('attendances')
-                ->join('employees', 'attendances.employee_id', '=', 'employees.id')
-                ->whereMonth('attendances.date', Carbon::now()->month)
-                ->whereYear('attendances.date', Carbon::now()->year)
-                ->where('attendances.status', 'present')
-                ->select('employees.name', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
-                ->groupBy('employees.id', 'employees.name')
-                ->orderByDesc('count')
-                ->limit(3)
-                ->get();
+            // Executive Stats - For top level management
+            $recapAll = $monthlyRecap['recapData'] ?? [];
 
-            // Bottom Performers (Most 'alpha' + 'late' this month)
-            $bottomPerformers = \Illuminate\Support\Facades\DB::table('attendances')
-                ->join('employees', 'attendances.employee_id', '=', 'employees.id')
-                ->whereMonth('attendances.date', Carbon::now()->month)
-                ->whereYear('attendances.date', Carbon::now()->year)
-                ->whereIn('attendances.status', ['alpha', 'late'])
-                ->select('employees.name', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
-                ->groupBy('employees.id', 'employees.name')
-                ->orderByDesc('count')
-                ->limit(3)
-                ->get();
+            // Top Performers (Top 5 Paling Banyak Hadir bulan ini untuk seluruh Pegawai/Guru/Karyawan)
+            $topPerformers = collect($recapAll)
+                ->filter(fn($emp) => ($emp['present'] ?? 0) > 0)
+                ->sortByDesc('present')
+                ->take(5)
+                ->map(fn($emp) => [
+                    'name' => $emp['name'],
+                    'count' => $emp['present'],
+                ])
+                ->values();
+
+            // Bottom Performers (Top 5 Paling Banyak Pelanggaran: Late + Alpha + JTM Alpa bulan ini)
+            $bottomPerformers = collect($recapAll)
+                ->map(function ($emp) {
+                    $violations = ($emp['late'] ?? 0) + ($emp['alpha'] ?? 0) + ($emp['jtm_absent'] ?? 0);
+                    return [
+                        'name' => $emp['name'],
+                        'count' => $violations,
+                    ];
+                })
+                ->filter(fn($emp) => $emp['count'] > 0)
+                ->sortByDesc('count')
+                ->take(5)
+                ->values();
 
             $mostUnlocked = \Illuminate\Support\Facades\DB::table('attendance_unlocks')
                 ->join('employees', 'attendance_unlocks.employee_id', '=', 'employees.id')
@@ -186,7 +190,7 @@ class AttendanceController extends Controller
                 ->select('employees.name', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
                 ->groupBy('employees.id', 'employees.name')
                 ->orderByDesc('count')
-                ->limit(3)
+                ->limit(5)
                 ->get();
 
             $executiveStats = [

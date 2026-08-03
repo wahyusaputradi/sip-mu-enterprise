@@ -1,2 +1,13 @@
 User-agent: *
-Disallow:
+Allow: /
+Allow: /login
+Allow: /images/
+Allow: /build/
+
+Disallow: /admin/
+Disallow: /leave-requests/approval
+Disallow: /monitoring/
+Disallow: /settings
+Disallow: /backup
+
+Sitemap: https://sipmuenterprise.my.id/sitemap.xml

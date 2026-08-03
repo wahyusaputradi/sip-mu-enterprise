@@ -45,9 +45,16 @@ class LeaveRequestController extends Controller
                 ->get();
         }
 
+        $isGuru = false;
+        if ($employee) {
+            $isGuru = $employee->teachingSchedules()->exists() 
+                || $employee->positions()->where('name', 'LIKE', '%Guru%')->exists();
+        }
+
         return Inertia::render('LeaveRequests/Index', [
             'leaveRequests' => $leaveRequests,
             'hasEmployee' => (bool) $employee,
+            'isGuru' => $isGuru,
         ]);
     }
 

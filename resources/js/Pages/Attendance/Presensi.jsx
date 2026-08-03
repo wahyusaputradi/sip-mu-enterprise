@@ -776,7 +776,7 @@ export default function Presensi({
                                                         </div>
                                                     ) : s.not_yet ? (
                                                         <div className="bg-slate-100 text-slate-500 px-4 py-2 rounded-xl text-xs font-bold border border-slate-200">
-                                                            <Clock className="w-3.5 h-3.5 mr-1 inline" /> Belum Dimulai
+                                                            <Clock className="w-3.5 h-3.5 mr-1 inline" /> {s.hour_number === 10 ? 'Belum Dimulai (Dibuka 14:40)' : 'Belum Dimulai'}
                                                         </div>
                                                     ) : s.is_dinas_luar_active ? (
                                                         <div className="flex flex-col items-end">

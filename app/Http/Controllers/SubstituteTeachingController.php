@@ -89,7 +89,8 @@ class SubstituteTeachingController extends Controller
                 $slot = $hourSlots[$schedule->hour_number] ?? null;
                 if (!$slot) return false;
 
-                $sessionStart = Carbon::createFromFormat('H:i', $slot['start']);
+                $sessionStartStr = ($schedule->hour_number == 10) ? $slot['end'] : $slot['start'];
+                $sessionStart = Carbon::createFromFormat('H:i', $sessionStartStr);
                 $deadline = $sessionStart->copy()->addMinutes($teachingLateTolerance);
 
                 // Only show as empty if the grace period has elapsed
@@ -126,12 +127,18 @@ class SubstituteTeachingController extends Controller
         $historyEndDate = $request->input('history_end_date');
         $historyStatus = $request->input('history_status');
 
-        if ($historyStartDate) {
-            $invalsQuery->whereDate('date', '>=', $historyStartDate);
+        if ($historyStartDate || $historyEndDate) {
+            if ($historyStartDate) {
+                $invalsQuery->whereDate('date', '>=', $historyStartDate);
+            }
+            if ($historyEndDate) {
+                $invalsQuery->whereDate('date', '<=', $historyEndDate);
+            }
+        } else {
+            // Filter by selected date by default, instead of displaying all dates in history
+            $invalsQuery->whereDate('date', $date);
         }
-        if ($historyEndDate) {
-            $invalsQuery->whereDate('date', '<=', $historyEndDate);
-        }
+
         if ($historyStatus && in_array($historyStatus, ['pending', 'approved', 'rejected'])) {
             $invalsQuery->where('status', $historyStatus);
         }

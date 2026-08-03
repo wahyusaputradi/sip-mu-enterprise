@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 
 export default function Index({ positions }) {
+    const { auth } = usePage().props;
+    const userRoles = auth?.user?.roles || (auth?.user?.role ? [auth.user.role] : []);
+    const canManage = userRoles.some(r => ['Super Admin', 'Bendahara'].includes(r));
+
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
@@ -107,29 +111,35 @@ export default function Index({ positions }) {
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         <div className="hidden sm:flex gap-2">
-                            <input type="file" id="import_pos" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
-                            <Button onClick={() => document.getElementById('import_pos').click()} className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-lg shadow-amber-200 hover:shadow-amber-300 transition-all">
-                                <Upload className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Import</span>
-                            </Button>
-                            <a href={route('positions.template')}>
-                                <Button className="rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all">
-                                    <FileUp className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Template</span>
-                                </Button>
-                            </a>
+                            {canManage && (
+                                <>
+                                    <input type="file" id="import_pos" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
+                                    <Button onClick={() => document.getElementById('import_pos').click()} className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-lg shadow-amber-200 hover:shadow-amber-300 transition-all">
+                                        <Upload className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Import</span>
+                                    </Button>
+                                    <a href={route('positions.template')}>
+                                        <Button className="rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all">
+                                            <FileUp className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Template</span>
+                                        </Button>
+                                    </a>
+                                </>
+                            )}
                             <a href={route('positions.export')}>
                                 <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-200 hover:shadow-emerald-300 transition-all">
                                     <Download className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Export</span>
                                 </Button>
                             </a>
                         </div>
-                        {checkedIds.length > 0 && (
+                        {canManage && checkedIds.length > 0 && (
                             <Button onClick={() => setIsBulkDeleteOpen(true)} variant="outline" className="rounded-xl border-rose-200 text-rose-600 font-bold hover:bg-rose-50">
                                 <Trash2 className="w-4 h-4 mr-2" /> Hapus ({checkedIds.length})
                             </Button>
                         )}
-                        <Button onClick={openCreate} className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl shadow-lg hover:-translate-y-0.5 transition-all">
-                            <Plus className="w-5 h-5 sm:mr-2" /><span className="hidden sm:inline">Tambah Jabatan</span>
-                        </Button>
+                        {canManage && (
+                            <Button onClick={openCreate} className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl shadow-lg hover:-translate-y-0.5 transition-all">
+                                <Plus className="w-5 h-5 sm:mr-2" /><span className="hidden sm:inline">Tambah Jabatan</span>
+                            </Button>
+                        )}
                     </div>
                 </div>
             }
@@ -191,14 +201,18 @@ export default function Index({ positions }) {
                                                         </span>
                                                     </TableCell>
                                                     <TableCell className="px-6 text-right">
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            <Button onClick={() => openEdit(pos)} variant="outline" size="icon" className="h-8 w-8 rounded-xl border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200">
-                                                                <Edit2 className="w-4 h-4" />
-                                                            </Button>
-                                                            <Button onClick={() => openDelete(pos)} variant="outline" size="icon" className="h-8 w-8 rounded-xl border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200">
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
+                                                        {canManage ? (
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <Button onClick={() => openEdit(pos)} variant="outline" size="icon" className="h-8 w-8 rounded-xl border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200">
+                                                                    <Edit2 className="w-4 h-4" />
+                                                                </Button>
+                                                                <Button onClick={() => openDelete(pos)} variant="outline" size="icon" className="h-8 w-8 rounded-xl border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200">
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[11px] font-semibold text-slate-400 italic">Read-Only</span>
+                                                        )}
                                                     </TableCell>
                                                 </motion.tr>
                                             );
@@ -224,13 +238,13 @@ export default function Index({ positions }) {
                 {totalPages > 1 && (
                     <div className="flex justify-center mt-6">
                         <div className="flex items-center gap-1 bg-white/60 p-2 rounded-2xl shadow-sm border border-white/50 backdrop-blur-sm">
-                            <button 
+                            <button
                                 disabled={currentPage === 1}
                                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                 className="px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 text-slate-500 hover:bg-slate-100 disabled:hover:bg-transparent"
                             >Prev</button>
-                            
-                            {Array.from({length: Math.min(5, totalPages)}, (_, i) => {
+
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                                 let pageNum = i + 1;
                                 if (totalPages > 5 && currentPage > 3) {
                                     pageNum = currentPage - 2 + i;
@@ -245,7 +259,7 @@ export default function Index({ positions }) {
                                 );
                             })}
 
-                            <button 
+                            <button
                                 disabled={currentPage === totalPages}
                                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                 className="px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 text-slate-500 hover:bg-slate-100 disabled:hover:bg-transparent"

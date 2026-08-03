@@ -21,7 +21,7 @@ const TYPE_CFG = {
 };
 const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
-export default function Index({ leaveRequests, hasEmployee }) {
+export default function Index({ leaveRequests, hasEmployee, isGuru }) {
     const user = usePage().props.auth.user;
     const now = new Date();
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -37,6 +37,12 @@ export default function Index({ leaveRequests, hasEmployee }) {
     const [fileName, setFileName] = useState('');
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState({});
+
+    const supportsDurationChoice = (type) => {
+        if (type === 'izin_dinas_luar') return true;
+        if (isGuru && ['izin_pribadi', 'izin_pulang_cepat', 'sakit'].includes(type)) return true;
+        return false;
+    };
 
     const years = useMemo(() => {
         const s = new Set(); leaveRequests.forEach(l => s.add(new Date(l.start_date).getFullYear())); s.add(now.getFullYear());
@@ -84,8 +90,9 @@ export default function Index({ leaveRequests, hasEmployee }) {
         const fd = new FormData();
         fd.append('start_date', formData.start_date); fd.append('end_date', formData.end_date);
         fd.append('type', formData.type);
-        fd.append('duration_type', formData.type === 'izin_dinas_luar' ? formData.duration_type : 'full_day');
-        if (formData.type === 'izin_dinas_luar' && formData.duration_type === 'partial') {
+        const supportsDuration = supportsDurationChoice(formData.type);
+        fd.append('duration_type', supportsDuration ? formData.duration_type : 'full_day');
+        if (supportsDuration && formData.duration_type === 'partial') {
             fd.append('start_time', formData.start_time);
             fd.append('end_time', formData.end_time);
         }
@@ -247,7 +254,14 @@ export default function Index({ leaveRequests, hasEmployee }) {
                             <Label className="font-bold text-slate-700 text-sm">Jenis Pengajuan</Label>
                             <Select 
                                 value={formData.type} 
-                                onValueChange={v => setFormData({...formData, type: v, duration_type: v === 'izin_dinas_luar' ? formData.duration_type : 'full_day'})}
+                                onValueChange={v => {
+                                    const supports = supportsDurationChoice(v);
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        type: v,
+                                        duration_type: supports ? prev.duration_type : 'full_day'
+                                    }));
+                                }}
                             >
                                 <SelectTrigger className="rounded-xl border-slate-200 h-10 font-semibold">
                                     <SelectValue />
@@ -263,11 +277,11 @@ export default function Index({ leaveRequests, hasEmployee }) {
                             {errors.type && <p className="text-rose-500 text-xs font-bold">{errors.type}</p>}
                         </div>
 
-                        {/* Pilihan Durasi khusus untuk Izin Dinas Luar */}
-                        {formData.type === 'izin_dinas_luar' && (
+                        {/* Pilihan Durasi (Dinas Luar, atau Izin Pribadi/Pulang Cepat/Sakit khusus Guru) */}
+                        {supportsDurationChoice(formData.type) && (
                             <div className="space-y-3 p-3.5 bg-white border border-slate-100 rounded-xl">
                                 <div className="space-y-1.5">
-                                    <Label className="font-bold text-slate-700 text-sm">Durasi Dinas Luar</Label>
+                                    <Label className="font-bold text-slate-700 text-sm">Durasi Pengajuan</Label>
                                     <Select 
                                         value={formData.duration_type} 
                                         onValueChange={handleDurationTypeChange}

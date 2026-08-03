@@ -32,7 +32,7 @@ export default function Index({ teachers, schoolClasses, schedules, hourSlots, d
         }
     });
     const roles = [...new Set(expandedRoles)];
-    const canManage = roles.some(r => ['Super Admin', 'Kepala Sekolah', 'Kurikulum'].includes(r));
+    const canManage = roles.some(r => ['Super Admin', 'Kurikulum'].includes(r));
 
     const [activeTab, setActiveTab] = useState('manage');
     const [selectedTeacher, setSelectedTeacher] = useState('');

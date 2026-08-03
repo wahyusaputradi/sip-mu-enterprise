@@ -36,7 +36,7 @@ class AttendanceRecapService
 
         $settings = SystemSetting::pluck('value', 'key');
         $cutoffType = $settings['recap_cutoff_type'] ?? 'calendar_month';
-        $countHolidays = ($settings['recap_count_holidays'] ?? '1') === '1';
+        $countHolidays = ($settings['count_holidays_as_present'] ?? $settings['recap_count_holidays'] ?? '0') === '1';
 
         if ($cutoffType === 'custom_date') {
             $cutoffDay = (int) ($settings['recap_cutoff_day'] ?? 20);
@@ -64,13 +64,17 @@ class AttendanceRecapService
             ->toArray();
 
         $validHolidayCount = 0;
+        $todayStr = Carbon::today()->format('Y-m-d');
         $period = CarbonPeriod::create($startDate, $endDate);
         foreach ($period as $date) {
             if ($date->isWeekday()) {
                 if (!in_array($date->format('Y-m-d'), $holidays)) {
                     $workingDaysDates[] = $date->format('Y-m-d');
                 } else {
-                    $validHolidayCount++;
+                    // Only count holiday if the holiday date has passed or is today
+                    if ($date->format('Y-m-d') <= $todayStr) {
+                        $validHolidayCount++;
+                    }
                 }
             }
         }
@@ -136,20 +140,22 @@ class AttendanceRecapService
                     elseif ($att->status === 'permit') $permitCount++;
                     elseif ($att->status === 'sick') $sickCount++;
                 } else {
-                    $onLeave = false;
-                    foreach ($leaves as $leave) {
-                        $start = Carbon::parse($leave->start_date);
-                        $end = Carbon::parse($leave->end_date);
-                        $current = Carbon::parse($wDate);
-                        if ($current->betweenIncluded($start, $end)) {
-                            $onLeave = true;
-                            if ($leave->type === 'Sakit' || $leave->type === 'sakit') $sickCount++;
-                            else $permitCount++;
-                            break;
+                    if ($wDate <= $todayStr) {
+                        $onLeave = false;
+                        foreach ($leaves as $leave) {
+                            $start = Carbon::parse($leave->start_date);
+                            $end = Carbon::parse($leave->end_date);
+                            $current = Carbon::parse($wDate);
+                            if ($current->betweenIncluded($start, $end)) {
+                                $onLeave = true;
+                                if ($leave->type === 'Sakit' || $leave->type === 'sakit') $sickCount++;
+                                else $permitCount++;
+                                break;
+                            }
                         }
-                    }
-                    if (!$onLeave) {
-                        $alphaCount++;
+                        if (!$onLeave) {
+                            $alphaCount++;
+                        }
                     }
                 }
             }
@@ -214,12 +220,14 @@ class AttendanceRecapService
                 $jtm_effective_12 = $jtm_present_12;
                 $jtm_effective = $jtm_effective_10 + $jtm_effective_11 + $jtm_effective_12;
 
-                // Perhitungan JTM Libur
+                // Perhitungan JTM Libur (Hanya dihitung jika tanggal libur sudah terlewati atau hari ini)
                 $jtm_holiday = 0;
                 foreach ($holidays as $hDate) {
-                    $dayOfWeek = Carbon::parse($hDate)->dayOfWeekIso;
-                    if ($dayOfWeek >= 1 && $dayOfWeek <= 5) {
-                        $jtm_holiday += $schedules->where('day_of_week', $dayOfWeek)->count();
+                    if ($hDate <= $todayStr) {
+                        $dayOfWeek = Carbon::parse($hDate)->dayOfWeekIso;
+                        if ($dayOfWeek >= 1 && $dayOfWeek <= 5) {
+                            $jtm_holiday += $schedules->where('day_of_week', $dayOfWeek)->count();
+                        }
                     }
                 }
 

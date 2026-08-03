@@ -297,7 +297,7 @@ export default function Index({ auth, date, lowongan = [], invals, canApprove, e
                     <div className="p-6 md:p-8 border-b border-slate-100 dark:border-border bg-slate-50/50 dark:bg-slate-800/20 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
                         <div>
                             <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">Riwayat Klaim Inval</h3>
-                            <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">Daftar jam ganti yang diajukan {canApprove ? 'seluruh pegawai' : 'oleh Anda'}</p>
+                            <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">Daftar jam ganti yang diajukan {canApprove ? 'seluruh pegawai' : 'oleh Anda'}{!historyStartDate && !historyEndDate ? ` (Tanggal ${selectedDate})` : ''}</p>
                         </div>
                         
                         {/* History Filters */}

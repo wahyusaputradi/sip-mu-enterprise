@@ -11,7 +11,10 @@ import { Plus, Edit2, Trash2, Users, AlertCircle, Search, Download, Upload, File
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Index({ employees }) {
-    const { flash } = usePage().props;
+    const { flash, auth } = usePage().props;
+    const userRoles = auth?.user?.roles || (auth?.user?.role ? [auth.user.role] : []);
+    const canManage = userRoles.some(r => ['Super Admin', 'Bendahara'].includes(r));
+
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -114,39 +117,43 @@ export default function Index({ employees }) {
                         </h2>
                     </div>
                     <div className="flex items-center flex-wrap gap-2">
-                        {/* Import/Export - hidden on mobile, shown on sm+ */}
+                        {/* Import/Export */}
                         <div className="hidden sm:flex items-center gap-2">
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                const fileInput = document.getElementById('import_excel');
-                                if (fileInput.files.length > 0) {
-                                    const formData = new FormData();
-                                    formData.append('file', fileInput.files[0]);
-                                    setImportLoading(true);
-                                    setNotification(null);
-                                    router.post(route('employees.import'), formData, {
-                                        preserveScroll: true,
-                                        onFinish: () => {
-                                            fileInput.value = '';
-                                            setImportLoading(false);
-                                        },
-                                    });
-                                }
-                            }} className="flex items-center">
-                                <input type="file" id="import_excel" accept=".xlsx, .xls, .csv" className="hidden" onChange={(e) => {
-                                    if(e.target.files.length > 0) e.target.closest('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                                }} />
-                                <Button type="button" disabled={importLoading} onClick={() => document.getElementById('import_excel').click()} className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-lg shadow-amber-200 hover:shadow-amber-300 transition-all disabled:opacity-60">
-                                    {importLoading ? <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" /> : <Upload className="w-4 h-4 sm:mr-2" />}
-                                    <span className="hidden sm:inline">{importLoading ? 'Mengimpor...' : 'Import Excel'}</span>
-                                </Button>
-                            </form>
-                            
-                            <a href={route('employees.template')}>
-                                <Button className="rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all">
-                                    <FileUp className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Template</span>
-                                </Button>
-                            </a>
+                            {canManage && (
+                                <>
+                                    <form onSubmit={(e) => {
+                                        e.preventDefault();
+                                        const fileInput = document.getElementById('import_excel');
+                                        if (fileInput.files.length > 0) {
+                                            const formData = new FormData();
+                                            formData.append('file', fileInput.files[0]);
+                                            setImportLoading(true);
+                                            setNotification(null);
+                                            router.post(route('employees.import'), formData, {
+                                                preserveScroll: true,
+                                                onFinish: () => {
+                                                    fileInput.value = '';
+                                                    setImportLoading(false);
+                                                },
+                                            });
+                                        }
+                                    }} className="flex items-center">
+                                        <input type="file" id="import_excel" accept=".xlsx, .xls, .csv" className="hidden" onChange={(e) => {
+                                            if(e.target.files.length > 0) e.target.closest('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                                        }} />
+                                        <Button type="button" disabled={importLoading} onClick={() => document.getElementById('import_excel').click()} className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-lg shadow-amber-200 hover:shadow-amber-300 transition-all disabled:opacity-60">
+                                            {importLoading ? <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" /> : <Upload className="w-4 h-4 sm:mr-2" />}
+                                            <span className="hidden sm:inline">{importLoading ? 'Mengimpor...' : 'Import Excel'}</span>
+                                        </Button>
+                                    </form>
+                                    
+                                    <a href={route('employees.template')}>
+                                        <Button className="rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all">
+                                            <FileUp className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Template</span>
+                                        </Button>
+                                    </a>
+                                </>
+                            )}
                             
                             <a href={route('employees.export')}>
                                 <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-200 hover:shadow-emerald-300 transition-all">
@@ -154,18 +161,20 @@ export default function Index({ employees }) {
                                 </Button>
                             </a>
                         </div>
-                        {checkedIds.length > 0 && (
+                        {canManage && checkedIds.length > 0 && (
                             <Button onClick={() => setIsBulkDeleteOpen(true)} variant="outline" className="rounded-xl border-rose-200 text-rose-600 font-bold hover:bg-rose-50">
                                 <Trash2 className="w-4 h-4 mr-2" /> Hapus ({checkedIds.length})
                             </Button>
                         )}
-                        <Link href={route('employees.create')}>
-                            <Button 
-                                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-[0_8px_20px_rgba(99,102,241,0.3)] hover:shadow-[0_10px_25px_rgba(99,102,241,0.4)] transition-all hover:-translate-y-0.5"
-                            >
-                                <Plus className="w-5 h-5 sm:mr-2" /><span className="hidden sm:inline">Tambah Pegawai</span>
-                            </Button>
-                        </Link>
+                        {canManage && (
+                            <Link href={route('employees.create')}>
+                                <Button 
+                                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-[0_8px_20px_rgba(99,102,241,0.3)] hover:shadow-[0_10px_25px_rgba(99,102,241,0.4)] transition-all hover:-translate-y-0.5"
+                                >
+                                    <Plus className="w-5 h-5 sm:mr-2" /><span className="hidden sm:inline">Tambah Pegawai</span>
+                                </Button>
+                            </Link>
+                        )}
                     </div>
                 </div>
             }
@@ -342,26 +351,30 @@ export default function Index({ employees }) {
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="px-4 lg:px-8 text-right">
-                                                    <div className="flex items-center justify-end space-x-2">
-                                                        <Link href={route('employees.edit', emp.id)}>
-                                                            <Button 
-                                                                variant="outline" 
-                                                                size="icon" 
-                                                                className="h-8 w-8 rounded-lg border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200"
-                                                            >
-                                                                <Edit2 className="w-4 h-4" />
-                                                            </Button>
-                                                        </Link>
-                                                        <Button 
-                                                            onClick={() => openDeleteModal(emp)}
-                                                            variant="outline" 
-                                                            size="icon" 
-                                                            className="h-8 w-8 rounded-lg border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
+                                                     {canManage ? (
+                                                         <div className="flex items-center justify-end space-x-2">
+                                                             <Link href={route('employees.edit', emp.id)}>
+                                                                 <Button 
+                                                                     variant="outline" 
+                                                                     size="icon" 
+                                                                     className="h-8 w-8 rounded-lg border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200"
+                                                                 >
+                                                                     <Edit2 className="w-4 h-4" />
+                                                                 </Button>
+                                                             </Link>
+                                                             <Button 
+                                                                 onClick={() => openDeleteModal(emp)}
+                                                                 variant="outline" 
+                                                                 size="icon" 
+                                                                 className="h-8 w-8 rounded-lg border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
+                                                             >
+                                                                 <Trash2 className="w-4 h-4" />
+                                                             </Button>
+                                                         </div>
+                                                     ) : (
+                                                         <span className="text-[11px] font-semibold text-slate-400 italic">Read-Only</span>
+                                                     )}
+                                                 </TableCell>
                                             </motion.tr>
                                         )})}
                                         {filteredEmployees.length === 0 && (

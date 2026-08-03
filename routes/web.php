@@ -23,6 +23,20 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+Route::get('/robots.txt', function () {
+    $content = file_exists(public_path('robots.txt')) 
+        ? file_get_contents(public_path('robots.txt')) 
+        : "User-agent: *\nAllow: /\nSitemap: https://sipmuenterprise.my.id/sitemap.xml";
+    return response($content, 200)->header('Content-Type', 'text/plain');
+});
+
+Route::get('/sitemap.xml', function () {
+    $content = file_exists(public_path('sitemap.xml')) 
+        ? file_get_contents(public_path('sitemap.xml')) 
+        : '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://sipmuenterprise.my.id/</loc><lastmod>2026-08-02</lastmod><priority>1.0</priority></url></urlset>';
+    return response($content, 200)->header('Content-Type', 'text/xml');
+});
+
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -94,9 +108,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/attendance/{attendance}', [AttendanceController::class, 'update'])->name('attendance.update');
         Route::post('/attendance/unlock', [AttendanceController::class, 'unlockAttendance'])->name('attendance.unlock');
 
-        // Kelola Foto Presensi
+        // Kelola Foto Presensi - Read Only & Download
         Route::get('/monitoring/photos', [AttendancePhotoController::class, 'index'])->name('monitoring.photos.index');
         Route::post('/monitoring/photos/download', [AttendancePhotoController::class, 'downloadZip'])->name('monitoring.photos.download');
+    });
+
+    // Kelola Foto Presensi - Delete Operations (Excludes Kepala Sekolah)
+    Route::middleware(['role:Super Admin|Kurikulum|Absensi'])->group(function () {
         Route::delete('/monitoring/photos/{type}/{id}', [AttendancePhotoController::class, 'destroy'])->name('monitoring.photos.destroy');
         Route::post('/monitoring/photos/bulk-destroy', [AttendancePhotoController::class, 'bulkDestroy'])->name('monitoring.photos.bulk-destroy');
     });
@@ -110,19 +128,38 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ══════════════════════════════════════════════════
     // AREA MANAJEMEN — Data Pegawai & Jabatan
     // ══════════════════════════════════════════════════
+    // Read-Only Access (Includes Kepala Sekolah)
     Route::middleware(['role:Super Admin|Kepala Sekolah|Bendahara'])->group(function () {
-        Route::get('employees/template', [EmployeeController::class, 'template'])->name('employees.template');
+        Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
         Route::get('employees/export', [EmployeeController::class, 'export'])->name('employees.export');
+        Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
+
+        Route::get('positions', [PositionController::class, 'index'])->name('positions.index');
+        Route::get('positions/export', [PositionController::class, 'export'])->name('positions.export');
+        Route::get('positions/{position}', [PositionController::class, 'show'])->name('positions.show');
+    });
+
+    // Write Operations (Excludes Kepala Sekolah)
+    Route::middleware(['role:Super Admin|Bendahara'])->group(function () {
+        Route::get('employees/template', [EmployeeController::class, 'template'])->name('employees.template');
         Route::post('employees/import', [EmployeeController::class, 'import'])->name('employees.import');
         Route::post('employees/bulk-destroy', [EmployeeController::class, 'bulkDestroy'])->name('employees.bulk-destroy');
-        Route::resource('employees', EmployeeController::class);
+        Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create');
+        Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store');
+        Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
+        Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
+        Route::patch('employees/{employee}', [EmployeeController::class, 'update']);
+        Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
+
         Route::get('positions/template', [PositionController::class, 'template'])->name('positions.template');
-        Route::get('positions/export', [PositionController::class, 'export'])->name('positions.export');
         Route::post('positions/import', [PositionController::class, 'import'])->name('positions.import');
         Route::post('positions/bulk-destroy', [PositionController::class, 'bulkDestroy'])->name('positions.bulk-destroy');
-        Route::resource('positions', PositionController::class);
-
-        // Routes for Salary Settings and Payroll have been removed.
+        Route::get('positions/create', [PositionController::class, 'create'])->name('positions.create');
+        Route::post('positions', [PositionController::class, 'store'])->name('positions.store');
+        Route::get('positions/{position}/edit', [PositionController::class, 'edit'])->name('positions.edit');
+        Route::put('positions/{position}', [PositionController::class, 'update'])->name('positions.update');
+        Route::patch('positions/{position}', [PositionController::class, 'update']);
+        Route::delete('positions/{position}', [PositionController::class, 'destroy'])->name('positions.destroy');
     });
 
     // ══════════════════════════════════════════════════
@@ -133,12 +170,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/teaching-schedules/export/excel', [TeachingScheduleController::class, 'export'])->name('teaching-schedules.export');
     });
 
-    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum'])->group(function () {
+    // Write Operations Jadwal (Excludes Kepala Sekolah)
+    Route::middleware(['role:Super Admin|Kurikulum'])->group(function () {
         Route::post('/teaching-schedules', [TeachingScheduleController::class, 'store'])->name('teaching-schedules.store');
         Route::put('/teaching-schedules/{teachingSchedule}', [TeachingScheduleController::class, 'update'])->name('teaching-schedules.update');
         Route::delete('/teaching-schedules/{teachingSchedule}', [TeachingScheduleController::class, 'destroy'])->name('teaching-schedules.destroy');
         Route::post('/teaching-schedules/import/excel', [TeachingScheduleController::class, 'import'])->name('teaching-schedules.import');
+    });
 
+    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum'])->group(function () {
         // Persetujuan Cuti/Izin
         Route::get('/leave-requests/approval', [LeaveRequestController::class, 'approval'])->name('leave-requests.approval');
         Route::post('/leave-requests/{leaveRequest}/approve', [LeaveRequestController::class, 'approve'])->name('leave-requests.approve');

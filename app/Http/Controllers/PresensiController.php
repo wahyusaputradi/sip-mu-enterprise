@@ -233,8 +233,11 @@ class PresensiController extends Controller
                 $slotEnd = $slot ? Carbon::createFromFormat('H:i', $slot['end']) : null;
                 $isPastSlot = $slotEnd ? $now->gt($slotEnd) : false;
 
+                // For hour 10 (last hour), open time is slot['end'] (14:40) instead of slot['start'] (14:00)
+                $openTime = ($slot && $schedule->hour_number == 10) ? $slotEnd : $slotStart;
+
                 if (!$hasAttended && $slot) {
-                    $slotDeadline = $slotStart->copy()->addMinutes($teachingLateTolerance);
+                    $slotDeadline = $openTime->copy()->addMinutes($teachingLateTolerance);
 
                     // If it is an inval schedule or on Dinas Luar, bypass the slot deadline block
                     if (!$isInval && !$slotOnDinasLuar && $now->gt($slotDeadline)) {
@@ -244,12 +247,13 @@ class PresensiController extends Controller
                             ->isNotEmpty();
                         if (!$hasUnlock) {
                             $blocked = true;
-                            $blockReason = "Batas presensi Jam ke-{$schedule->hour_number} ({$slot['start']} + {$teachingLateTolerance} menit) telah terlewat.";
+                            $openStr = ($schedule->hour_number == 10) ? $slot['end'] : $slot['start'];
+                            $blockReason = "Batas presensi Jam ke-{$schedule->hour_number} ({$openStr} + {$teachingLateTolerance} menit) telah terlewat.";
                         }
                     }
 
                     // Not yet started
-                    $notYet = $now->lt($slotStart);
+                    $notYet = $now->lt($openTime);
                 }
 
                 $showDinasLuarBadge = false;
@@ -422,11 +426,13 @@ class PresensiController extends Controller
         $status = 'present';
 
         if (!$onDinasLuar && $slot) {
-            $slotStart = Carbon::createFromFormat('H:i', $slot['start']);
-            $slotDeadline = $slotStart->copy()->addMinutes($teachingLateTolerance);
+            // For hour 10 (last hour), open time is slot['end'] (14:40) instead of slot['start'] (14:00)
+            $openTimeStr = ($schedule->hour_number == 10) ? $slot['end'] : $slot['start'];
+            $openTime = Carbon::createFromFormat('H:i', $openTimeStr);
+            $slotDeadline = $openTime->copy()->addMinutes($teachingLateTolerance);
 
-            if ($now->lt($slotStart)) {
-                return back()->withErrors(['message' => "Belum waktunya jam pelajaran ke-{$schedule->hour_number}. Sesi baru dimulai pada pukul " . $slot['start']]);
+            if ($now->lt($openTime)) {
+                return back()->withErrors(['message' => "Belum waktunya jam pelajaran ke-{$schedule->hour_number}. Presensi Jam ke-10 baru dibuka pada pukul " . $openTimeStr]);
             }
 
             if ($isInval) {
@@ -445,13 +451,13 @@ class PresensiController extends Controller
                     ->first();
 
                 if (!$unlock) {
-                    return back()->withErrors(['message' => "Batas waktu presensi Jam ke-{$schedule->hour_number} ({$slot['start']} + {$teachingLateTolerance} menit) telah terlewat. Hubungi Admin Presensi/Kurikulum."]);
+                    return back()->withErrors(['message' => "Batas waktu presensi Jam ke-{$schedule->hour_number} ({$openTimeStr} + {$teachingLateTolerance} menit) telah terlewat. Hubungi Admin Presensi/Kurikulum."]);
                 }
 
                 // Mark unlock as used
                 $unlock->update(['used' => true]);
                 $status = $unlock->is_lateness_violation ? 'late' : 'present';
-            } elseif ($now->gt($slotStart)) {
+            } elseif ($now->gt($openTime)) {
                 $status = 'late';
             }
         }

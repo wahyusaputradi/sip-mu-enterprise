@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -18,6 +18,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function AttendancePhotos({ photos, campusLocations, stats, filters }) {
+    const { auth } = usePage().props;
+    const userRoles = auth?.user?.roles || (auth?.user?.role ? [auth.user.role] : []);
+    const canDeletePhoto = userRoles.some(r => ['Super Admin', 'Kurikulum', 'Absensi'].includes(r));
+
     const [search, setSearch] = useState(filters.search || '');
     const [startDate, setStartDate] = useState(filters.start_date || '');
     const [endDate, setEndDate] = useState(filters.end_date || '');
@@ -434,13 +438,15 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
                                     exit={{ opacity: 0, scale: 0.95 }}
                                     className="flex items-center gap-3 w-full sm:w-auto"
                                 >
-                                    <Button
-                                        onClick={() => setIsBulkDeleting(true)}
-                                        variant="outline"
-                                        className="rounded-xl font-bold border-rose-200 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 h-10 w-full sm:w-auto px-4"
-                                    >
-                                        <Trash2 className="w-4 h-4 mr-2" /> Hapus Terpilih
-                                    </Button>
+                                    {canDeletePhoto && (
+                                        <Button
+                                            onClick={() => setIsBulkDeleting(true)}
+                                            variant="outline"
+                                            className="rounded-xl font-bold border-rose-200 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 h-10 w-full sm:w-auto px-4"
+                                        >
+                                            <Trash2 className="w-4 h-4 mr-2" /> Hapus Terpilih
+                                        </Button>
+                                    )}
                                     <Button
                                         onClick={handleBulkDownload}
                                         className="rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white h-10 w-full sm:w-auto px-5 shadow-md shadow-emerald-100 dark:shadow-none"
@@ -554,14 +560,16 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
                                                             >
                                                                 <Eye className="w-4 h-4" />
                                                             </Button>
-                                                            <Button 
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() => setIsDeleting({ type: photo.type, id: photo.id })}
-                                                                className="h-8 w-8 p-0 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
+                                                            {canDeletePhoto && (
+                                                                <Button 
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={() => setIsDeleting({ type: photo.type, id: photo.id })}
+                                                                    className="h-8 w-8 p-0 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -622,13 +630,15 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
                                                 >
                                                     <Eye className="w-3.5 h-3.5 mr-1" /> Detail
                                                 </Button>
-                                                <Button 
-                                                    size="sm" 
-                                                    onClick={() => setIsDeleting({ type: photo.type, id: photo.id })} 
-                                                    className="bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold h-8 w-8 p-0"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </Button>
+                                                {canDeletePhoto && (
+                                                    <Button 
+                                                        size="sm" 
+                                                        onClick={() => setIsDeleting({ type: photo.type, id: photo.id })} 
+                                                        className="bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold h-8 w-8 p-0"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
 
@@ -700,13 +710,15 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
                                                 >
                                                     <Eye className="w-4 h-4 mr-1.5" /> Detail
                                                 </Button>
-                                                <Button 
-                                                    size="sm" 
-                                                    onClick={() => setIsDeleting({ type: photo.type, id: photo.id })} 
-                                                    className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold h-9"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
+                                                {canDeletePhoto && (
+                                                    <Button 
+                                                        size="sm" 
+                                                        onClick={() => setIsDeleting({ type: photo.type, id: photo.id })} 
+                                                        className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold h-9"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
 
@@ -888,16 +900,18 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
                             >
                                 Tutup
                             </Button>
-                            <Button 
-                                type="button" 
-                                onClick={() => {
-                                    setPreviewPhoto(null);
-                                    setIsDeleting({ type: previewPhoto.type, id: previewPhoto.id });
-                                }}
-                                className="bg-rose-600 hover:bg-rose-700 text-white w-full rounded-xl font-bold h-11"
-                            >
-                                <Trash2 className="w-4 h-4 mr-2" /> Hapus
-                            </Button>
+                            {canDeletePhoto && (
+                                <Button 
+                                    type="button" 
+                                    onClick={() => {
+                                        setPreviewPhoto(null);
+                                        setIsDeleting({ type: previewPhoto.type, id: previewPhoto.id });
+                                    }}
+                                    className="bg-rose-600 hover:bg-rose-700 text-white w-full rounded-xl font-bold h-11"
+                                >
+                                    <Trash2 className="w-4 h-4 mr-2" /> Hapus
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </DialogContent>

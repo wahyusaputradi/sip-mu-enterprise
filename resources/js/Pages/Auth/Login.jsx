@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { UserCircle, Lock, LogIn, Loader2, Eye, EyeOff, ShieldCheck, ShieldX, Timer } from 'lucide-react';
+import { UserCircle, Lock, LogIn, Loader2, Eye, EyeOff, ShieldCheck, ShieldX, Timer, KeyRound } from 'lucide-react';
 
 export default function Login({ status, canResetPassword }) {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -30,28 +30,43 @@ export default function Login({ status, canResetPassword }) {
 
     return (
         <GuestLayout>
-            <Head title="Sign In" />
+            <Head title="Sign In - SIP MU Enterprise" />
 
+            {/* Header Form */}
             <div className="mb-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">Selamat Datang</h2>
-                <p className="text-gray-500">Silakan masuk ke akun Anda untuk melanjutkan.</p>
+                <div className="inline-flex items-center space-x-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold border border-indigo-100 mb-3">
+                    <KeyRound className="w-3.5 h-3.5" />
+                    <span>Autentikasi Akun</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mb-2">
+                    Selamat Datang
+                </h2>
+                <p className="text-sm font-medium text-slate-500">
+                    Silakan masukkan email/username & password Anda untuk melanjutkan.
+                </p>
             </div>
 
+            {/* Status Message (e.g. Password Reset Successful) */}
             {status && (
-                <div className="mb-6 p-4 rounded-xl bg-green-50 text-sm font-medium text-green-600 border border-green-100">
-                    {status}
-                </div>
+                <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6 p-4 rounded-2xl bg-emerald-50 text-xs font-bold text-emerald-700 border border-emerald-200/80 flex items-center space-x-3"
+                >
+                    <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <span>{status}</span>
+                </motion.div>
             )}
 
-            {/* Login Error / Lockout Warning */}
+            {/* Login Error / Lockout Warning Alert */}
             {errors.login && (
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`mb-6 p-4 rounded-xl text-sm font-medium border flex items-start gap-3 ${
+                    className={`mb-6 p-4 rounded-2xl text-xs font-bold border flex items-start space-x-3 shadow-sm ${
                         errors.login.includes('dikunci') || errors.login.includes('locked')
-                            ? 'bg-rose-50 text-rose-700 border-rose-200'
-                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                            ? 'bg-rose-50 text-rose-700 border-rose-200/80'
+                            : 'bg-amber-50 text-amber-800 border-amber-200/80'
                     }`}
                 >
                     {errors.login.includes('dikunci') || errors.login.includes('locked') ? (
@@ -59,66 +74,73 @@ export default function Login({ status, canResetPassword }) {
                     ) : (
                         <Timer className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                     )}
-                    <span>{errors.login}</span>
+                    <span className="leading-relaxed">{errors.login}</span>
                 </motion.div>
             )}
 
-            <form onSubmit={submit} className="space-y-6">
+            <form onSubmit={submit} className="space-y-5">
+                {/* Username / Email Input */}
                 <motion.div 
-                    initial={{ x: 20, opacity: 0 }}
+                    initial={{ x: 15, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
+                    transition={{ delay: 0.15 }}
                     className="space-y-2"
                 >
-                    <Label htmlFor="login" className="text-sm font-semibold text-gray-700">Email atau Username</Label>
-                    <div className="relative">
-                        <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Label htmlFor="login" className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Email atau Username
+                    </Label>
+                    <div className="relative group">
+                        <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
                         <Input
                             id="login"
                             type="text"
                             value={data.login}
-                            className={`pl-11 h-12 bg-white border-gray-200 focus:ring-indigo-500 focus:border-indigo-500 rounded-xl transition-all placeholder:text-gray-400/60 ${errors.login ? 'border-red-500' : ''}`}
+                            className={`pl-11 h-12 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 rounded-2xl text-sm font-semibold transition-all placeholder:text-slate-400 placeholder:font-normal ${errors.login ? 'border-rose-500 bg-rose-50/30' : ''}`}
                             autoComplete="username"
                             autoFocus
                             onChange={(e) => setData('login', e.target.value)}
-                            placeholder="Email atau Username..."
+                            placeholder="Masukkan Email atau Username..."
                         />
                     </div>
                 </motion.div>
 
+                {/* Password Input */}
                 <motion.div 
-                    initial={{ x: 20, opacity: 0 }}
+                    initial={{ x: 15, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
+                    transition={{ delay: 0.25 }}
                     className="space-y-2"
                 >
                     <div className="flex items-center justify-between">
-                        <Label htmlFor="password" title="Password" className="text-sm font-semibold text-gray-700">Password</Label>
+                        <Label htmlFor="password" className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                            Password
+                        </Label>
                         {canResetPassword && (
                             <Link
                                 href={route('password.request')}
-                                className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 transition-colors"
+                                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
                             >
                                 Lupa Password?
                             </Link>
                         )}
                     </div>
-                    <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <div className="relative group">
+                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
                         <Input
                             id="password"
                             type={showPassword ? 'text' : 'password'}
                             value={data.password}
-                            className={`pl-11 pr-11 h-12 bg-white border-gray-200 focus:ring-indigo-500 focus:border-indigo-500 rounded-xl transition-all placeholder:text-gray-400/60 ${errors.password ? 'border-red-500' : ''}`}
+                            className={`pl-11 pr-11 h-12 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 rounded-2xl text-sm font-semibold transition-all placeholder:text-slate-400 placeholder:font-normal ${errors.password ? 'border-rose-500 bg-rose-50/30' : ''}`}
                             autoComplete="current-password"
                             onChange={(e) => setData('password', e.target.value)}
-                            placeholder="Masukkan password Anda..."
+                            placeholder="Masukkan Password Anda..."
                         />
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors focus:outline-none"
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors focus:outline-none"
                             tabIndex="-1"
+                            aria-label="Toggle Password Visibility"
                         >
                             {showPassword ? (
                                 <EyeOff className="h-5 w-5" />
@@ -127,51 +149,57 @@ export default function Login({ status, canResetPassword }) {
                             )}
                         </button>
                     </div>
-                    {errors.password && <p className="text-red-500 text-xs mt-1 font-medium">{errors.password}</p>}
+                    {errors.password && <p className="text-rose-500 text-xs font-semibold mt-1">{errors.password}</p>}
                 </motion.div>
 
+                {/* Remember Me Checkbox */}
                 <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                    className="flex items-center space-x-2"
+                    transition={{ delay: 0.35 }}
+                    className="flex items-center space-x-2 pt-1"
                 >
                     <Checkbox
                         id="remember"
                         checked={data.remember}
                         onCheckedChange={(checked) => setData('remember', checked)}
-                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                        className="rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                     />
-                    <Label htmlFor="remember" className="text-sm font-medium text-gray-600 cursor-pointer">
-                        Ingat akun saya
+                    <Label htmlFor="remember" className="text-xs font-bold text-slate-600 cursor-pointer select-none">
+                        Ingat sesi saya di perangkat ini
                     </Label>
                 </motion.div>
 
-                {/* Security Honeypot Layer (Hidden from normal users) */}
+                {/* Security Honeypot Layer (Anti-Bot Hidden Field) */}
                 <input type="text" name="b_email" className="hidden" tabIndex="-1" autoComplete="off" />
 
+                {/* 256-Bit SSL Security Badge */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.45 }}
-                    className="flex items-center space-x-2 bg-emerald-50 p-3 rounded-xl border border-emerald-100"
+                    transition={{ delay: 0.4 }}
+                    className="flex items-center space-x-3 bg-slate-50 p-3 rounded-2xl border border-slate-200/70"
                 >
-                    <ShieldCheck className="h-5 w-5 text-emerald-600" />
-                    <span className="text-xs font-semibold text-emerald-700">Koneksi aman terlindungi oleh enkripsi 256-bit</span>
+                    <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0" />
+                    <span className="text-[11px] font-bold text-slate-600">
+                        Koneksi aman terenkripsi SSL 256-bit & Proteksi Anti-Bot
+                    </span>
                 </motion.div>
 
+                {/* Submit Button */}
                 <motion.div
-                    initial={{ y: 20, opacity: 0 }}
+                    initial={{ y: 15, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.5 }}
+                    transition={{ delay: 0.45 }}
+                    className="pt-2"
                 >
                     <Button 
                         type="submit" 
                         disabled={processing}
-                        className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center space-x-2 group active:scale-[0.98]"
+                        className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-2xl shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transition-all flex items-center justify-center space-x-2 group active:scale-[0.98]"
                     >
                         {processing ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
+                            <Loader2 className="h-5 w-5 animate-spin text-white" />
                         ) : (
                             <>
                                 <span>Sign In ke SIP MU Enterprise</span>
@@ -182,14 +210,15 @@ export default function Login({ status, canResetPassword }) {
                 </motion.div>
             </form>
 
+            {/* Administrator Note */}
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
-                className="mt-10 text-center"
+                transition={{ delay: 0.55 }}
+                className="mt-8 text-center pt-6 border-t border-slate-100"
             >
-                <p className="text-sm text-gray-500">
-                    Belum punya akun? <span className="text-indigo-600 font-bold">Hubungi Administrator</span>
+                <p className="text-xs text-slate-500 font-medium">
+                    Kendala saat login? <span className="text-indigo-600 font-extrabold">Hubungi Administrator Sekolah</span>
                 </p>
             </motion.div>
         </GuestLayout>
