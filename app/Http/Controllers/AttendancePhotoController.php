@@ -234,6 +234,27 @@ class AttendancePhotoController extends Controller
             return response()->json(['message' => 'Tidak ada foto presensi yang dipilih.'], 400);
         }
 
+        // 🚀 BATCH EAGER LOAD (Eliminates N+1 DB Queries & Cloudflare Timeout)
+        $dailyIds = [];
+        $teachingIds = [];
+        foreach ($selectedPhotos as $item) {
+            if (!empty($item['id'])) {
+                if (($item['type'] ?? '') === 'teaching') {
+                    $teachingIds[] = $item['id'];
+                } else {
+                    $dailyIds[] = $item['id'];
+                }
+            }
+        }
+
+        $dailyRecords = !empty($dailyIds) 
+            ? Attendance::with('employee:id,name')->whereIn('id', array_unique($dailyIds))->get()->keyBy('id')
+            : collect();
+
+        $teachingRecords = !empty($teachingIds)
+            ? TeachingAttendance::with(['employee:id,name', 'teachingSchedule:id,hour_number'])->whereIn('id', array_unique($teachingIds))->get()->keyBy('id')
+            : collect();
+
         $storagePublicDir = storage_path('app/public');
         \Illuminate\Support\Facades\File::ensureDirectoryExists($storagePublicDir);
 
@@ -245,7 +266,6 @@ class AttendancePhotoController extends Controller
             return response()->json(['message' => 'Gagal membuat berkas kompresi ZIP di server.'], 500);
         }
 
-        $disk = config('filesystems.default', 'public');
         $addedCount = 0;
 
         foreach ($selectedPhotos as $photoItem) {
@@ -259,48 +279,30 @@ class AttendancePhotoController extends Controller
             $dateStr = date('Y-m-d');
             $folder = 'lainnya';
 
-            // Lookup from Database if ID is provided (Ultra Lightweight & Fast Payload)
             if ($id) {
-                if ($type === 'daily_in') {
-                    $attendance = Attendance::with('employee')->find($id);
-                    if ($attendance && $attendance->photo_check_in) {
-                        $path = $attendance->photo_check_in;
-                        $empName = Str::slug($attendance->employee->name ?? 'pegawai', '_');
-                        $dateStr = $attendance->date ?? date('Y-m-d');
-                        $folder = 'presensi_harian/masuk';
-                    }
-                } elseif ($type === 'daily_out') {
-                    $attendance = Attendance::with('employee')->find($id);
-                    if ($attendance && $attendance->photo_check_out) {
-                        $path = $attendance->photo_check_out;
-                        $empName = Str::slug($attendance->employee->name ?? 'pegawai', '_');
-                        $dateStr = $attendance->date ?? date('Y-m-d');
-                        $folder = 'presensi_harian/pulang';
-                    }
-                } elseif ($type === 'teaching') {
-                    $teaching = TeachingAttendance::with(['employee', 'teachingSchedule'])->find($id);
-                    if ($teaching && $teaching->photo) {
-                        $path = $teaching->photo;
-                        $empName = Str::slug($teaching->employee->name ?? 'guru', '_');
-                        $dateStr = $teaching->date ?? date('Y-m-d');
-                        $hour = $teaching->teachingSchedule->hour_number ?? 'x';
-                        $folder = "presensi_mengajar/jam_ke_{$hour}";
-                    }
-                }
-            } else {
-                $empName = Str::slug($photoItem['employee_name'] ?? 'pegawai', '_');
-                $dateStr = $photoItem['date'] ?? date('Y-m-d');
-                if ($type === 'daily_in') {
+                if ($type === 'daily_in' && isset($dailyRecords[$id])) {
+                    $rec = $dailyRecords[$id];
+                    $path = $rec->photo_check_in ?: $path;
+                    $empName = Str::slug($rec->employee->name ?? 'pegawai', '_');
+                    $dateStr = $rec->date ?? date('Y-m-d');
                     $folder = 'presensi_harian/masuk';
-                } elseif ($type === 'daily_out') {
+                } elseif ($type === 'daily_out' && isset($dailyRecords[$id])) {
+                    $rec = $dailyRecords[$id];
+                    $path = $rec->photo_check_out ?: $path;
+                    $empName = Str::slug($rec->employee->name ?? 'pegawai', '_');
+                    $dateStr = $rec->date ?? date('Y-m-d');
                     $folder = 'presensi_harian/pulang';
-                } elseif ($type === 'teaching') {
-                    $hour = $photoItem['hour_number'] ?? 'x';
+                } elseif ($type === 'teaching' && isset($teachingRecords[$id])) {
+                    $rec = $teachingRecords[$id];
+                    $path = $rec->photo ?: $path;
+                    $empName = Str::slug($rec->employee->name ?? 'guru', '_');
+                    $dateStr = $rec->date ?? date('Y-m-d');
+                    $hour = $rec->teachingSchedule->hour_number ?? 'x';
                     $folder = "presensi_mengajar/jam_ke_{$hour}";
                 }
             }
 
-            // Guaranteed Fallback metadata from request if DB lookup didn't populate them
+            // Guaranteed Fallback metadata from request if DB batch didn't populate them
             if (empty($empName) || $empName === 'pegawai') {
                 $empName = Str::slug($photoItem['employee_name'] ?? 'pegawai', '_');
             }
@@ -312,7 +314,6 @@ class AttendancePhotoController extends Controller
             }
 
             if (!$path) {
-                // If path is still empty, use employee name as dummy identifier path for SVG generator
                 $path = "placeholder_{$empName}_{$dateStr}.svg";
             }
 
@@ -328,28 +329,26 @@ class AttendancePhotoController extends Controller
                         }
                     }
                 } 
-                // Case 2: Disk Storage Files
+                // Case 2: Direct File Path Check (Ultra Fast Single I/O Check)
                 else {
                     $ext = pathinfo($path, PATHINFO_EXTENSION) ?: 'jpg';
-                    if (Storage::disk($disk)->exists($path)) {
-                        $fileContent = Storage::disk($disk)->get($path);
-                    } elseif (Storage::disk('public')->exists($path)) {
-                        $fileContent = Storage::disk('public')->get($path);
-                    } elseif (Storage::disk('local')->exists($path)) {
-                        $fileContent = Storage::disk('local')->get($path);
-                    } elseif (file_exists(storage_path('app/public/' . $path))) {
-                        $fileContent = file_get_contents(storage_path('app/public/' . $path));
-                    } elseif (file_exists(storage_path('app/' . $path))) {
-                        $fileContent = file_get_contents(storage_path('app/' . $path));
-                    } elseif (file_exists(public_path('storage/' . $path))) {
-                        $fileContent = file_get_contents(public_path('storage/' . $path));
+                    $p1 = storage_path('app/public/' . $path);
+                    $p2 = storage_path('app/' . $path);
+                    $p3 = public_path('storage/' . $path);
+
+                    if (file_exists($p1)) {
+                        $fileContent = file_get_contents($p1);
+                    } elseif (file_exists($p2)) {
+                        $fileContent = file_get_contents($p2);
+                    } elseif (file_exists($p3)) {
+                        $fileContent = file_get_contents($p3);
                     }
                 }
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning("Could not read photo for ZIP: " . substr($path, 0, 40) . ". Error: " . $e->getMessage());
             }
 
-            // Case 3: Instant Fallback Card Generation (Deadlock-Free & Ultra Fast)
+            // Case 3: Instant Fallback Card Generation (Deadlock-Free & Instant)
             if (!$fileContent) {
                 $typeLabel = $type === 'daily_in' ? 'Presensi Masuk' : ($type === 'daily_out' ? 'Presensi Pulang' : 'Presensi Mengajar');
                 $displayEmp = str_replace('_', ' ', ucwords($empName, '_'));
@@ -358,10 +357,8 @@ class AttendancePhotoController extends Controller
             }
 
             if ($fileContent) {
-                // Guaranteed Unique Filename to avoid overwrite inside ZIP
                 $uniqueIdSuffix = $id ? "_id{$id}" : '_' . Str::random(4);
                 $filename = "{$dateStr}_{$empName}{$uniqueIdSuffix}.{$ext}";
-
                 $zip->addFromString("{$folder}/{$filename}", $fileContent);
                 $addedCount++;
             }
