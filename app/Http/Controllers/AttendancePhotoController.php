@@ -248,11 +248,11 @@ class AttendancePhotoController extends Controller
         }
 
         $dailyRecords = !empty($dailyIds) 
-            ? Attendance::with('employee:id,name')->whereIn('id', array_unique($dailyIds))->get()->keyBy('id')
+            ? Attendance::with('employee:id,name,photo_path')->whereIn('id', array_unique($dailyIds))->get()->keyBy('id')
             : collect();
 
         $teachingRecords = !empty($teachingIds)
-            ? TeachingAttendance::with(['employee:id,name', 'teachingSchedule:id,hour_number'])->whereIn('id', array_unique($teachingIds))->get()->keyBy('id')
+            ? TeachingAttendance::with(['employee:id,name,photo_path', 'teachingSchedule:id,hour_number'])->whereIn('id', array_unique($teachingIds))->get()->keyBy('id')
             : collect();
 
         $storagePublicDir = storage_path('app/public');
@@ -272,6 +272,7 @@ class AttendancePhotoController extends Controller
             $type = $photoItem['type'] ?? 'daily_in';
             $id = $photoItem['id'] ?? null;
             $path = $photoItem['photo_path'] ?? null;
+            $employeePhoto = null;
 
             $fileContent = null;
             $ext = 'jpg';
@@ -283,18 +284,21 @@ class AttendancePhotoController extends Controller
                 if ($type === 'daily_in' && isset($dailyRecords[$id])) {
                     $rec = $dailyRecords[$id];
                     $path = $rec->photo_check_in ?: $path;
+                    $employeePhoto = $rec->employee->photo_path ?? null;
                     $empName = Str::slug($rec->employee->name ?? 'pegawai', '_');
                     $dateStr = $rec->date ?? date('Y-m-d');
                     $folder = 'presensi_harian/masuk';
                 } elseif ($type === 'daily_out' && isset($dailyRecords[$id])) {
                     $rec = $dailyRecords[$id];
                     $path = $rec->photo_check_out ?: $path;
+                    $employeePhoto = $rec->employee->photo_path ?? null;
                     $empName = Str::slug($rec->employee->name ?? 'pegawai', '_');
                     $dateStr = $rec->date ?? date('Y-m-d');
                     $folder = 'presensi_harian/pulang';
                 } elseif ($type === 'teaching' && isset($teachingRecords[$id])) {
                     $rec = $teachingRecords[$id];
                     $path = $rec->photo ?: $path;
+                    $employeePhoto = $rec->employee->photo_path ?? null;
                     $empName = Str::slug($rec->employee->name ?? 'guru', '_');
                     $dateStr = $rec->date ?? date('Y-m-d');
                     $hour = $rec->teachingSchedule->hour_number ?? 'x';
@@ -329,7 +333,7 @@ class AttendancePhotoController extends Controller
                         }
                     }
                 } 
-                // Case 2: Direct File Path Check (Ultra Fast Single I/O Check)
+                // Case 2: Direct File Path Check (Presensi Photo or Employee Profile Photo)
                 else {
                     $ext = pathinfo($path, PATHINFO_EXTENSION) ?: 'jpg';
                     $p1 = storage_path('app/public/' . $path);
@@ -342,6 +346,17 @@ class AttendancePhotoController extends Controller
                         $fileContent = file_get_contents($p2);
                     } elseif (file_exists($p3)) {
                         $fileContent = file_get_contents($p3);
+                    } elseif (!empty($employeePhoto)) {
+                        // Fallback to Employee Profile Photo if presensi photo file is not found on disk
+                        $ep1 = storage_path('app/public/' . $employeePhoto);
+                        $ep2 = public_path('storage/' . $employeePhoto);
+                        if (file_exists($ep1)) {
+                            $fileContent = file_get_contents($ep1);
+                            $ext = pathinfo($employeePhoto, PATHINFO_EXTENSION) ?: 'jpg';
+                        } elseif (file_exists($ep2)) {
+                            $fileContent = file_get_contents($ep2);
+                            $ext = pathinfo($employeePhoto, PATHINFO_EXTENSION) ?: 'jpg';
+                        }
                     }
                 }
             } catch (\Throwable $e) {
