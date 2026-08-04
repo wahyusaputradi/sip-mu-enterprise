@@ -211,15 +211,12 @@ class AttendancePhotoController extends Controller
      */
     public function downloadZip(Request $request)
     {
-        @set_time_limit(300);
-        @ini_set('memory_limit', '512M');
+        @set_time_limit(600);
+        @ini_set('memory_limit', '1024M');
 
         $request->validate([
             'photos' => 'required|array',
-            'photos.*.photo_path' => 'required|string',
             'photos.*.type' => 'required|string',
-            'photos.*.employee_name' => 'required|string',
-            'photos.*.date' => 'required|string',
         ]);
 
         $selectedPhotos = $request->input('photos');
@@ -238,12 +235,59 @@ class AttendancePhotoController extends Controller
         $disk = config('filesystems.default', 'public');
         $addedCount = 0;
 
-        foreach ($selectedPhotos as $photo) {
-            $path = $photo['photo_path'] ?? null;
-            if (!$path) continue;
+        foreach ($selectedPhotos as $photoItem) {
+            $type = $photoItem['type'] ?? 'daily_in';
+            $id = $photoItem['id'] ?? null;
+            $path = $photoItem['photo_path'] ?? null;
 
             $fileContent = null;
             $ext = 'jpg';
+            $empName = 'pegawai';
+            $dateStr = date('Y-m-d');
+            $folder = 'lainnya';
+
+            // Lookup from Database if ID is provided (Ultra Lightweight & Fast Payload)
+            if ($id) {
+                if ($type === 'daily_in') {
+                    $attendance = Attendance::with('employee')->find($id);
+                    if ($attendance && $attendance->photo_check_in) {
+                        $path = $attendance->photo_check_in;
+                        $empName = Str::slug($attendance->employee->name ?? 'pegawai', '_');
+                        $dateStr = $attendance->date ?? date('Y-m-d');
+                        $folder = 'presensi_harian/masuk';
+                    }
+                } elseif ($type === 'daily_out') {
+                    $attendance = Attendance::with('employee')->find($id);
+                    if ($attendance && $attendance->photo_check_out) {
+                        $path = $attendance->photo_check_out;
+                        $empName = Str::slug($attendance->employee->name ?? 'pegawai', '_');
+                        $dateStr = $attendance->date ?? date('Y-m-d');
+                        $folder = 'presensi_harian/pulang';
+                    }
+                } elseif ($type === 'teaching') {
+                    $teaching = TeachingAttendance::with(['employee', 'teachingSchedule'])->find($id);
+                    if ($teaching && $teaching->photo) {
+                        $path = $teaching->photo;
+                        $empName = Str::slug($teaching->employee->name ?? 'guru', '_');
+                        $dateStr = $teaching->date ?? date('Y-m-d');
+                        $hour = $teaching->teachingSchedule->hour_number ?? 'x';
+                        $folder = "presensi_mengajar/jam_ke_{$hour}";
+                    }
+                }
+            } else {
+                $empName = Str::slug($photoItem['employee_name'] ?? 'pegawai', '_');
+                $dateStr = $photoItem['date'] ?? date('Y-m-d');
+                if ($type === 'daily_in') {
+                    $folder = 'presensi_harian/masuk';
+                } elseif ($type === 'daily_out') {
+                    $folder = 'presensi_harian/pulang';
+                } elseif ($type === 'teaching') {
+                    $hour = $photoItem['hour_number'] ?? 'x';
+                    $folder = "presensi_mengajar/jam_ke_{$hour}";
+                }
+            }
+
+            if (!$path) continue;
 
             try {
                 // Case 1: Base64 Data URI String (camera swafoto/liveness)
@@ -277,27 +321,14 @@ class AttendancePhotoController extends Controller
             }
 
             if ($fileContent) {
-                $empName = Str::slug($photo['employee_name'] ?? 'pegawai', '_');
-                $dateStr = $photo['date'] ?? date('Y-m-d');
-                
-                $folder = 'lainnya';
-                $filename = "{$dateStr}_{$empName}.{$ext}";
-
-                if (($photo['type'] ?? '') === 'daily_in') {
-                    $folder = 'presensi_harian/masuk';
-                } elseif (($photo['type'] ?? '') === 'daily_out') {
-                    $folder = 'presensi_harian/pulang';
-                } elseif (($photo['type'] ?? '') === 'teaching') {
-                    $hour = $photo['hour_number'] ?? 'x';
-                    $folder = "presensi_mengajar/jam_ke_{$hour}";
-                    $filename = "{$dateStr}_{$empName}_jam_{$hour}.{$ext}";
-                }
+                // Guaranteed Unique Filename to avoid overwrite inside ZIP
+                $uniqueIdSuffix = $id ? "_id{$id}" : '_' . Str::random(4);
+                $filename = "{$dateStr}_{$empName}{$uniqueIdSuffix}.{$ext}";
 
                 $zip->addFromString("{$folder}/{$filename}", $fileContent);
                 $addedCount++;
             }
         }
-
 
         $zip->close();
 
