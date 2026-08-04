@@ -24,7 +24,7 @@
         </script>
 
         <!-- Favicon & PWA Manifest -->
-        <link rel="manifest" href="/manifest.json">
+        <link rel="manifest" href="{{ asset('manifest.json') }}">
         <meta name="theme-color" content="#0B0F19">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -39,7 +39,7 @@
         <script>
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                    navigator.serviceWorker.register("{{ asset('sw.js') }}").then(function(reg) {
                         console.log('SIP MU ServiceWorker registered successfully:', reg.scope);
                     }).catch(function(err) {
                         console.log('SIP MU ServiceWorker registration failed:', err);
@@ -47,7 +47,6 @@
                 });
             }
         </script>
-        <link rel="apple-touch-icon" href="{{ asset('images/logo.png') }}?v=2">
 
         <!-- Open Graph Meta Tags -->
         <meta property="og:title" content="SIP-MU Enterprise - SMK Manbaul Ulum Cirebon">
