@@ -178,23 +178,28 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
             
             toast.success('ZIP foto presensi berhasil diunduh.', { id: toastId });
         } catch (error) {
-            console.error(error);
+            console.error('ZIP Download Error:', error);
             let errorMsg = 'Gagal mengunduh ZIP presensi.';
             
             if (error.response && error.response.data instanceof Blob) {
-                const reader = new FileReader();
-                reader.onload = () => {
+                try {
+                    const text = await error.response.data.text();
                     try {
-                        const errData = JSON.parse(reader.result);
-                        toast.error(errData.message || errorMsg, { id: toastId });
+                        const errData = JSON.parse(text);
+                        errorMsg = errData.message || errorMsg;
                     } catch (e) {
-                        toast.error(errorMsg, { id: toastId });
+                        // Response text is HTML / plain text
+                        if (error.response.status === 403) {
+                            errorMsg = 'Akses ditolak (403). Anda tidak memiliki wewenang untuk mengunduh berkas.';
+                        } else if (error.response.status === 413) {
+                            errorMsg = 'Ukuran berkas melebihi batas (413).';
+                        }
                     }
-                };
-                reader.readAsText(error.response.data);
-            } else {
-                toast.error(errorMsg, { id: toastId });
+                } catch (e) {
+                    // Blob read error
+                }
             }
+            toast.error(errorMsg, { id: toastId });
         }
     };
 

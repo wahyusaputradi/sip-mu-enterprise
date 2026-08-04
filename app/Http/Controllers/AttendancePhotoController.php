@@ -312,6 +312,8 @@ class AttendancePhotoController extends Controller
                         $fileContent = Storage::disk('local')->get($path);
                     } elseif (file_exists(storage_path('app/public/' . $path))) {
                         $fileContent = file_get_contents(storage_path('app/public/' . $path));
+                    } elseif (file_exists(storage_path('app/' . $path))) {
+                        $fileContent = file_get_contents(storage_path('app/' . $path));
                     } elseif (file_exists(public_path('storage/' . $path))) {
                         $fileContent = file_get_contents(public_path('storage/' . $path));
                     }
@@ -320,20 +322,7 @@ class AttendancePhotoController extends Controller
                 \Illuminate\Support\Facades\Log::warning("Could not read photo for ZIP: " . substr($path, 0, 40) . ". Error: " . $e->getMessage());
             }
 
-            // Case 3: HTTP Media Stream fallback if local disk file not found directly
-            if (!$fileContent && !str_starts_with($path, 'data:image/')) {
-                try {
-                    $streamUrl = route('media.stream', ['path' => $path]);
-                    $response = \Illuminate\Support\Facades\Http::timeout(3)->get($streamUrl);
-                    if ($response->successful()) {
-                        $fileContent = $response->body();
-                    }
-                } catch (\Throwable $e) {
-                    // Ignore HTTP timeout/error
-                }
-            }
-
-            // Case 4: Guaranteed SVG Card Fallback generation so ZIP download NEVER fails
+            // Case 3: Instant Fallback Card Generation (Deadlock-Free & Ultra Fast)
             if (!$fileContent) {
                 $typeLabel = $type === 'daily_in' ? 'Presensi Masuk' : ($type === 'daily_out' ? 'Presensi Pulang' : 'Presensi Mengajar');
                 $displayEmp = str_replace('_', ' ', ucwords($empName, '_'));
