@@ -7,6 +7,7 @@ use App\Models\TeachingAttendance;
 use App\Models\CampusLocation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Carbon\Carbon;
 use Inertia\Inertia;
@@ -333,34 +334,100 @@ class AttendancePhotoController extends Controller
                         }
                     }
                 } 
-                // Case 2: Direct File Path Check (Presensi Photo or Employee Profile Photo)
+                // Case 2: Direct HTTP/HTTPS Cloudflare R2 Object Storage URL
+                elseif (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                    $ext = pathinfo(parse_url($path, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg';
+                    try {
+                        $r2Response = Http::timeout(5)->get($path);
+                        if ($r2Response->successful()) {
+                            $fileContent = $r2Response->body();
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning("Could not fetch R2 photo via HTTP URL: {$path}. Error: " . $e->getMessage());
+                    }
+                }
+                // Case 3: Cloudflare R2 S3 Disk & Local Storage File Path Check
                 else {
-                    $ext = pathinfo($path, PATHINFO_EXTENSION) ?: 'jpg';
-                    $p1 = storage_path('app/public/' . $path);
-                    $p2 = storage_path('app/' . $path);
-                    $p3 = public_path('storage/' . $path);
+                    $cleanPath = ltrim(preg_replace('#^/?(storage|public)/#i', '', $path), '/');
+                    $ext = pathinfo($cleanPath, PATHINFO_EXTENSION) ?: 'jpg';
 
-                    if (file_exists($p1)) {
-                        $fileContent = file_get_contents($p1);
-                    } elseif (file_exists($p2)) {
-                        $fileContent = file_get_contents($p2);
-                    } elseif (file_exists($p3)) {
-                        $fileContent = file_get_contents($p3);
-                    } elseif (!empty($employeePhoto)) {
-                        // Fallback to Employee Profile Photo if presensi photo file is not found on disk
-                        $ep1 = storage_path('app/public/' . $employeePhoto);
-                        $ep2 = public_path('storage/' . $employeePhoto);
-                        if (file_exists($ep1)) {
-                            $fileContent = file_get_contents($ep1);
-                            $ext = pathinfo($employeePhoto, PATHINFO_EXTENSION) ?: 'jpg';
-                        } elseif (file_exists($ep2)) {
-                            $fileContent = file_get_contents($ep2);
-                            $ext = pathinfo($employeePhoto, PATHINFO_EXTENSION) ?: 'jpg';
+                    // 1. Fetch from Cloudflare R2 Object Storage (s3 disk driver)
+                    try {
+                        if (Storage::disk('s3')->exists($cleanPath)) {
+                            $fileContent = Storage::disk('s3')->get($cleanPath);
+                        }
+                    } catch (\Throwable $e) {}
+
+                    // 2. Fetch from Default Disk (if default is set to s3/r2)
+                    if (!$fileContent) {
+                        try {
+                            $defaultDisk = config('filesystems.default', 'public');
+                            if ($defaultDisk !== 's3' && Storage::disk($defaultDisk)->exists($cleanPath)) {
+                                $fileContent = Storage::disk($defaultDisk)->get($cleanPath);
+                            }
+                        } catch (\Throwable $e) {}
+                    }
+
+                    // 3. Fetch from Public Storage Disk
+                    if (!$fileContent) {
+                        try {
+                            if (Storage::disk('public')->exists($cleanPath)) {
+                                $fileContent = Storage::disk('public')->get($cleanPath);
+                            }
+                        } catch (\Throwable $e) {}
+                    }
+
+                    // 4. Fetch via Cloudflare R2 Custom Domain URL if AWS_URL is configured
+                    if (!$fileContent && env('AWS_URL')) {
+                        try {
+                            $r2Url = rtrim(env('AWS_URL'), '/') . '/' . $cleanPath;
+                            $r2Response = Http::timeout(5)->get($r2Url);
+                            if ($r2Response->successful()) {
+                                $fileContent = $r2Response->body();
+                            }
+                        } catch (\Throwable $e) {}
+                    }
+
+                    // 5. Fetch from Local Physical File Paths
+                    if (!$fileContent) {
+                        $p1 = storage_path('app/public/' . $cleanPath);
+                        $p2 = storage_path('app/' . $cleanPath);
+                        $p3 = public_path('storage/' . $cleanPath);
+
+                        if (file_exists($p1)) {
+                            $fileContent = file_get_contents($p1);
+                        } elseif (file_exists($p2)) {
+                            $fileContent = file_get_contents($p2);
+                        } elseif (file_exists($p3)) {
+                            $fileContent = file_get_contents($p3);
+                        }
+                    }
+
+                    // 6. Fallback to Employee Profile Photo (Cloudflare R2 or Local Disk)
+                    if (!$fileContent && !empty($employeePhoto)) {
+                        $cleanEmpPath = ltrim(preg_replace('#^/?(storage|public)/#i', '', $employeePhoto), '/');
+                        try {
+                            if (Storage::disk('s3')->exists($cleanEmpPath)) {
+                                $fileContent = Storage::disk('s3')->get($cleanEmpPath);
+                                $ext = pathinfo($cleanEmpPath, PATHINFO_EXTENSION) ?: 'jpg';
+                            }
+                        } catch (\Throwable $e) {}
+
+                        if (!$fileContent) {
+                            $ep1 = storage_path('app/public/' . $cleanEmpPath);
+                            $ep2 = public_path('storage/' . $cleanEmpPath);
+                            if (file_exists($ep1)) {
+                                $fileContent = file_get_contents($ep1);
+                                $ext = pathinfo($cleanEmpPath, PATHINFO_EXTENSION) ?: 'jpg';
+                            } elseif (file_exists($ep2)) {
+                                $fileContent = file_get_contents($ep2);
+                                $ext = pathinfo($cleanEmpPath, PATHINFO_EXTENSION) ?: 'jpg';
+                            }
                         }
                     }
                 }
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning("Could not read photo for ZIP: " . substr($path, 0, 40) . ". Error: " . $e->getMessage());
+                Log::warning("Could not read photo for ZIP: " . substr($path, 0, 40) . ". Error: " . $e->getMessage());
             }
 
             // Case 3: Instant Fallback Card Generation (Deadlock-Free & Instant)
