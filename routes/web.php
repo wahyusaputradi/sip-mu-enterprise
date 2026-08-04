@@ -30,6 +30,35 @@ Route::get('/robots.txt', function () {
     return response($content, 200)->header('Content-Type', 'text/plain');
 });
 
+Route::get('/manifest.json', function () {
+    $manifestPath = public_path('manifest.json');
+    if (file_exists($manifestPath)) {
+        return response()->file($manifestPath, [
+            'Content-Type' => 'application/manifest+json',
+            'Access-Control-Allow-Origin' => '*'
+        ]);
+    }
+    return response()->json([
+        'id' => '/',
+        'name' => 'SIP MU Enterprise',
+        'short_name' => 'SIP MU',
+        'description' => 'Sistem Informasi Presensi & Kehadiran SMK Manbaul Ulum Cirebon',
+        'start_url' => '/',
+        'display' => 'standalone'
+    ], 200, ['Access-Control-Allow-Origin' => '*']);
+});
+
+Route::get('/sw.js', function () {
+    $swPath = public_path('sw.js');
+    if (file_exists($swPath)) {
+        return response()->file($swPath, [
+            'Content-Type' => 'application/javascript',
+            'Access-Control-Allow-Origin' => '*'
+        ]);
+    }
+    return response('console.log("SW loaded");', 200, ['Content-Type' => 'application/javascript']);
+});
+
 Route::get('/sitemap.xml', function () {
     $content = file_exists(public_path('sitemap.xml')) 
         ? file_get_contents(public_path('sitemap.xml')) 
