@@ -148,6 +148,7 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = route('monitoring.photos.download');
+            form.target = '_blank';
             form.style.display = 'none';
 
             // CSRF Token
@@ -181,11 +182,13 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
 
             document.body.appendChild(form);
             form.submit();
-            document.body.removeChild(form);
-
             setTimeout(() => {
-                toast.success('Pengunduhan ZIP foto presensi telah diproses oleh browser.', { id: toastId });
-            }, 1200);
+                if (document.body.contains(form)) {
+                    document.body.removeChild(form);
+                }
+            }, 2000);
+
+            toast.success('Pengunduhan ZIP foto presensi berhasil diproses oleh browser.', { id: toastId });
         } catch (error) {
             console.error('ZIP Download Form Submit Error:', error);
             toast.error('Gagal memicu pengunduhan berkas ZIP.', { id: toastId });

@@ -214,12 +214,25 @@ class AttendancePhotoController extends Controller
         @set_time_limit(600);
         @ini_set('memory_limit', '1024M');
 
-        $request->validate([
-            'photos' => 'required|array',
-            'photos.*.type' => 'required|string',
-        ]);
+        $selectedPhotos = $request->input('photos', []);
+        
+        // Support GET request fallback via query parameters (ids & types)
+        if (empty($selectedPhotos) && $request->has('ids')) {
+            $ids = explode(',', $request->query('ids', ''));
+            $types = explode(',', $request->query('types', ''));
+            foreach ($ids as $idx => $idVal) {
+                if (trim($idVal) !== '') {
+                    $selectedPhotos[] = [
+                        'id' => trim($idVal),
+                        'type' => $types[$idx] ?? 'daily_in'
+                    ];
+                }
+            }
+        }
 
-        $selectedPhotos = $request->input('photos');
+        if (empty($selectedPhotos)) {
+            return response()->json(['message' => 'Tidak ada foto presensi yang dipilih.'], 400);
+        }
 
         $storagePublicDir = storage_path('app/public');
         \Illuminate\Support\Facades\File::ensureDirectoryExists($storagePublicDir);

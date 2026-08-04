@@ -152,7 +152,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Kelola Foto Presensi - Read Only & Download
         Route::get('/monitoring/photos', [AttendancePhotoController::class, 'index'])->name('monitoring.photos.index');
-        Route::post('/monitoring/photos/download', [AttendancePhotoController::class, 'downloadZip'])->name('monitoring.photos.download');
+        Route::match(['get', 'post'], '/monitoring/photos/download', [AttendancePhotoController::class, 'downloadZip'])->name('monitoring.photos.download');
     });
 
     // Kelola Foto Presensi - Delete Operations (Excludes Kepala Sekolah)
