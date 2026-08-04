@@ -145,52 +145,18 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
         const toastId = toast.loading('Menyiapkan kompresi ZIP untuk unduhan...');
 
         try {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = route('monitoring.photos.download');
-            form.target = '_blank';
-            form.style.display = 'none';
+            const ids = selectedPhotos.map(p => p.id).filter(Boolean).join(',');
+            const types = selectedPhotos.map(p => p.type || 'daily_in').join(',');
 
-            // CSRF Token
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            if (csrfToken) {
-                const csrfInput = document.createElement('input');
-                csrfInput.type = 'hidden';
-                csrfInput.name = '_token';
-                csrfInput.value = csrfToken;
-                form.appendChild(csrfInput);
-            }
+            // Direct Window Location Download Trigger (Identical to Excel/PDF exports in Attendance & Recap)
+            const downloadUrl = route('monitoring.photos.download') + `?ids=${encodeURIComponent(ids)}&types=${encodeURIComponent(types)}`;
+            window.location.href = downloadUrl;
 
-            selectedPhotos.forEach((photo, index) => {
-                const fields = {
-                    id: photo.id || '',
-                    type: photo.type || 'daily_in',
-                    photo_path: photo.photo_path || '',
-                    employee_name: photo.employee_name || 'Pegawai',
-                    date: photo.date || '',
-                    hour_number: photo.hour_number || ''
-                };
-
-                Object.keys(fields).forEach(key => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = `photos[${index}][${key}]`;
-                    input.value = fields[key];
-                    form.appendChild(input);
-                });
-            });
-
-            document.body.appendChild(form);
-            form.submit();
             setTimeout(() => {
-                if (document.body.contains(form)) {
-                    document.body.removeChild(form);
-                }
-            }, 2000);
-
-            toast.success('Pengunduhan ZIP foto presensi berhasil diproses oleh browser.', { id: toastId });
+                toast.success('ZIP foto presensi berhasil diunduh ke perangkat Anda.', { id: toastId });
+            }, 1000);
         } catch (error) {
-            console.error('ZIP Download Form Submit Error:', error);
+            console.error('ZIP Download Error:', error);
             toast.error('Gagal memicu pengunduhan berkas ZIP.', { id: toastId });
         }
     };
