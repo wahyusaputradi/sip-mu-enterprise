@@ -139,67 +139,56 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
         });
     };
 
-    const handleBulkDownload = async () => {
+    const handleBulkDownload = () => {
         if (selectedPhotos.length === 0) return;
-        
-        const toastId = toast.loading('Menyiapkan kompresi ZIP untuk unduhan...');
-        
-        try {
-            const formattedPhotos = selectedPhotos.map(p => ({
-                id: p.id,
-                type: p.type || 'daily_in',
-            }));
 
-            const response = await axios.post(route('monitoring.photos.download'), {
-                photos: formattedPhotos
-            }, {
-                responseType: 'blob'
+        const toastId = toast.loading('Menyiapkan kompresi ZIP untuk unduhan...');
+
+        try {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = route('monitoring.photos.download');
+            form.style.display = 'none';
+
+            // CSRF Token
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = '_token';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+            }
+
+            selectedPhotos.forEach((photo, index) => {
+                const fields = {
+                    id: photo.id || '',
+                    type: photo.type || 'daily_in',
+                    photo_path: photo.photo_path || '',
+                    employee_name: photo.employee_name || 'Pegawai',
+                    date: photo.date || '',
+                    hour_number: photo.hour_number || ''
+                };
+
+                Object.keys(fields).forEach(key => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = `photos[${index}][${key}]`;
+                    input.value = fields[key];
+                    form.appendChild(input);
+                });
             });
-            
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            
-            let fileName = `Unduh_Foto_Presensi_${new Date().toISOString().slice(0, 10)}.zip`;
-            const disposition = response.headers['content-disposition'];
-            if (disposition && disposition.indexOf('attachment') !== -1) {
-                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                const matches = filenameRegex.exec(disposition);
-                if (matches != null && matches[1]) { 
-                    fileName = matches[1].replace(/['"]/g, '');
-                }
-            }
-            
-            link.setAttribute('download', fileName);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-            
-            toast.success('ZIP foto presensi berhasil diunduh.', { id: toastId });
+
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+
+            setTimeout(() => {
+                toast.success('Pengunduhan ZIP foto presensi telah diproses oleh browser.', { id: toastId });
+            }, 1200);
         } catch (error) {
-            console.error('ZIP Download Error:', error);
-            let errorMsg = 'Gagal mengunduh ZIP presensi.';
-            
-            if (error.response && error.response.data instanceof Blob) {
-                try {
-                    const text = await error.response.data.text();
-                    try {
-                        const errData = JSON.parse(text);
-                        errorMsg = errData.message || errorMsg;
-                    } catch (e) {
-                        // Response text is HTML / plain text
-                        if (error.response.status === 403) {
-                            errorMsg = 'Akses ditolak (403). Anda tidak memiliki wewenang untuk mengunduh berkas.';
-                        } else if (error.response.status === 413) {
-                            errorMsg = 'Ukuran berkas melebihi batas (413).';
-                        }
-                    }
-                } catch (e) {
-                    // Blob read error
-                }
-            }
-            toast.error(errorMsg, { id: toastId });
+            console.error('ZIP Download Form Submit Error:', error);
+            toast.error('Gagal memicu pengunduhan berkas ZIP.', { id: toastId });
         }
     };
 

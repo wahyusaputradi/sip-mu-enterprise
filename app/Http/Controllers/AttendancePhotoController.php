@@ -287,7 +287,21 @@ class AttendancePhotoController extends Controller
                 }
             }
 
-            if (!$path) continue;
+            // Guaranteed Fallback metadata from request if DB lookup didn't populate them
+            if (empty($empName) || $empName === 'pegawai') {
+                $empName = Str::slug($photoItem['employee_name'] ?? 'pegawai', '_');
+            }
+            if (empty($dateStr)) {
+                $dateStr = $photoItem['date'] ?? date('Y-m-d');
+            }
+            if (empty($path)) {
+                $path = $photoItem['photo_path'] ?? null;
+            }
+
+            if (!$path) {
+                // If path is still empty, use employee name as dummy identifier path for SVG generator
+                $path = "placeholder_{$empName}_{$dateStr}.svg";
+            }
 
             try {
                 // Case 1: Base64 Data URI String (camera swafoto/liveness)
