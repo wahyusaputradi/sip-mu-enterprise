@@ -37,6 +37,12 @@ export default function PwaInstallPrompt() {
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
+        // Check if redirected from install parameter
+        if (window.location.search.includes('install=true')) {
+            setShowPrompt(true);
+            setShowGuideModal(true);
+        }
+
         // Always trigger prompt banner on mobile devices after 1.5 seconds
         const timer = setTimeout(() => {
             const dismissed = localStorage.getItem('pwa_prompt_dismissed_session');
