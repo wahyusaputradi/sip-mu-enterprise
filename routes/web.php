@@ -37,6 +37,18 @@ Route::get('/sitemap.xml', function () {
     return response($content, 200)->header('Content-Type', 'text/xml');
 });
 
+Route::get('/download-apk', function () {
+    $apkPath = public_path('downloads/SIP-MU-Enterprise.apk');
+    if (file_exists($apkPath)) {
+        return response()->download($apkPath, 'SIP-MU-Enterprise.apk', [
+            'Content-Type' => 'application/vnd.android.package-archive',
+            'Content-Disposition' => 'attachment; filename="SIP-MU-Enterprise.apk"'
+        ]);
+    }
+    
+    return response("<html lang='id'><head><title>Download APK Android - SIP MU Enterprise</title><meta name='viewport' content='width=device-width, initial-scale=1.0'><script src='https://cdn.tailwindcss.com'></script></head><body class='bg-slate-950 text-white min-h-screen flex items-center justify-center p-6 font-sans'><div class='max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl'><div class='w-16 h-16 bg-indigo-600/30 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-500/30'><svg class='w-8 h-8' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4'></path></svg></div><h2 class='text-xl font-black mb-2'>Unduh Aplikasi Android (APK)</h2><p class='text-xs text-slate-400 mb-6 leading-relaxed'>Aplikasi mobile SIP MU Enterprise dapat di-install langsung tanpa perlu download file besar, atau dikonversi menjadi file paket .APK (TWA) untuk didistribusikan via WhatsApp atau Google Play Store.</p><div class='space-y-3'><a href='/' class='block w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl font-bold text-xs shadow-lg shadow-indigo-600/30 hover:opacity-90 transition-opacity'>Install via Browser PWA (Instan)</a><a href='https://www.pwabuilder.com/' target='_blank' class='block w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 rounded-2xl font-bold text-xs border border-slate-700 transition-colors'>Buka PWABuilder (Generate APK Android)</a></div></div></body></html>");
+});
+
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),

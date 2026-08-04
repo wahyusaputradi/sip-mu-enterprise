@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import ThemeToggle from '@/Components/ThemeToggle';
+import PwaInstallPrompt from '@/Components/PwaInstallPrompt';
 import Dropdown from '@/Components/Dropdown';
 import { Link, usePage, router } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
@@ -49,15 +51,19 @@ const RealtimeClock = () => {
     const timeStr = time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/:/g, '.');
 
     return (
-        <div className="flex items-center bg-white dark:bg-card rounded-full px-4 md:px-5 py-2 border border-slate-100 dark:border-border shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
-            <div className="flex items-center border-r border-slate-200 dark:border-border pr-3 md:pr-4 mr-3 md:mr-4">
-                <span className="text-[10px] md:text-[12px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+        <div className="flex items-center bg-white/90 dark:bg-slate-900/90 rounded-full px-4 md:px-5 py-2 border border-slate-200/80 dark:border-slate-800 shadow-sm backdrop-blur-md">
+            <div className="flex items-center border-r border-slate-200 dark:border-slate-800 pr-3 md:pr-4 mr-3 md:mr-4">
+                <span className="relative flex h-2 w-2 mr-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="text-[10px] md:text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     {dateStr}
                 </span>
             </div>
             <div className="flex items-center">
-                <Clock className="w-4 h-4 text-indigo-500 dark:text-indigo-400 mr-2" />
-                <span className="font-extrabold text-slate-800 dark:text-slate-100 text-[13px] md:text-[14px] tracking-tight">
+                <Clock className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mr-2" />
+                <span className="font-black text-slate-800 dark:text-slate-100 text-[12px] md:text-[13px] tracking-tight">
                     {timeStr} WIB
                 </span>
             </div>
@@ -336,11 +342,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                                 </motion.div>
                                             )}
                                             
-                                            {!isSidebarOpen && isActive && (
-                                                <motion.div 
-                                                    layoutId="active-dot"
-                                                    className="absolute right-3 w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)] z-10"
-                                                />
+                                            {!isSidebarOpen && (
+                                                <div className="absolute left-full ml-3 px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-extrabold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 shadow-2xl border border-slate-800">
+                                                    {item.name}
+                                                </div>
                                             )}
                                         </Link>
                                     );
@@ -351,10 +356,25 @@ export default function AuthenticatedLayout({ header, children }) {
                 </div>
 
                 {/* Footer Sidebar */}
-                <div className="p-5 border-t border-white/5 space-y-4">
+                <div className="p-5 border-t border-white/5 space-y-3">
+                    {isSidebarOpen && (
+                        <div className="flex items-center space-x-3 p-3 rounded-2xl bg-white/5 border border-white/5">
+                            {user.employee_photo ? (
+                                <img src={user.employee_photo} alt={user.name} className="h-9 w-9 rounded-xl object-cover" />
+                            ) : (
+                                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-xs">
+                                    {user.name.charAt(0)}
+                                </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-white truncate">{user.name}</p>
+                                <p className="text-[10px] font-extrabold text-indigo-400 uppercase tracking-wider truncate">{roles[0] || 'User'}</p>
+                            </div>
+                        </div>
+                    )}
                     <button 
                         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                        className="w-full flex items-center justify-center p-3.5 rounded-2xl bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/5"
+                        className="w-full flex items-center justify-center p-3 rounded-2xl bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/5"
                     >
                         <ChevronLeft className={`w-5 h-5 transition-transform duration-500 ${!isSidebarOpen ? 'rotate-180' : ''}`} />
                     </button>
@@ -382,15 +402,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         <div className="flex items-center space-x-4 md:space-x-6">
                             <div className="hidden sm:flex items-center space-x-3">
                                 {/* Theme Toggle */}
-                                {mounted && (
-                                    <button
-                                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                        className="relative p-3 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-700 hover:shadow-sm"
-                                        aria-label="Toggle Dark Mode"
-                                    >
-                                        {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                                    </button>
-                                )}
+                                <ThemeToggle />
 
                                 {/* Notifications */}
                                 <Dropdown>
@@ -634,6 +646,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
                 body { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.01em; }
             `}} />
+            <PwaInstallPrompt />
         </div>
     );
 }

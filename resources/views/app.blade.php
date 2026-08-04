@@ -23,11 +23,30 @@
             })();
         </script>
 
-        <!-- Favicon -->
+        <!-- Favicon & PWA Manifest -->
+        <link rel="manifest" href="/manifest.json">
+        <meta name="theme-color" content="#0B0F19">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="SIP MU Enterprise">
+        <link rel="apple-touch-icon" href="{{ asset('images/logo.png') }}?v=2">
         <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/logo.png') }}?v=2">
         <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/logo.png') }}?v=2">
         <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=2">
         <link rel="shortcut icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=2">
+
+        <!-- Service Worker Registration -->
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                        console.log('SIP MU ServiceWorker registered successfully:', reg.scope);
+                    }).catch(function(err) {
+                        console.log('SIP MU ServiceWorker registration failed:', err);
+                    });
+                });
+            }
+        </script>
         <link rel="apple-touch-icon" href="{{ asset('images/logo.png') }}?v=2">
 
         <!-- Open Graph Meta Tags -->
