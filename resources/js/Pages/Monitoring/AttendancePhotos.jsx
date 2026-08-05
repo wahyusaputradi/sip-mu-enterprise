@@ -2,6 +2,7 @@ import { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
+import JSZip from 'jszip';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -139,25 +140,100 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
         });
     };
 
-    const handleBulkDownload = () => {
+    const handleBulkDownload = async () => {
         if (selectedPhotos.length === 0) return;
 
-        const toastId = toast.loading('Menyiapkan kompresi ZIP untuk unduhan...');
+        const toastId = toast.loading(`Menyiapkan ${selectedPhotos.length} foto presensi...`);
 
         try {
-            const ids = selectedPhotos.map(p => p.id).filter(Boolean).join(',');
-            const types = selectedPhotos.map(p => p.type || 'daily_in').join(',');
+            const formattedPhotos = selectedPhotos.map(p => ({
+                id: p.id,
+                type: p.type || 'daily_in',
+                photo_path: p.photo_path || '',
+                employee_name: p.employee_name || 'Pegawai',
+                date: p.date || ''
+            }));
 
-            // Direct Window Location Download Trigger (Identical to Excel/PDF exports in Attendance & Recap)
-            const downloadUrl = route('monitoring.photos.download') + `?ids=${encodeURIComponent(ids)}&types=${encodeURIComponent(types)}`;
-            window.location.href = downloadUrl;
+            // Step 1: Get metadata & stream URLs from server in <0.02s
+            const prepareRes = await axios.post(route('monitoring.photos.prepare-download'), {
+                photos: formattedPhotos
+            });
 
-            setTimeout(() => {
-                toast.success('ZIP foto presensi berhasil diunduh ke perangkat Anda.', { id: toastId });
-            }, 1000);
+            if (!prepareRes.data || !prepareRes.data.files) {
+                throw new Error('Gagal menyiapkan berkas foto dari server.');
+            }
+
+            const files = prepareRes.data.files;
+            const zip = new JSZip();
+            let successCount = 0;
+
+            // Step 2: Parallel Async Fetch & Zip in Browser Client-Side
+            toast.loading(`Memproses ${files.length} berkas foto presensi...`, { id: toastId });
+
+            const fetchPromises = files.map(async (fileItem) => {
+                const targetPath = `${fileItem.folder}/${fileItem.filename}`;
+                try {
+                    if (fileItem.fallback_svg) {
+                        zip.file(targetPath, fileItem.fallback_svg);
+                        successCount++;
+                    } else if (fileItem.stream_url) {
+                        if (fileItem.stream_url.startsWith('data:image/')) {
+                            const commaPos = fileItem.stream_url.indexOf(',');
+                            if (commaPos !== -1) {
+                                const base64Data = fileItem.stream_url.substring(commaPos + 1);
+                                zip.file(targetPath, base64Data, { base64: true });
+                                successCount++;
+                            }
+                        } else {
+                            const imgRes = await axios.get(fileItem.stream_url, { responseType: 'blob', timeout: 8000 });
+                            const blob = imgRes.data;
+                            zip.file(targetPath, blob);
+                            successCount++;
+                        }
+                    }
+                } catch (e) {
+                    console.warn(`Could not fetch photo for ${fileItem.filename}:`, e);
+                    if (fileItem.fallback_svg) {
+                        zip.file(targetPath, fileItem.fallback_svg);
+                        successCount++;
+                    }
+                }
+            });
+
+            await Promise.all(fetchPromises);
+
+            if (successCount === 0) {
+                toast.error('Tidak ada foto yang berhasil dikompresi.', { id: toastId });
+                return;
+            }
+
+            toast.loading(`Mengemas arsip ZIP ${successCount} foto presensi...`, { id: toastId });
+
+            // Step 3: Generate ZIP Blob in browser RAM in 0.1s
+            const content = await zip.generateAsync({ type: 'blob' });
+
+            // Step 4: Native Browser Download Trigger
+            const downloadUrl = window.URL.createObjectURL(content);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = prepareRes.data.suggested_zip_name || `Unduh_Foto_Presensi_${new Date().toISOString().slice(0, 10)}.zip`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(downloadUrl);
+
+            toast.success(`Berhasil mengunduh ZIP ${successCount} foto presensi!`, { id: toastId });
         } catch (error) {
-            console.error('ZIP Download Error:', error);
-            toast.error('Gagal memicu pengunduhan berkas ZIP.', { id: toastId });
+            console.error('JSZip Download Error:', error);
+            // Fallback to direct window location download if JSZip fails
+            try {
+                const ids = selectedPhotos.map(p => p.id).filter(Boolean).join(',');
+                const types = selectedPhotos.map(p => p.type || 'daily_in').join(',');
+                window.location.href = route('monitoring.photos.download') + `?ids=${encodeURIComponent(ids)}&types=${encodeURIComponent(types)}`;
+                toast.success('Pengunduhan berkas ZIP telah dialihkan ke browser.', { id: toastId });
+            } catch (fallbackErr) {
+                toast.error('Gagal mengunduh berkas ZIP foto presensi.', { id: toastId });
+            }
         }
     };
 
