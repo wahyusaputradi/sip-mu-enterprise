@@ -155,7 +155,7 @@ class AttendanceController extends Controller
                 ['name' => 'Belum Absen', 'value' => $unrecorded, 'color' => '#94a3b8'],
             ];
 
-            // Executive Stats - Multi-Source Evaluation (Jam Masuk + Jam Keluar + Jam Mengajar)
+            // Executive Stats - Strict & Fair Multi-Weighted Evaluation (Jam Masuk + Jam Keluar + Jam Mengajar + Buka Kunci)
             $dailyPresent = \Illuminate\Support\Facades\DB::table('attendances')
                 ->whereMonth('date', $currentMonth)
                 ->whereYear('date', $currentYear)
@@ -167,6 +167,7 @@ class AttendanceController extends Controller
             $dailyCheckout = \Illuminate\Support\Facades\DB::table('attendances')
                 ->whereMonth('date', $currentMonth)
                 ->whereYear('date', $currentYear)
+                ->where('status', 'present')
                 ->whereNotNull('check_out')
                 ->select('employee_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
                 ->groupBy('employee_id')
@@ -180,27 +181,19 @@ class AttendanceController extends Controller
                 ->groupBy('employee_id')
                 ->pluck('count', 'employee_id');
 
-            $allEmployees = Employee::select('id', 'name')->get();
-
-            // 🟢 Top Performers: Hadir tepat waktu (Masuk + Pulang + Mengajar)
-            $topPerformersList = [];
-            foreach ($allEmployees as $emp) {
-                $totalOnTime = ($dailyPresent->get($emp->id, 0)) + ($dailyCheckout->get($emp->id, 0)) + ($teachingPresent->get($emp->id, 0));
-                if ($totalOnTime > 0) {
-                    $topPerformersList[] = [
-                        'name' => $emp->name,
-                        'count' => $totalOnTime,
-                    ];
-                }
-            }
-            usort($topPerformersList, fn($a, $b) => $b['count'] <=> $a['count']);
-            $topPerformers = array_slice($topPerformersList, 0, 5);
-
-            // 🔴 Needs Attention: Terlambat / Alpha (Masuk + Pulang + Mengajar)
-            $dailyViolations = \Illuminate\Support\Facades\DB::table('attendances')
+            // Violations Data for Strict Tie-Breaking & Needs Attention (Late = 1pt, Alpha = 2pt, Teaching = 1pt, Unlock = 1pt)
+            $dailyLate = \Illuminate\Support\Facades\DB::table('attendances')
                 ->whereMonth('date', $currentMonth)
                 ->whereYear('date', $currentYear)
-                ->whereIn('status', ['late', 'alpha'])
+                ->where('status', 'late')
+                ->select('employee_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+                ->groupBy('employee_id')
+                ->pluck('count', 'employee_id');
+
+            $dailyAlpha = \Illuminate\Support\Facades\DB::table('attendances')
+                ->whereMonth('date', $currentMonth)
+                ->whereYear('date', $currentYear)
+                ->where('status', 'alpha')
                 ->select('employee_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
                 ->groupBy('employee_id')
                 ->pluck('count', 'employee_id');
@@ -213,20 +206,62 @@ class AttendanceController extends Controller
                 ->groupBy('employee_id')
                 ->pluck('count', 'employee_id');
 
+            $unlockCounts = \Illuminate\Support\Facades\DB::table('attendance_unlocks')
+                ->whereMonth('date', $currentMonth)
+                ->whereYear('date', $currentYear)
+                ->select('employee_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+                ->groupBy('employee_id')
+                ->pluck('count', 'employee_id');
+
+            $allEmployees = Employee::select('id', 'name')->get();
+
+            // 🟢 Top Performers (Murni Hadir Tepat Waktu: Masuk + Pulang + Mengajar)
+            // Strict Tie-Breaker: Poin tepat waktu tertinggi -> Pelanggaran Paling Sedikit
+            $topPerformersList = [];
             $bottomPerformersList = [];
+
             foreach ($allEmployees as $emp) {
-                $totalViolations = ($dailyViolations->get($emp->id, 0)) + ($teachingViolations->get($emp->id, 0));
-                if ($totalViolations > 0) {
+                $pIn = $dailyPresent->get($emp->id, 0);
+                $pOut = $dailyCheckout->get($emp->id, 0);
+                $pTeach = $teachingPresent->get($emp->id, 0);
+                $pureOnTimeScore = $pIn + $pOut + $pTeach;
+
+                $vLate = $dailyLate->get($emp->id, 0);
+                $vAlpha = $dailyAlpha->get($emp->id, 0);
+                $vTeach = $teachingViolations->get($emp->id, 0);
+                $vUnlock = $unlockCounts->get($emp->id, 0);
+                $weightedViolationScore = ($vLate * 1) + ($vAlpha * 2) + ($vTeach * 1) + ($vUnlock * 1);
+
+                if ($pureOnTimeScore > 0) {
+                    $topPerformersList[] = [
+                        'name' => $emp->name,
+                        'count' => $pureOnTimeScore,
+                        'violations' => $weightedViolationScore,
+                    ];
+                }
+
+                if ($weightedViolationScore > 0) {
                     $bottomPerformersList[] = [
                         'name' => $emp->name,
-                        'count' => $totalViolations,
+                        'count' => $weightedViolationScore,
                     ];
                 }
             }
+
+            // Rank Top Performers: Highest On-Time Score FIRST, then FEWEST violations SECOND
+            usort($topPerformersList, function($a, $b) {
+                if ($b['count'] !== $a['count']) {
+                    return $b['count'] <=> $a['count'];
+                }
+                return $a['violations'] <=> $b['violations'];
+            });
+            $topPerformers = array_slice($topPerformersList, 0, 5);
+
+            // Rank Needs Attention: Highest Weighted Violation Score FIRST
             usort($bottomPerformersList, fn($a, $b) => $b['count'] <=> $a['count']);
             $bottomPerformers = array_slice($bottomPerformersList, 0, 5);
 
-            // 🟣 Buka Kunci: Permintaan buka kunci presensi pada bulan berjalan
+            // 🟣 Buka Kunci: Top 5 Permintaan Buka Kunci Presensi
             $mostUnlocked = \Illuminate\Support\Facades\DB::table('attendance_unlocks')
                 ->join('employees', 'attendance_unlocks.employee_id', '=', 'employees.id')
                 ->whereMonth('attendance_unlocks.date', $currentMonth)
