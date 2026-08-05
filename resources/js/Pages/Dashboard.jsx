@@ -298,7 +298,7 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                                         </CardDescription>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                <CardContent className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
                                     {/* Top Performers */}
                                     <div className="space-y-4">
                                         <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-600 flex items-center mb-4 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full w-max border border-emerald-100 dark:border-emerald-500/20 shadow-sm">
@@ -306,14 +306,14 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                                         </h4>
                                         <div className="space-y-3">
                                             {executiveStats.topPerformers.map((emp, i) => (
-                                                <div key={i} className="group flex items-center justify-between p-3 rounded-[1.25rem] bg-white dark:bg-card border border-slate-100 dark:border-border hover:border-emerald-200 dark:hover:border-emerald-500/30 hover:shadow-md transition-all duration-300">
-                                                    <div className="flex items-center min-w-0 mr-3">
-                                                        <div className="w-9 h-9 rounded-[0.8rem] bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center font-black text-xs mr-3 shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                                                <div key={i} className="group flex items-center justify-between p-2.5 sm:p-3 rounded-[1.25rem] bg-white dark:bg-card border border-slate-100 dark:border-border hover:border-emerald-200 dark:hover:border-emerald-500/30 hover:shadow-md transition-all duration-300">
+                                                    <div className="flex items-center min-w-0 mr-2 flex-1">
+                                                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-[0.8rem] bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center font-black text-xs mr-2.5 shadow-sm group-hover:scale-110 transition-transform shrink-0">
                                                             #{i + 1}
                                                         </div>
-                                                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 transition-colors truncate max-w-[110px] sm:max-w-[150px]">{emp.name}</span>
+                                                        <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 transition-colors truncate" title={emp.name}>{emp.name}</span>
                                                     </div>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 px-2.5 py-1.5 rounded-lg flex-shrink-0 w-28 text-center">
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 px-2 sm:px-2.5 py-1.5 rounded-lg shrink-0 text-center whitespace-nowrap">
                                                         {emp.count} Hadir
                                                     </span>
                                                 </div>
@@ -331,15 +331,15 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                                         </h4>
                                         <div className="space-y-3">
                                             {executiveStats.bottomPerformers.map((emp, i) => (
-                                                <div key={i} className="group flex items-center justify-between p-3 rounded-[1.25rem] bg-white dark:bg-card border border-slate-100 dark:border-border hover:border-rose-200 dark:hover:border-rose-500/30 hover:shadow-md transition-all duration-300">
-                                                    <div className="flex items-center min-w-0 mr-3">
-                                                        <div className="w-9 h-9 rounded-[0.8rem] bg-gradient-to-br from-rose-400 to-red-500 text-white flex items-center justify-center font-black text-xs mr-3 shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                                                <div key={i} className="group flex items-center justify-between p-2.5 sm:p-3 rounded-[1.25rem] bg-white dark:bg-card border border-slate-100 dark:border-border hover:border-rose-200 dark:hover:border-rose-500/30 hover:shadow-md transition-all duration-300">
+                                                    <div className="flex items-center min-w-0 mr-2 flex-1">
+                                                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-[0.8rem] bg-gradient-to-br from-rose-400 to-red-500 text-white flex items-center justify-center font-black text-xs mr-2.5 shadow-sm group-hover:scale-110 transition-transform shrink-0">
                                                             #{i + 1}
                                                         </div>
-                                                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-rose-500 transition-colors truncate max-w-[110px] sm:max-w-[150px]">{emp.name}</span>
+                                                        <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 group-hover:text-rose-500 transition-colors truncate" title={emp.name}>{emp.name}</span>
                                                     </div>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-rose-500 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 px-2.5 py-1.5 rounded-lg flex items-center justify-center flex-shrink-0 w-28 text-center">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5 animate-pulse flex-shrink-0"></span>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-500 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 px-2 sm:px-2.5 py-1.5 rounded-lg flex items-center justify-center shrink-0 text-center whitespace-nowrap">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1 animate-pulse shrink-0"></span>
                                                         {emp.count} Pelanggaran
                                                     </span>
                                                 </div>
@@ -359,14 +359,14 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                                         </h4>
                                         <div className="space-y-3">
                                             {executiveStats.mostUnlocked?.map((emp, i) => (
-                                                <div key={i} className="group flex items-center justify-between p-3 rounded-[1.25rem] bg-white dark:bg-card border border-slate-100 dark:border-border hover:border-violet-200 dark:hover:border-violet-500/30 hover:shadow-md transition-all duration-300">
-                                                    <div className="flex items-center min-w-0 mr-3">
-                                                        <div className="w-9 h-9 rounded-[0.8rem] bg-gradient-to-br from-violet-400 to-indigo-500 text-white flex items-center justify-center font-black text-xs mr-3 shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                                                <div key={i} className="group flex items-center justify-between p-2.5 sm:p-3 rounded-[1.25rem] bg-white dark:bg-card border border-slate-100 dark:border-border hover:border-violet-200 dark:hover:border-violet-500/30 hover:shadow-md transition-all duration-300">
+                                                    <div className="flex items-center min-w-0 mr-2 flex-1">
+                                                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-[0.8rem] bg-gradient-to-br from-violet-400 to-indigo-500 text-white flex items-center justify-center font-black text-xs mr-2.5 shadow-sm group-hover:scale-110 transition-transform shrink-0">
                                                             #{i + 1}
                                                         </div>
-                                                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-violet-600 transition-colors truncate max-w-[110px] sm:max-w-[150px]">{emp.name}</span>
+                                                        <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 group-hover:text-violet-600 transition-colors truncate" title={emp.name}>{emp.name}</span>
                                                     </div>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10 border border-violet-100 dark:border-violet-500/20 px-2.5 py-1.5 rounded-lg flex-shrink-0 w-28 text-center">
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10 border border-violet-100 dark:border-violet-500/20 px-2 sm:px-2.5 py-1.5 rounded-lg shrink-0 text-center whitespace-nowrap">
                                                         {emp.count} Buka Kunci
                                                     </span>
                                                 </div>
