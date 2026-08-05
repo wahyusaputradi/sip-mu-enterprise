@@ -66,6 +66,13 @@ Route::get('/sitemap.xml', function () {
     return response($content, 200)->header('Content-Type', 'text/xml');
 });
 
+Route::get('/ads.txt', function () {
+    $content = file_exists(public_path('ads.txt'))
+        ? file_get_contents(public_path('ads.txt'))
+        : "google.com, pub-1006393524825968, DIRECT, f08c47fec0942fa0";
+    return response($content, 200)->header('Content-Type', 'text/plain');
+});
+
 Route::get('/download-apk', function () {
     $apkPath = public_path('downloads/SIP-MU-Enterprise.apk');
     // Validasi file APK harus berupa file biner Android asli (> 100KB)
