@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 
 export default function AdSenseBanner({ 
-    client = "ca-pub-XXXXXXXXXXXXXXXX", // Ganti dengan Google AdSense Publisher ID Anda
-    slot = "XXXXXXXXXX",               // Ganti dengan Ad Slot ID Anda
+    client = import.meta.env.VITE_ADSENSE_CLIENT || "ca-pub-XXXXXXXXXXXXXXXX",
+    slot = import.meta.env.VITE_ADSENSE_SLOT || "XXXXXXXXXX",
     format = "auto",
     responsive = "true",
     className = "my-6 text-center overflow-hidden" 
