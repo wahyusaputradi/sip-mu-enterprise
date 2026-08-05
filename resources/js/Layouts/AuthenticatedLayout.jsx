@@ -385,8 +385,8 @@ export default function AuthenticatedLayout({ header, children }) {
             <div className="flex-1 flex flex-col min-w-0 relative">
                 
                 {/* Floating Glassmorphic Header */}
-                <div className="px-6 lg:px-10 pt-6 z-30 sticky top-0">
-                    <header className="h-20 bg-white/70 dark:bg-card/70 backdrop-blur-xl border border-white dark:border-border rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-between px-6 lg:px-8 transition-all duration-300">
+                <div className="px-3 sm:px-6 lg:px-10 pt-3 sm:pt-6 z-30 sticky top-0">
+                    <header className="h-16 sm:h-20 bg-white/70 dark:bg-card/70 backdrop-blur-xl border border-white dark:border-border rounded-2xl sm:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-between px-3 sm:px-6 lg:px-8 transition-all duration-300">
                         <div className="flex items-center space-x-3 sm:space-x-6 w-full lg:w-auto">
                             <button 
                                 onClick={() => setIsMobileMenuOpen(true)}
@@ -507,7 +507,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 </div>
 
                 {/* Page Content */}
-                <main className="flex-1 p-6 lg:p-10 lg:pt-8 overflow-x-hidden relative z-10">
+                <main className="flex-1 p-3 sm:p-6 lg:p-10 lg:pt-8 overflow-x-hidden relative z-10">
                     <AnimatePresence mode='wait'>
                         <motion.div
                             key={route().current()}
