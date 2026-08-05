@@ -155,35 +155,78 @@ class AttendanceController extends Controller
                 ['name' => 'Belum Absen', 'value' => $unrecorded, 'color' => '#94a3b8'],
             ];
 
-            // Executive Stats - For top level management (Direct Ultra Fast SQL Aggregation)
-            $topPerformers = Attendance::whereMonth('attendances.date', $currentMonth)
-                ->whereYear('attendances.date', $currentYear)
-                ->whereIn('attendances.status', ['present', 'late'])
-                ->join('employees', 'attendances.employee_id', '=', 'employees.id')
-                ->select('employees.name', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
-                ->groupBy('employees.id', 'employees.name')
-                ->orderByDesc('count')
-                ->limit(5)
-                ->get()
-                ->map(fn($emp) => [
-                    'name' => $emp->name,
-                    'count' => $emp->count,
-                ]);
+            // Executive Stats - Multi-Source Evaluation (Jam Masuk + Jam Keluar + Jam Mengajar)
+            $dailyPresent = \Illuminate\Support\Facades\DB::table('attendances')
+                ->whereMonth('date', $currentMonth)
+                ->whereYear('date', $currentYear)
+                ->where('status', 'present')
+                ->select('employee_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+                ->groupBy('employee_id')
+                ->pluck('count', 'employee_id');
 
-            $bottomPerformers = Attendance::whereMonth('attendances.date', $currentMonth)
-                ->whereYear('attendances.date', $currentYear)
-                ->whereIn('attendances.status', ['late', 'alpha'])
-                ->join('employees', 'attendances.employee_id', '=', 'employees.id')
-                ->select('employees.name', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
-                ->groupBy('employees.id', 'employees.name')
-                ->orderByDesc('count')
-                ->limit(5)
-                ->get()
-                ->map(fn($emp) => [
-                    'name' => $emp->name,
-                    'count' => $emp->count,
-                ]);
+            $dailyCheckout = \Illuminate\Support\Facades\DB::table('attendances')
+                ->whereMonth('date', $currentMonth)
+                ->whereYear('date', $currentYear)
+                ->whereNotNull('check_out')
+                ->select('employee_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+                ->groupBy('employee_id')
+                ->pluck('count', 'employee_id');
 
+            $teachingPresent = \Illuminate\Support\Facades\DB::table('teaching_attendances')
+                ->whereMonth('date', $currentMonth)
+                ->whereYear('date', $currentYear)
+                ->where('status', 'present')
+                ->select('employee_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+                ->groupBy('employee_id')
+                ->pluck('count', 'employee_id');
+
+            $allEmployees = Employee::select('id', 'name')->get();
+
+            // 🟢 Top Performers: Hadir tepat waktu (Masuk + Pulang + Mengajar)
+            $topPerformersList = [];
+            foreach ($allEmployees as $emp) {
+                $totalOnTime = ($dailyPresent->get($emp->id, 0)) + ($dailyCheckout->get($emp->id, 0)) + ($teachingPresent->get($emp->id, 0));
+                if ($totalOnTime > 0) {
+                    $topPerformersList[] = [
+                        'name' => $emp->name,
+                        'count' => $totalOnTime,
+                    ];
+                }
+            }
+            usort($topPerformersList, fn($a, $b) => $b['count'] <=> $a['count']);
+            $topPerformers = array_slice($topPerformersList, 0, 5);
+
+            // 🔴 Needs Attention: Terlambat / Alpha (Masuk + Pulang + Mengajar)
+            $dailyViolations = \Illuminate\Support\Facades\DB::table('attendances')
+                ->whereMonth('date', $currentMonth)
+                ->whereYear('date', $currentYear)
+                ->whereIn('status', ['late', 'alpha'])
+                ->select('employee_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+                ->groupBy('employee_id')
+                ->pluck('count', 'employee_id');
+
+            $teachingViolations = \Illuminate\Support\Facades\DB::table('teaching_attendances')
+                ->whereMonth('date', $currentMonth)
+                ->whereYear('date', $currentYear)
+                ->whereIn('status', ['late', 'alpha'])
+                ->select('employee_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+                ->groupBy('employee_id')
+                ->pluck('count', 'employee_id');
+
+            $bottomPerformersList = [];
+            foreach ($allEmployees as $emp) {
+                $totalViolations = ($dailyViolations->get($emp->id, 0)) + ($teachingViolations->get($emp->id, 0));
+                if ($totalViolations > 0) {
+                    $bottomPerformersList[] = [
+                        'name' => $emp->name,
+                        'count' => $totalViolations,
+                    ];
+                }
+            }
+            usort($bottomPerformersList, fn($a, $b) => $b['count'] <=> $a['count']);
+            $bottomPerformers = array_slice($bottomPerformersList, 0, 5);
+
+            // 🟣 Buka Kunci: Permintaan buka kunci presensi pada bulan berjalan
             $mostUnlocked = \Illuminate\Support\Facades\DB::table('attendance_unlocks')
                 ->join('employees', 'attendance_unlocks.employee_id', '=', 'employees.id')
                 ->whereMonth('attendance_unlocks.date', $currentMonth)
