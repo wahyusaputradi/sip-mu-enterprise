@@ -155,38 +155,39 @@ class AttendanceController extends Controller
                 ['name' => 'Belum Absen', 'value' => $unrecorded, 'color' => '#94a3b8'],
             ];
 
-            // Executive Stats - For top level management
-            $recapAll = $monthlyRecap['recapData'] ?? [];
-
-            // Top Performers (Top 5 Paling Banyak Hadir bulan ini untuk seluruh Pegawai/Guru/Karyawan)
-            $topPerformers = collect($recapAll)
-                ->filter(fn($emp) => ($emp['present'] ?? 0) > 0)
-                ->sortByDesc('present')
-                ->take(5)
+            // Executive Stats - For top level management (Direct Ultra Fast SQL Aggregation)
+            $topPerformers = Attendance::whereMonth('attendances.date', $currentMonth)
+                ->whereYear('attendances.date', $currentYear)
+                ->whereIn('attendances.status', ['present', 'late'])
+                ->join('employees', 'attendances.employee_id', '=', 'employees.id')
+                ->select('employees.name', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+                ->groupBy('employees.id', 'employees.name')
+                ->orderByDesc('count')
+                ->limit(5)
+                ->get()
                 ->map(fn($emp) => [
-                    'name' => $emp['name'],
-                    'count' => $emp['present'],
-                ])
-                ->values();
+                    'name' => $emp->name,
+                    'count' => $emp->count,
+                ]);
 
-            // Bottom Performers (Top 5 Paling Banyak Pelanggaran: Late + Alpha + JTM Alpa bulan ini)
-            $bottomPerformers = collect($recapAll)
-                ->map(function ($emp) {
-                    $violations = ($emp['late'] ?? 0) + ($emp['alpha'] ?? 0) + ($emp['jtm_absent'] ?? 0);
-                    return [
-                        'name' => $emp['name'],
-                        'count' => $violations,
-                    ];
-                })
-                ->filter(fn($emp) => $emp['count'] > 0)
-                ->sortByDesc('count')
-                ->take(5)
-                ->values();
+            $bottomPerformers = Attendance::whereMonth('attendances.date', $currentMonth)
+                ->whereYear('attendances.date', $currentYear)
+                ->whereIn('attendances.status', ['late', 'alpha'])
+                ->join('employees', 'attendances.employee_id', '=', 'employees.id')
+                ->select('employees.name', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+                ->groupBy('employees.id', 'employees.name')
+                ->orderByDesc('count')
+                ->limit(5)
+                ->get()
+                ->map(fn($emp) => [
+                    'name' => $emp->name,
+                    'count' => $emp->count,
+                ]);
 
             $mostUnlocked = \Illuminate\Support\Facades\DB::table('attendance_unlocks')
                 ->join('employees', 'attendance_unlocks.employee_id', '=', 'employees.id')
-                ->whereMonth('attendance_unlocks.date', Carbon::now()->month)
-                ->whereYear('attendance_unlocks.date', Carbon::now()->year)
+                ->whereMonth('attendance_unlocks.date', $currentMonth)
+                ->whereYear('attendance_unlocks.date', $currentYear)
                 ->select('employees.name', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
                 ->groupBy('employees.id', 'employees.name')
                 ->orderByDesc('count')
