@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AdSenseBanner from '@/Components/AdSenseBanner';
 import { Head, useForm, Link } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -935,6 +936,9 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                         </Card>
                     </motion.div>
                 </div>
+
+                {/* Google AdSense Responsive Unit Container */}
+                <AdSenseBanner />
             </motion.div>
 
             <style dangerouslySetInnerHTML={{ __html: `
