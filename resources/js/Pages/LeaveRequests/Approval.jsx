@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, X, CalendarDays, Clock, FileText, Paperclip, Eye, ClipboardCheck, Filter } from 'lucide-react';
+import { Check, X, CalendarDays, Clock, FileText, Paperclip, Eye, ClipboardCheck, Filter, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const TYPE_CFG = {
@@ -30,6 +30,11 @@ export default function Approval({ leaveRequests }) {
 
     const handleApprove = (id) => router.post(route('leave-requests.approve', id));
     const handleReject = (id) => router.post(route('leave-requests.reject', id));
+    const handleDeleteAdmin = (id) => {
+        if (confirm('Apakah Anda yakin ingin menghapus berkas pengajuan ini secara permanen?')) {
+            router.delete(route('leave-requests.destroy-admin', id));
+        }
+    };
     const fmt = (ds) => new Intl.DateTimeFormat('id-ID', { day:'numeric', month:'short', year:'numeric' }).format(new Date(ds));
     const ti = (t) => TYPE_CFG[t] || TYPE_CFG.cuti;
     const isImg = (p) => p && /\.(jpg|jpeg|png)$/i.test(p);
@@ -148,12 +153,32 @@ export default function Approval({ leaveRequests }) {
                                         {lr.status==='rejected' && <span className="flex items-center text-[11px] font-black uppercase tracking-widest text-rose-600 bg-rose-50 px-3 py-1.5 rounded-full w-max border border-rose-100/50 shadow-sm"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-2"></span>Ditolak</span>}
                                         {lr.status==='pending' && <span className="flex items-center text-[11px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full w-max border border-amber-100/50 shadow-sm"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-2 animate-pulse"></span>Menunggu</span>}
                                     </div></TableCell>
-                                    <TableCell className="px-6 lg:px-8 text-right">{lr.status==='pending' ? (
-                                        <div className="flex items-center justify-end space-x-2">
-                                            <Button onClick={()=>handleApprove(lr.id)} size="sm" className="h-8 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white border-none shadow-none font-bold"><Check className="w-4 h-4 mr-1" />Setuju</Button>
-                                            <Button onClick={()=>handleReject(lr.id)} size="sm" className="h-8 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border-none shadow-none font-bold"><X className="w-4 h-4 mr-1" />Tolak</Button>
-                                        </div>
-                                    ) : <span className="text-xs font-bold text-slate-400">{lr.approver?`oleh ${lr.approver.name}`:lr.status==='approved'?'Disetujui':'Ditolak'}</span>}</TableCell>
+                                    <TableCell className="px-6 lg:px-8 text-right">
+                                        {lr.status==='pending' ? (
+                                            <div className="flex items-center justify-end space-x-2">
+                                                <Button onClick={()=>handleApprove(lr.id)} size="sm" className="h-8 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white border-none shadow-none font-bold"><Check className="w-4 h-4 mr-1" />Setuju</Button>
+                                                <Button onClick={()=>handleReject(lr.id)} size="sm" className="h-8 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border-none shadow-none font-bold"><X className="w-4 h-4 mr-1" />Tolak</Button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-end space-x-2">
+                                                <span className="text-[11px] font-bold text-slate-400 mr-1 hidden xl:inline">
+                                                    {lr.approver ? `oleh ${lr.approver.name}` : ''}
+                                                </span>
+                                                {lr.status === 'approved' ? (
+                                                    <Button onClick={()=>handleReject(lr.id)} size="sm" variant="outline" className="h-7 px-2.5 rounded-xl bg-rose-50/80 text-rose-600 border-rose-200 hover:bg-rose-600 hover:text-white font-bold text-[11px] transition-all" title="Batalkan Persetujuan & Ubah ke Ditolak">
+                                                        <X className="w-3.5 h-3.5 mr-1" /> Batalkan
+                                                    </Button>
+                                                ) : (
+                                                    <Button onClick={()=>handleApprove(lr.id)} size="sm" variant="outline" className="h-7 px-2.5 rounded-xl bg-emerald-50/80 text-emerald-600 border-emerald-200 hover:bg-emerald-600 hover:text-white font-bold text-[11px] transition-all" title="Setujui Kembali">
+                                                        <Check className="w-3.5 h-3.5 mr-1" /> Setujui
+                                                    </Button>
+                                                )}
+                                                <Button onClick={()=>handleDeleteAdmin(lr.id)} size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" title="Hapus Pengajuan">
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </TableCell>
                                 </motion.tr>
                             ); })}
                             {filtered.length===0 && <TableRow><TableCell colSpan={7} className="text-center py-16"><div className="flex flex-col items-center text-slate-400"><CalendarDays className="w-12 h-12 mb-4 text-slate-200" /><p className="font-bold text-slate-500">Tidak ada data pengajuan</p></div></TableCell></TableRow>}

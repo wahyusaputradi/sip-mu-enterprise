@@ -300,4 +300,23 @@ class LeaveRequestController extends Controller
 
         return back()->with('success', 'Pengajuan berhasil dibatalkan.');
     }
+
+    /**
+     * Delete/cancel any leave request by Approver / Super Admin.
+     */
+    public function destroyByAdmin(LeaveRequest $leaveRequest)
+    {
+        if (!$this->isApprover()) {
+            abort(403, 'Anda tidak memiliki izin untuk menghapus pengajuan ini.');
+        }
+
+        if ($leaveRequest->attachment_path) {
+            $disk = config('filesystems.default', 'public');
+            Storage::disk($disk)->delete($leaveRequest->attachment_path);
+        }
+
+        $leaveRequest->delete();
+
+        return back()->with('success', 'Pengajuan berhasil dihapus oleh Atasan.');
+    }
 }

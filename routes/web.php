@@ -233,6 +233,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/leave-requests/approval', [LeaveRequestController::class, 'approval'])->name('leave-requests.approval');
         Route::post('/leave-requests/{leaveRequest}/approve', [LeaveRequestController::class, 'approve'])->name('leave-requests.approve');
         Route::post('/leave-requests/{leaveRequest}/reject', [LeaveRequestController::class, 'reject'])->name('leave-requests.reject');
+        Route::delete('/leave-requests/admin/{leaveRequest}', [LeaveRequestController::class, 'destroyByAdmin'])->name('leave-requests.destroy-admin');
     });
 
     Route::middleware(['role:Super Admin|Kurikulum'])->group(function () {
