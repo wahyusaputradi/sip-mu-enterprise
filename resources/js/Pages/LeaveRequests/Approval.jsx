@@ -10,11 +10,11 @@ import { Check, X, CalendarDays, Clock, FileText, Paperclip, Eye, ClipboardCheck
 import { motion, AnimatePresence } from 'framer-motion';
 
 const TYPE_CFG = {
-    cuti: { label: 'Cuti', bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-100' },
-    izin_pribadi: { label: 'Izin Pribadi', bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100' },
-    izin_dinas_luar: { label: 'Izin Dinas Luar', bg: 'bg-sky-50', text: 'text-sky-600', border: 'border-sky-100' },
-    izin_pulang_cepat: { label: 'Izin Pulang Cepat', bg: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-100' },
-    sakit: { label: 'Sakit', bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-100' },
+    cuti: { label: 'Cuti', bg: 'bg-purple-50 dark:bg-purple-950/40', text: 'text-purple-600 dark:text-purple-300', border: 'border-purple-100 dark:border-purple-800/50' },
+    izin_pribadi: { label: 'Izin Pribadi', bg: 'bg-amber-50 dark:bg-amber-950/40', text: 'text-amber-600 dark:text-amber-300', border: 'border-amber-100 dark:border-amber-800/50' },
+    izin_dinas_luar: { label: 'Izin Dinas Luar', bg: 'bg-sky-50 dark:bg-sky-950/40', text: 'text-sky-600 dark:text-sky-300', border: 'border-sky-100 dark:border-sky-800/50' },
+    izin_pulang_cepat: { label: 'Izin Pulang Cepat', bg: 'bg-teal-50 dark:bg-teal-950/40', text: 'text-teal-600 dark:text-teal-300', border: 'border-teal-100 dark:border-teal-800/50' },
+    sakit: { label: 'Sakit', bg: 'bg-rose-50 dark:bg-rose-950/40', text: 'text-rose-600 dark:text-rose-300', border: 'border-rose-100 dark:border-rose-800/50' },
 };
 const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
@@ -71,33 +71,33 @@ export default function Approval({ leaveRequests }) {
 
     return (
         <AuthenticatedLayout header={
-            <div><div className="flex items-center space-x-2 mb-2"><span className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-widest flex items-center shadow-sm"><ClipboardCheck className="w-3 h-3 mr-1.5" /> Persetujuan</span></div>
-            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Persetujuan <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-600">Cuti & Izin</span></h2></div>
+            <div><div className="flex items-center space-x-2 mb-2"><span className="px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-300 text-[10px] font-black uppercase tracking-widest flex items-center shadow-sm"><ClipboardCheck className="w-3 h-3 mr-1.5" /> Persetujuan</span></div>
+            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Persetujuan <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">Cuti & Izin</span></h2></div>
         }>
             <Head title="Persetujuan Cuti & Izin" />
 
             {/* Date Filter */}
             <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.3}} className="flex flex-wrap items-center gap-3 mb-6">
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-white/80 backdrop-blur-xl border border-white rounded-2xl shadow-sm">
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm">
                     <Filter className="w-4 h-4 text-slate-400" />
-                    <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Filter</span>
+                    <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Filter</span>
                 </div>
                 <Select value={filterMonth} onValueChange={setFilterMonth}>
-                    <SelectTrigger className="w-[150px] rounded-xl border-slate-200 h-10 font-semibold bg-white/80 text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent className="rounded-xl shadow-xl">
-                        <SelectItem value="all" className="font-semibold">Semua Bulan</SelectItem>
-                        {MONTHS.map((m,i) => <SelectItem key={i} value={String(i+1)} className="font-semibold">{m}</SelectItem>)}
+                    <SelectTrigger className="w-[150px] rounded-xl border-slate-200 dark:border-slate-800 h-10 font-semibold bg-white/80 dark:bg-slate-900/80 text-slate-900 dark:text-slate-100 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent className="rounded-xl shadow-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                        <SelectItem value="all" className="font-semibold text-slate-900 dark:text-slate-100">Semua Bulan</SelectItem>
+                        {MONTHS.map((m,i) => <SelectItem key={i} value={String(i+1)} className="font-semibold text-slate-900 dark:text-slate-100">{m}</SelectItem>)}
                     </SelectContent>
                 </Select>
                 <Select value={filterYear} onValueChange={setFilterYear}>
-                    <SelectTrigger className="w-[120px] rounded-xl border-slate-200 h-10 font-semibold bg-white/80 text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent className="rounded-xl shadow-xl">
-                        <SelectItem value="all" className="font-semibold">Semua Tahun</SelectItem>
-                        {years.map(y => <SelectItem key={y} value={String(y)} className="font-semibold">{y}</SelectItem>)}
+                    <SelectTrigger className="w-[120px] rounded-xl border-slate-200 dark:border-slate-800 h-10 font-semibold bg-white/80 dark:bg-slate-900/80 text-slate-900 dark:text-slate-100 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent className="rounded-xl shadow-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                        <SelectItem value="all" className="font-semibold text-slate-900 dark:text-slate-100">Semua Tahun</SelectItem>
+                        {years.map(y => <SelectItem key={y} value={String(y)} className="font-semibold text-slate-900 dark:text-slate-100">{y}</SelectItem>)}
                     </SelectContent>
                 </Select>
                 {(filterMonth !== String(now.getMonth()+1) || filterYear !== String(now.getFullYear())) && (
-                    <button onClick={() => { setFilterMonth(String(now.getMonth()+1)); setFilterYear(String(now.getFullYear())); }} className="text-xs font-bold text-indigo-600 hover:text-indigo-700 underline underline-offset-2">Reset</button>
+                    <button onClick={() => { setFilterMonth(String(now.getMonth()+1)); setFilterYear(String(now.getFullYear())); }} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2">Reset</button>
                 )}
             </motion.div>
 
@@ -105,8 +105,8 @@ export default function Approval({ leaveRequests }) {
             <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.4}} className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 {filterBtns.map((fb) => (
                     <button key={fb.key} onClick={()=>setStatusFilter(fb.key)}
-                        className={`bg-white/80 backdrop-blur-xl border rounded-2xl p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] text-left transition-all hover:-translate-y-0.5 ${statusFilter===fb.key?'border-indigo-300 ring-2 ring-indigo-100':'border-white hover:border-slate-200'}`}>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{fb.label}</p>
+                        className={`bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border rounded-2xl p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] text-left transition-all hover:-translate-y-0.5 ${statusFilter===fb.key?'border-indigo-300 dark:border-indigo-500/50 ring-2 ring-indigo-100 dark:ring-indigo-950':'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'}`}>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">{fb.label}</p>
                         <p className={`text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r ${fb.g}`}>{counts[fb.key]}</p>
                     </button>
                 ))}
@@ -114,66 +114,66 @@ export default function Approval({ leaveRequests }) {
 
             {/* Table */}
             <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.5,delay:0.1}} className="pb-8">
-                <Card className="border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white/80 backdrop-blur-xl overflow-hidden">
-                    <CardHeader className="border-b border-slate-50/50 bg-white/50 p-6 lg:px-8">
-                        <CardTitle className="text-xl font-black text-slate-900 flex items-center justify-between"><span>Daftar Pengajuan Pegawai</span><span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full border border-indigo-100 flex items-center"><Clock className="w-3 h-3 mr-1" />Reviewer Mode</span></CardTitle>
-                        <CardDescription className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Tinjau dan setujui permohonan cuti/izin pegawai</CardDescription>
+                <Card className="border border-slate-200/80 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl overflow-hidden">
+                    <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 p-6 lg:px-8">
+                        <CardTitle className="text-xl font-black text-slate-900 dark:text-white flex items-center justify-between"><span>Daftar Pengajuan Pegawai</span><span className="text-xs font-bold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-800/50 flex items-center"><Clock className="w-3 h-3 mr-1" />Reviewer Mode</span></CardTitle>
+                        <CardDescription className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">Tinjau dan setujui permohonan cuti/izin pegawai</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0"><div className="overflow-x-auto"><Table>
-                        <TableHeader className="bg-slate-50/50"><TableRow className="hover:bg-transparent border-b-slate-100">
-                            <TableHead className="font-black text-slate-900 px-6 lg:px-8 py-5">Pegawai</TableHead>
-                            <TableHead className="font-black text-slate-900">Jenis</TableHead>
-                            <TableHead className="font-black text-slate-900">Periode</TableHead>
-                            <TableHead className="font-black text-slate-900">Keterangan</TableHead>
-                            <TableHead className="font-black text-slate-900 text-center">Lampiran</TableHead>
-                            <TableHead className="font-black text-slate-900 text-center">Status</TableHead>
-                            <TableHead className="font-black text-slate-900 text-right px-6 lg:px-8">Aksi</TableHead>
+                        <TableHeader className="bg-slate-50/50 dark:bg-slate-800/60"><TableRow className="hover:bg-transparent border-b-slate-100 dark:border-b-slate-800">
+                            <TableHead className="font-black text-slate-900 dark:text-slate-200 px-6 lg:px-8 py-5">Pegawai</TableHead>
+                            <TableHead className="font-black text-slate-900 dark:text-slate-200">Jenis</TableHead>
+                            <TableHead className="font-black text-slate-900 dark:text-slate-200">Periode</TableHead>
+                            <TableHead className="font-black text-slate-900 dark:text-slate-200">Keterangan</TableHead>
+                            <TableHead className="font-black text-slate-900 dark:text-slate-200 text-center">Lampiran</TableHead>
+                            <TableHead className="font-black text-slate-900 dark:text-slate-200 text-center">Status</TableHead>
+                            <TableHead className="font-black text-slate-900 dark:text-slate-200 text-right px-6 lg:px-8">Aksi</TableHead>
                         </TableRow></TableHeader>
                         <TableBody><AnimatePresence>
                             {paginated.map((lr) => { const t = ti(lr.type); return (
-                                <motion.tr key={lr.id} initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="group hover:bg-slate-50/50 transition-colors border-b-slate-50">
-                                    <TableCell className="px-6 lg:px-8 py-4"><div className="flex items-center space-x-3"><div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-700 font-bold text-sm">{lr.employee?.name?.charAt(0)||'?'}</div><span className="font-bold text-slate-900 text-sm">{lr.employee?.name||'-'}</span></div></TableCell>
+                                <motion.tr key={lr.id} initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors border-b-slate-50 dark:border-b-slate-800/50">
+                                    <TableCell className="px-6 lg:px-8 py-4"><div className="flex items-center space-x-3"><div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-950 dark:to-purple-950 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-sm">{lr.employee?.name?.charAt(0)||'?'}</div><span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{lr.employee?.name||'-'}</span></div></TableCell>
                                     <TableCell><span className={`font-bold px-3 py-1.5 rounded-full text-xs uppercase tracking-wider ${t.bg} ${t.text} border ${t.border}`}>{t.label}</span></TableCell>
                                     <TableCell>
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-slate-900">{fmt(lr.start_date)}</span>
+                                            <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{fmt(lr.start_date)}</span>
                                             {lr.duration_type === 'partial' ? (
-                                                <span className="text-xs font-black text-indigo-600 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100/30 w-max mt-1">
+                                                <span className="text-xs font-black text-indigo-600 dark:text-indigo-300 bg-indigo-50/50 dark:bg-indigo-950/50 px-2 py-0.5 rounded border border-indigo-100/30 dark:border-indigo-800/40 w-max mt-1">
                                                     ⏱️ {lr.start_time?.substring(0, 5)} - {lr.end_time?.substring(0, 5)}
                                                 </span>
                                             ) : (
-                                                <span className="text-xs font-semibold text-slate-500">s/d {fmt(lr.end_date)}</span>
+                                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">s/d {fmt(lr.end_date)}</span>
                                             )}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="max-w-[200px]"><div className="flex items-start space-x-2"><FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" /><p className="text-sm font-medium text-slate-600 line-clamp-2">{lr.reason}</p></div></TableCell>
-                                    <TableCell className="text-center">{lr.attachment_path ? <button onClick={()=>setPreviewAttachment(lr)} className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-full border border-indigo-100 transition-colors"><Paperclip className="w-3 h-3" />Lihat</button> : <span className="text-xs text-slate-400">—</span>}</TableCell>
+                                    <TableCell className="max-w-[200px]"><div className="flex items-start space-x-2"><FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" /><p className="text-sm font-medium text-slate-600 dark:text-slate-300 line-clamp-2">{lr.reason}</p></div></TableCell>
+                                    <TableCell className="text-center">{lr.attachment_path ? <button onClick={()=>setPreviewAttachment(lr)} className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-3 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-800/50 transition-colors"><Paperclip className="w-3 h-3" />Lihat</button> : <span className="text-xs text-slate-400">—</span>}</TableCell>
                                     <TableCell className="text-center"><div className="flex justify-center">
-                                        {lr.status==='approved' && <span className="flex items-center text-[11px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full w-max border border-emerald-100/50 shadow-sm"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span>Disetujui</span>}
-                                        {lr.status==='rejected' && <span className="flex items-center text-[11px] font-black uppercase tracking-widest text-rose-600 bg-rose-50 px-3 py-1.5 rounded-full w-max border border-rose-100/50 shadow-sm"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-2"></span>Ditolak</span>}
-                                        {lr.status==='pending' && <span className="flex items-center text-[11px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full w-max border border-amber-100/50 shadow-sm"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-2 animate-pulse"></span>Menunggu</span>}
+                                        {lr.status==='approved' && <span className="flex items-center text-[11px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 rounded-full w-max border border-emerald-100/50 dark:border-emerald-800/50 shadow-sm"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span>Disetujui</span>}
+                                        {lr.status==='rejected' && <span className="flex items-center text-[11px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 rounded-full w-max border border-rose-100/50 dark:border-rose-800/50 shadow-sm"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-2"></span>Ditolak</span>}
+                                        {lr.status==='pending' && <span className="flex items-center text-[11px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-3 py-1.5 rounded-full w-max border border-amber-100/50 dark:border-amber-800/50 shadow-sm"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-2 animate-pulse"></span>Menunggu</span>}
                                     </div></TableCell>
                                     <TableCell className="px-6 lg:px-8 text-right">
                                         {lr.status==='pending' ? (
                                             <div className="flex items-center justify-end space-x-2">
-                                                <Button onClick={()=>handleApprove(lr.id)} size="sm" className="h-8 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white border-none shadow-none font-bold"><Check className="w-4 h-4 mr-1" />Setuju</Button>
-                                                <Button onClick={()=>handleReject(lr.id)} size="sm" className="h-8 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border-none shadow-none font-bold"><X className="w-4 h-4 mr-1" />Tolak</Button>
+                                                <Button onClick={()=>handleApprove(lr.id)} size="sm" className="h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 border-none shadow-none font-bold"><Check className="w-4 h-4 mr-1" />Setuju</Button>
+                                                <Button onClick={()=>handleReject(lr.id)} size="sm" className="h-8 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-300 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 border-none shadow-none font-bold"><X className="w-4 h-4 mr-1" />Tolak</Button>
                                             </div>
                                         ) : (
                                             <div className="flex items-center justify-end space-x-2">
-                                                <span className="text-[11px] font-bold text-slate-400 mr-1 hidden xl:inline">
+                                                <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mr-1 hidden xl:inline">
                                                     {lr.approver ? `oleh ${lr.approver.name}` : ''}
                                                 </span>
                                                 {lr.status === 'approved' ? (
-                                                    <Button onClick={()=>handleReject(lr.id)} size="sm" variant="outline" className="h-7 px-2.5 rounded-xl bg-rose-50/80 text-rose-600 border-rose-200 hover:bg-rose-600 hover:text-white font-bold text-[11px] transition-all" title="Batalkan Persetujuan & Ubah ke Ditolak">
+                                                    <Button onClick={()=>handleReject(lr.id)} size="sm" variant="outline" className="h-7 px-2.5 rounded-xl bg-rose-50/80 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 border-rose-200 dark:border-rose-800/50 hover:bg-rose-600 hover:text-white font-bold text-[11px] transition-all" title="Batalkan Persetujuan & Ubah ke Ditolak">
                                                         <X className="w-3.5 h-3.5 mr-1" /> Batalkan
                                                     </Button>
                                                 ) : (
-                                                    <Button onClick={()=>handleApprove(lr.id)} size="sm" variant="outline" className="h-7 px-2.5 rounded-xl bg-emerald-50/80 text-emerald-600 border-emerald-200 hover:bg-emerald-600 hover:text-white font-bold text-[11px] transition-all" title="Setujui Kembali">
+                                                    <Button onClick={()=>handleApprove(lr.id)} size="sm" variant="outline" className="h-7 px-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-600 hover:text-white font-bold text-[11px] transition-all" title="Setujui Kembali">
                                                         <Check className="w-3.5 h-3.5 mr-1" /> Setujui
                                                     </Button>
                                                 )}
-                                                <Button onClick={()=>handleDeleteAdmin(lr.id)} size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" title="Hapus Pengajuan">
+                                                <Button onClick={()=>handleDeleteAdmin(lr.id)} size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-xl text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors" title="Hapus Pengajuan">
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </Button>
                                             </div>
@@ -181,18 +181,18 @@ export default function Approval({ leaveRequests }) {
                                     </TableCell>
                                 </motion.tr>
                             ); })}
-                            {filtered.length===0 && <TableRow><TableCell colSpan={7} className="text-center py-16"><div className="flex flex-col items-center text-slate-400"><CalendarDays className="w-12 h-12 mb-4 text-slate-200" /><p className="font-bold text-slate-500">Tidak ada data pengajuan</p></div></TableCell></TableRow>}
+                            {filtered.length===0 && <TableRow><TableCell colSpan={7} className="text-center py-16"><div className="flex flex-col items-center text-slate-400 dark:text-slate-500"><CalendarDays className="w-12 h-12 mb-4 text-slate-200 dark:text-slate-700" /><p className="font-bold text-slate-500 dark:text-slate-400">Tidak ada data pengajuan</p></div></TableCell></TableRow>}
                         </AnimatePresence></TableBody>
                     </Table></div></CardContent>
                 </Card>
 
                 {totalPages > 1 && (
                     <div className="flex justify-center mt-6">
-                        <div className="flex items-center gap-1 bg-white/60 p-2 rounded-2xl shadow-sm border border-white/50 backdrop-blur-sm">
+                        <div className="flex items-center gap-1 bg-white/60 dark:bg-slate-900/60 p-2 rounded-2xl shadow-sm border border-white/50 dark:border-slate-800 backdrop-blur-sm">
                             <button 
                                 disabled={currentPage === 1}
                                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                className="px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 text-slate-500 hover:bg-slate-100 disabled:hover:bg-transparent"
+                                className="px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:hover:bg-transparent"
                             >Prev</button>
                             
                             {Array.from({length: Math.min(5, totalPages)}, (_, i) => {
