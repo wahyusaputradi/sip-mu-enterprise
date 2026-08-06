@@ -389,7 +389,7 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
 
             {/* Unlock Attendance Modal */}
             <Dialog open={unlockModal} onOpenChange={setUnlockModal}>
-                <DialogContent className="max-w-none sm:max-w-none md:max-w-none w-[98vw] md:w-[95vw] h-[98vh] md:h-[95vh] max-h-[98vh] overflow-hidden bg-slate-50/95 backdrop-blur-xl border-white/50 p-0 rounded-[2rem] shadow-2xl flex flex-col gap-0">
+                <DialogContent className="max-w-none sm:max-w-none md:max-w-none w-[98vw] md:w-[95vw] h-[98vh] md:h-[95vh] max-h-[98vh] overflow-hidden bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-xl border-white/50 dark:border-slate-800 p-0 rounded-[2rem] shadow-2xl flex flex-col gap-0">
                     
                     {/* Header Banner */}
                     <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-purple-900 p-8 text-white relative flex-shrink-0">
@@ -410,7 +410,7 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
                         </div>
                     </div>
 
-                    <div className="overflow-y-auto flex-1 p-8 space-y-10 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+                    <div className="overflow-y-auto flex-1 p-8 space-y-10 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800 scrollbar-track-transparent">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 h-full">
                             
                             {/* Left: Form - col-span-5 */}
@@ -418,30 +418,30 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
                                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                                     <div className="flex items-center mb-6">
                                         <div className="h-10 w-1.5 bg-indigo-500 rounded-r-full -ml-8 mr-6"></div>
-                                        <h3 className="text-xl font-black text-slate-800 tracking-tight">Formulir Buka Akses</h3>
+                                        <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">Formulir Buka Akses</h3>
                                     </div>
 
-                                    <form id="unlockForm" onSubmit={submitUnlock} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-6 h-full flex flex-col justify-center">
+                                    <form id="unlockForm" onSubmit={submitUnlock} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-6 h-full flex flex-col justify-center">
                                         <div className="space-y-3">
-                                            <Label className="text-slate-700 font-bold flex items-center text-sm">Pegawai</Label>
+                                            <Label className="text-slate-700 dark:text-slate-200 font-bold flex items-center text-sm">Pegawai</Label>
                                             <Select value={unlockData.employee_id} onValueChange={handleUnlockEmployeeChange}>
-                                                <SelectTrigger className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"><SelectValue placeholder="Pilih pegawai..." /></SelectTrigger>
-                                                <SelectContent className="rounded-2xl shadow-xl max-h-80 border-slate-100">
+                                                <SelectTrigger className="h-12 rounded-xl bg-slate-50/50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700 dark:text-slate-100"><SelectValue placeholder="Pilih pegawai..." /></SelectTrigger>
+                                                <SelectContent className="rounded-2xl shadow-xl max-h-80 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                                                     {(employees || []).map(emp => (
-                                                        <SelectItem key={emp.id} value={String(emp.id)} className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50">{emp.name}</SelectItem>
+                                                        <SelectItem key={emp.id} value={String(emp.id)} className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">{emp.name}</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
                                         </div>
 
                                         <div className="space-y-3">
-                                            <Label className="text-slate-700 font-bold flex items-center text-sm">Tipe Presensi</Label>
+                                            <Label className="text-slate-700 dark:text-slate-200 font-bold flex items-center text-sm">Tipe Presensi</Label>
                                             <Select value={unlockData.type} onValueChange={handleUnlockTypeChange}>
-                                                <SelectTrigger className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"><SelectValue /></SelectTrigger>
-                                                <SelectContent className="rounded-2xl shadow-xl border-slate-100">
-                                                    <SelectItem value="daily_checkin" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50">Presensi Masuk (Harian)</SelectItem>
-                                                    <SelectItem value="daily_checkout" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50">Presensi Pulang (Harian)</SelectItem>
-                                                    <SelectItem value="teaching" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50">Presensi Jam Pelajaran</SelectItem>
+                                                <SelectTrigger className="h-12 rounded-xl bg-slate-50/50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700 dark:text-slate-100"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="rounded-2xl shadow-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                                                    <SelectItem value="daily_checkin" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">Presensi Masuk (Harian)</SelectItem>
+                                                    <SelectItem value="daily_checkout" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">Presensi Pulang (Harian)</SelectItem>
+                                                    <SelectItem value="teaching" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">Presensi Jam Pelajaran</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -449,22 +449,22 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
                                         {/* Teaching Schedule Dropdown - Only when type is 'teaching' */}
                                         {unlockData.type === 'teaching' && (
                                             <div className="space-y-3">
-                                                <Label className="text-slate-700 font-bold flex items-center text-sm">Jam Pelajaran</Label>
+                                                <Label className="text-slate-700 dark:text-slate-200 font-bold flex items-center text-sm">Jam Pelajaran</Label>
                                                 {selectedEmployeeSchedules.length > 0 ? (
                                                     <Select value={unlockData.teaching_schedule_id} onValueChange={(v) => setUnlockData(d => ({...d, teaching_schedule_id: v}))}>
-                                                        <SelectTrigger className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"><SelectValue placeholder="Pilih jam pelajaran..." /></SelectTrigger>
-                                                        <SelectContent className="rounded-2xl shadow-xl border-slate-100">
+                                                        <SelectTrigger className="h-12 rounded-xl bg-slate-50/50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700 dark:text-slate-100"><SelectValue placeholder="Pilih jam pelajaran..." /></SelectTrigger>
+                                                        <SelectContent className="rounded-2xl shadow-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                                                             {selectedEmployeeSchedules.map(s => (
-                                                                <SelectItem key={s.id} value={String(s.id)} className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50">
+                                                                <SelectItem key={s.id} value={String(s.id)} className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">
                                                                     Jam ke-{s.hour_number} • {s.subject} ({s.class_name}) • {s.time_start}-{s.time_end}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
                                                 ) : (
-                                                    <div className="bg-rose-50 rounded-2xl p-4 border border-rose-100 flex items-start shadow-sm">
+                                                    <div className="bg-rose-50 dark:bg-rose-950/40 rounded-2xl p-4 border border-rose-100 dark:border-rose-800/50 flex items-start shadow-sm">
                                                         <ShieldAlert className="w-5 h-5 text-rose-500 mr-3 shrink-0" />
-                                                        <p className="text-sm text-rose-700 font-semibold leading-relaxed">
+                                                        <p className="text-sm text-rose-700 dark:text-rose-300 font-semibold leading-relaxed">
                                                             {unlockData.employee_id
                                                                 ? 'Pegawai ini tidak memiliki jadwal mengajar pada hari ini.'
                                                                 : 'Silakan pilih pegawai terlebih dahulu.'}
@@ -475,35 +475,35 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
                                         )}
 
                                         <div className="space-y-3">
-                                            <Label className="text-slate-700 font-bold flex items-center text-sm">Kebijakan Keterlambatan</Label>
+                                            <Label className="text-slate-700 dark:text-slate-200 font-bold flex items-center text-sm">Kebijakan Keterlambatan</Label>
                                             <Select value={String(unlockData.is_lateness_violation)} onValueChange={(v) => setUnlockData(d => ({...d, is_lateness_violation: v === 'true'}))}>
-                                                <SelectTrigger className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"><SelectValue /></SelectTrigger>
-                                                <SelectContent className="rounded-2xl shadow-xl border-slate-100">
-                                                    <SelectItem value="true" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50">Tandai Sebagai Pelanggaran Keterlambatan</SelectItem>
-                                                    <SelectItem value="false" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50">Tidak Tandai Sebagai Pelanggaran Keterlambatan</SelectItem>
+                                                <SelectTrigger className="h-12 rounded-xl bg-slate-50/50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700 dark:text-slate-100"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="rounded-2xl shadow-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                                                    <SelectItem value="true" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">Tandai Sebagai Pelanggaran Keterlambatan</SelectItem>
+                                                    <SelectItem value="false" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">Tidak Tandai Sebagai Pelanggaran Keterlambatan</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
 
                                         <div className="space-y-3">
-                                            <Label className="text-slate-700 font-bold flex items-center text-sm">Batas Waktu Akses</Label>
+                                            <Label className="text-slate-700 dark:text-slate-200 font-bold flex items-center text-sm">Batas Waktu Akses</Label>
                                             <Select value={unlockData.expires_in_minutes} onValueChange={(v) => setUnlockData(d => ({...d, expires_in_minutes: v}))}>
-                                                <SelectTrigger className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"><SelectValue /></SelectTrigger>
-                                                <SelectContent className="rounded-2xl shadow-xl border-slate-100">
-                                                    <SelectItem value="15" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50">15 Menit</SelectItem>
-                                                    <SelectItem value="30" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50">30 Menit</SelectItem>
-                                                    <SelectItem value="60" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50">1 Jam (60 Menit)</SelectItem>
+                                                <SelectTrigger className="h-12 rounded-xl bg-slate-50/50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700 dark:text-slate-100"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="rounded-2xl shadow-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                                                    <SelectItem value="15" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">15 Menit</SelectItem>
+                                                    <SelectItem value="30" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">30 Menit</SelectItem>
+                                                    <SelectItem value="60" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">1 Jam (60 Menit)</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
 
                                         <div className="space-y-3">
-                                            <Label className="text-slate-700 font-bold flex items-center justify-between text-sm">
+                                            <Label className="text-slate-700 dark:text-slate-200 font-bold flex items-center justify-between text-sm">
                                                 <span>Alasan</span>
-                                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-wider bg-indigo-50 px-2 py-1 rounded-md">Opsional</span>
+                                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/60 px-2 py-1 rounded-md">Opsional</span>
                                             </Label>
                                             <Input value={unlockData.reason} onChange={(e) => setUnlockData(d => ({...d, reason: e.target.value}))}
-                                                placeholder="Contoh: Izin terlambat dari Waka Kurikulum" className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700" />
+                                                placeholder="Contoh: Izin terlambat dari Waka Kurikulum" className="h-12 rounded-xl bg-slate-50/50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500 transition-all font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500" />
                                         </div>
                                     </form>
                                 </motion.div>
@@ -515,62 +515,62 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
                                     <div className="flex items-center mb-6 justify-between flex-wrap gap-4">
                                         <div className="flex items-center">
                                             <div className="h-10 w-1.5 bg-purple-500 rounded-r-full -ml-8 mr-6"></div>
-                                            <h3 className="text-xl font-black text-slate-800 tracking-tight">Riwayat Akses Hari Ini</h3>
+                                            <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">Riwayat Akses Hari Ini</h3>
                                         </div>
-                                        <p className="text-sm font-bold text-slate-500 mt-2 flex items-center bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
+                                        <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-2 flex items-center bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700">
                                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
                                             Total: {(todayUnlocks || []).length} diberikan
                                         </p>
                                     </div>
                                     
-                                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex-1 overflow-y-auto space-y-4 relative custom-scrollbar">
+                                    <div className="bg-white dark:bg-slate-900/60 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex-1 overflow-y-auto space-y-4 relative custom-scrollbar">
                                         {(!todayUnlocks || todayUnlocks.length === 0) ? (
                                             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
-                                                <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center shadow-inner mb-4 border border-slate-100">
-                                                    <ShieldAlert className="w-10 h-10 text-slate-300" />
+                                                <div className="w-24 h-24 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center shadow-inner mb-4 border border-slate-100 dark:border-slate-700">
+                                                    <ShieldAlert className="w-10 h-10 text-slate-300 dark:text-slate-600" />
                                                 </div>
-                                                <p className="font-black text-xl text-slate-500 mb-1">Belum Ada Riwayat</p>
-                                                <p className="text-sm font-medium text-center text-slate-400">Akses presensi yang dibuka hari ini akan muncul di sini.</p>
+                                                <p className="font-black text-xl text-slate-500 dark:text-slate-400 mb-1">Belum Ada Riwayat</p>
+                                                <p className="text-sm font-medium text-center text-slate-400 dark:text-slate-500">Akses presensi yang dibuka hari ini akan muncul di sini.</p>
                                             </div>
                                         ) : (
                                             todayUnlocks.map(u => (
-                                                <div key={u.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:border-indigo-100 transition-all duration-300 relative overflow-hidden group flex flex-col gap-4">
+                                                <div key={u.id} className="bg-white dark:bg-slate-800/80 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:border-indigo-100 dark:hover:border-indigo-500/30 transition-all duration-300 relative overflow-hidden group flex flex-col gap-4">
                                                     
                                                     <div className={`absolute top-0 right-0 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-bl-2xl border-b border-l shadow-sm ${
-                                                        u.used ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-                                                        : u.is_expired ? 'bg-rose-50 text-rose-600 border-rose-100'
-                                                        : 'bg-amber-50 text-amber-600 border-amber-100'
+                                                        u.used ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-300 border-emerald-100 dark:border-emerald-800/50' 
+                                                        : u.is_expired ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-300 border-rose-100 dark:border-rose-800/50'
+                                                        : 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-300 border-amber-100 dark:border-amber-800/50'
                                                     }`}>
                                                         {u.used ? '✓ DIPAKAI' : (u.is_expired ? '✗ KEDALUWARSA' : '⏳ AKTIF')}
                                                     </div>
                                                     
                                                     <div className="flex items-start gap-4">
-                                                        <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 shadow-inner">
-                                                            <Unlock className="w-5 h-5 text-slate-400" />
+                                                        <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-inner">
+                                                            <Unlock className="w-5 h-5 text-slate-400 dark:text-slate-500" />
                                                         </div>
                                                         <div className="flex-1 pt-0.5">
                                                             <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                                <span className="text-[11px] font-extrabold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">{u.created_at}</span>
-                                                                <span className="text-[11px] font-bold text-slate-400">Oleh: <span className="text-indigo-600 font-black">{u.unlocked_by_name}</span></span>
+                                                                <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-600">{u.created_at}</span>
+                                                                <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">Oleh: <span className="text-indigo-600 dark:text-indigo-400 font-black">{u.unlocked_by_name}</span></span>
                                                             </div>
                                                             
-                                                            <h4 className="font-black text-slate-800 text-lg mb-2">{u.employee_name}</h4>
+                                                            <h4 className="font-black text-slate-800 dark:text-white text-lg mb-2">{u.employee_name}</h4>
                                                             
                                                             <div className="flex flex-wrap items-center gap-2">
-                                                                <div className="flex items-center bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border border-indigo-100 shadow-sm">
+                                                                <div className="flex items-center bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border border-indigo-100 dark:border-indigo-800/50 shadow-sm">
                                                                     {u.type === 'daily_checkin' && 'Masuk'}
                                                                     {u.type === 'daily_checkout' && 'Pulang'}
                                                                     {u.type === 'teaching' && `Jam ke-${u.teaching_schedule?.hour_number}`}
                                                                 </div>
                                                                 {u.type === 'teaching' && (
-                                                                    <div className="flex items-center bg-purple-50 text-purple-700 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border border-purple-100 shadow-sm truncate max-w-[200px]">
+                                                                    <div className="flex items-center bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border border-purple-100 dark:border-purple-800/50 shadow-sm truncate max-w-[200px]">
                                                                         {u.teaching_schedule?.subject}
                                                                     </div>
                                                                 )}
                                                                 <div className={`flex items-center text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border shadow-sm ${
                                                                     u.is_lateness_violation 
-                                                                    ? 'bg-rose-50 text-rose-700 border-rose-100/50' 
-                                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-100/50'
+                                                                    ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-100/50 dark:border-rose-800/50' 
+                                                                    : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100/50 dark:border-emerald-800/50'
                                                                 }`}>
                                                                     {u.is_lateness_violation ? 'Tandai Terlambat' : 'Bebas Terlambat'}
                                                                 </div>
@@ -579,9 +579,9 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
                                                     </div>
 
                                                     {u.reason && (
-                                                        <div className="mt-2 bg-slate-50/50 border border-slate-100 rounded-2xl p-4 flex items-start">
+                                                        <div className="mt-2 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl p-4 flex items-start">
                                                             <Edit2 className="w-4 h-4 mr-3 mt-0.5 text-slate-400 shrink-0" /> 
-                                                            <p className="text-sm font-medium text-slate-600 leading-relaxed italic">"{u.reason}"</p>
+                                                            <p className="text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed italic">"{u.reason}"</p>
                                                         </div>
                                                     )}
                                                 </div>
@@ -593,12 +593,12 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
                         </div>
                     </div>
 
-                    <DialogFooter className="p-6 bg-white border-t border-slate-100 flex-shrink-0 flex sm:justify-between items-center gap-4 rounded-b-[2rem]">
+                    <DialogFooter className="p-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex-shrink-0 flex sm:justify-between items-center gap-4 rounded-b-[2rem]">
                         <Button 
                             type="button" 
                             variant="ghost" 
                             onClick={() => setUnlockModal(false)}
-                            className="rounded-xl h-12 px-6 font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                            className="rounded-xl h-12 px-6 font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                         >
                             Batal
                         </Button>

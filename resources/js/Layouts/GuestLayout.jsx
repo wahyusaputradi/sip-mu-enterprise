@@ -6,7 +6,7 @@ import { ArrowLeft, ShieldCheck, Zap, MapPin, CheckCircle2 } from 'lucide-react'
 
 export default function GuestLayout({ children, title = "SIP MU Enterprise" }) {
     return (
-        <div className="flex min-h-screen bg-slate-50/50 font-sans selection:bg-indigo-500 selection:text-white">
+        <div className="flex min-h-screen bg-slate-50/50 dark:bg-slate-950 font-sans selection:bg-indigo-500 selection:text-white">
             {/* Left Side: Branding & Visuals (Desktop > 1024px) */}
             <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-950">
                 {/* Animated Ambient Background Gradients */}
@@ -147,7 +147,7 @@ export default function GuestLayout({ children, title = "SIP MU Enterprise" }) {
                         initial={{ scale: 0.96, opacity: 0, y: 15 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         transition={{ duration: 0.4 }}
-                        className="bg-white p-8 sm:p-10 rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/80 relative overflow-hidden"
+                        className="bg-white dark:bg-slate-900 p-8 sm:p-10 rounded-3xl shadow-xl shadow-slate-100 dark:shadow-none border border-slate-200/80 dark:border-slate-800 relative overflow-hidden"
                     >
                         {children}
                     </motion.div>
