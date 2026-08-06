@@ -205,7 +205,7 @@ export default function Approval({ leaveRequests }) {
                                     <button
                                         key={pageNum}
                                         onClick={() => setCurrentPage(pageNum)}
-                                        className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${currentPage === pageNum ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+                                        className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${currentPage === pageNum ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                                     >{pageNum}</button>
                                 );
                             })}
@@ -213,7 +213,7 @@ export default function Approval({ leaveRequests }) {
                             <button 
                                 disabled={currentPage === totalPages}
                                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                className="px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 text-slate-500 hover:bg-slate-100 disabled:hover:bg-transparent"
+                                className="px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:hover:bg-transparent"
                             >Next</button>
                         </div>
                     </div>
@@ -222,9 +222,9 @@ export default function Approval({ leaveRequests }) {
 
             {/* Attachment Preview */}
             <Dialog open={!!previewAttachment} onOpenChange={()=>setPreviewAttachment(null)}>
-                <DialogContent className="sm:max-w-[600px] rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden">
-                    <DialogHeader className="p-6 pb-0"><DialogTitle className="text-lg font-black text-slate-900 flex items-center gap-2"><Paperclip className="w-5 h-5 text-indigo-500" />Lampiran</DialogTitle><DialogDescription className="text-sm text-slate-500">{previewAttachment?.attachment_name}</DialogDescription></DialogHeader>
-                    <div className="p-6">{previewAttachment && isImg(previewAttachment.attachment_path) ? <img src={previewAttachment.attachment_url} alt="Lampiran" className="w-full rounded-2xl border border-slate-100" /> : previewAttachment?.attachment_path?.endsWith('.pdf') ? <div className="flex flex-col items-center gap-4 py-8"><FileText className="w-16 h-16 text-rose-400" /><a href={previewAttachment.attachment_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700"><Eye className="w-4 h-4" />Buka PDF</a></div> : null}</div>
+                <DialogContent className="sm:max-w-[600px] rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden bg-white dark:bg-slate-900">
+                    <DialogHeader className="p-6 pb-0"><DialogTitle className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2"><Paperclip className="w-5 h-5 text-indigo-500" />Lampiran</DialogTitle><DialogDescription className="text-sm text-slate-500 dark:text-slate-400">{previewAttachment?.attachment_name}</DialogDescription></DialogHeader>
+                    <div className="p-6">{previewAttachment && isImg(previewAttachment.attachment_path) ? <img src={previewAttachment.attachment_url} alt="Lampiran" className="w-full rounded-2xl border border-slate-100 dark:border-slate-800" /> : previewAttachment?.attachment_path?.endsWith('.pdf') ? <div className="flex flex-col items-center gap-4 py-8"><FileText className="w-16 h-16 text-rose-400" /><a href={previewAttachment.attachment_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700"><Eye className="w-4 h-4" />Buka PDF</a></div> : null}</div>
                 </DialogContent>
             </Dialog>
         </AuthenticatedLayout>

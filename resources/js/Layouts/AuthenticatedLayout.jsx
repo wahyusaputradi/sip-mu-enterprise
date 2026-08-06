@@ -241,7 +241,7 @@ export default function AuthenticatedLayout({ header, children }) {
     })).filter(group => group.items.length > 0);
 
     return (
-        <div className="min-h-screen bg-[#F4F7FB] dark:bg-background flex font-sans text-slate-900 dark:text-slate-100 selection:bg-indigo-500/30 selection:text-indigo-900">
+        <div className="min-h-screen bg-[#F4F7FB] dark:bg-slate-950 flex font-sans text-slate-900 dark:text-slate-100 selection:bg-indigo-500/30 selection:text-indigo-900">
             <Toaster position="top-right" richColors theme={theme} />
             {/* Sidebar Desktop - Premium Dark Theme */}
             <motion.aside 
@@ -386,7 +386,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 
                 {/* Floating Glassmorphic Header */}
                 <div className="px-3 sm:px-6 lg:px-10 pt-3 sm:pt-6 z-30 sticky top-0">
-                    <header className="h-16 sm:h-20 bg-white/70 dark:bg-card/70 backdrop-blur-xl border border-white dark:border-border rounded-2xl sm:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-between px-3 sm:px-6 lg:px-8 transition-all duration-300">
+                    <header className="h-16 sm:h-20 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl border border-white dark:border-slate-800 rounded-2xl sm:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-between px-3 sm:px-6 lg:px-8 transition-all duration-300">
                         <div className="flex items-center space-x-3 sm:space-x-6 w-full lg:w-auto">
                             <button 
                                 onClick={() => setIsMobileMenuOpen(true)}
