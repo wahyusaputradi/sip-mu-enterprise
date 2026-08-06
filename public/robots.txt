@@ -1,3 +1,11 @@
+User-agent: Mediapartners-Google
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+Allow: /ads.txt
+Allow: /sitemap.xml
+
 User-agent: *
 Allow: /
 Allow: /login

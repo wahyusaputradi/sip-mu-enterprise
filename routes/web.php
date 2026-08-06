@@ -26,7 +26,7 @@ use Inertia\Inertia;
 Route::get('/robots.txt', function () {
     $content = file_exists(public_path('robots.txt')) 
         ? file_get_contents(public_path('robots.txt')) 
-        : "User-agent: *\nAllow: /\nSitemap: https://sipmuenterprise.my.id/sitemap.xml";
+        : "User-agent: Mediapartners-Google\nAllow: /\n\nUser-agent: Googlebot\nAllow: /\nAllow: /ads.txt\n\nUser-agent: *\nAllow: /\nSitemap: https://sipmuenterprise.my.id/sitemap.xml";
     return response($content, 200)->header('Content-Type', 'text/plain');
 });
 
