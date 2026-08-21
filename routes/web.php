@@ -19,6 +19,7 @@ use App\Http\Controllers\AttendancePhotoController;
 
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\MediaStreamController;
+use App\Http\Controllers\PublicPageController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -60,10 +61,30 @@ Route::get('/sw.js', function () {
 });
 
 Route::get('/sitemap.xml', function () {
-    $content = file_exists(public_path('sitemap.xml')) 
-        ? file_get_contents(public_path('sitemap.xml')) 
-        : '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://sipmuenterprise.my.id/</loc><lastmod>2026-08-02</lastmod><priority>1.0</priority></url></urlset>';
-    return response($content, 200)->header('Content-Type', 'text/xml');
+    if (file_exists(public_path('sitemap.xml'))) {
+        return response(file_get_contents(public_path('sitemap.xml')), 200)->header('Content-Type', 'text/xml');
+    }
+
+    $urls = [
+        'https://sipmuenterprise.my.id/',
+        'https://sipmuenterprise.my.id/about',
+        'https://sipmuenterprise.my.id/contact',
+        'https://sipmuenterprise.my.id/privacy-policy',
+        'https://sipmuenterprise.my.id/terms-of-service',
+        'https://sipmuenterprise.my.id/articles',
+        'https://sipmuenterprise.my.id/articles/panduan-presensi-geofencing-gps-sekolah-digital',
+        'https://sipmuenterprise.my.id/articles/efisiensi-manajemen-jam-mengajar-jtm-guru-kejuruan',
+        'https://sipmuenterprise.my.id/articles/integrasi-pwa-dan-aplikasi-mobile-presensi-sekolah',
+    ];
+
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>';
+    $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+    foreach ($urls as $url) {
+        $xml .= '<url><loc>' . $url . '</loc><lastmod>' . date('Y-m-d') . '</lastmod><priority>0.8</priority></url>';
+    }
+    $xml .= '</urlset>';
+
+    return response($xml, 200)->header('Content-Type', 'text/xml');
 });
 
 Route::get('/ads.txt', function () {
@@ -75,16 +96,22 @@ Route::get('/ads.txt', function () {
 
 Route::get('/download-apk', function () {
     $apkPath = public_path('downloads/SIP-MU-Enterprise.apk');
-    // Validasi file APK harus berupa file biner Android asli (> 100KB)
     if (file_exists($apkPath) && filesize($apkPath) > 100000) {
         return response()->download($apkPath, 'SIP-MU-Enterprise.apk', [
             'Content-Type' => 'application/vnd.android.package-archive',
             'Content-Disposition' => 'attachment; filename="SIP-MU-Enterprise.apk"'
         ]);
     }
-    
     return response("<html lang='id'><head><title>Install Aplikasi Android - SIP MU Enterprise</title><meta name='viewport' content='width=device-width, initial-scale=1.0'><script src='https://cdn.tailwindcss.com'></script></head><body class='bg-slate-950 text-white min-h-screen flex items-center justify-center p-6 font-sans'><div class='max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl'><div class='w-16 h-16 bg-indigo-600/30 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-500/30'><svg class='w-8 h-8' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z'></path></svg></div><h2 class='text-xl font-black mb-2'>Install Aplikasi Android (WebAPK)</h2><p class='text-xs text-slate-400 mb-6 leading-relaxed'>Pesan <i>'Ada masalah saat mengurai paket'</i> terjadi jika file APK mentah belum dikompilasi secara biner.<br><br>Gunakan metode <b>WebAPK Instan</b> di bawah ini untuk memasang aplikasi resmi secara langsung di smartphone Android tanpa download file besar dan 100% bebas error!</p><div class='space-y-3'><a href='/?install=true' class='block w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 rounded-2xl font-bold text-xs shadow-lg shadow-indigo-600/30 hover:opacity-90 transition-opacity'>📱 Install Aplikasi Langsung di HP Android</a><a href='https://www.pwabuilder.com/image?url=https://sipmuenterprise.my.id/manifest.json' target='_blank' class='block w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 rounded-2xl font-bold text-xs border border-slate-700 text-slate-300 transition-colors'>⚙️ Download File APK Resmi (PWABuilder)</a></div></div></body></html>");
 });
+
+// Halaman Publik Wajib AdSense Compliance
+Route::get('/privacy-policy', [PublicPageController::class, 'privacyPolicy'])->name('privacy-policy');
+Route::get('/terms-of-service', [PublicPageController::class, 'termsOfService'])->name('terms-of-service');
+Route::get('/about', [PublicPageController::class, 'aboutUs'])->name('about');
+Route::get('/contact', [PublicPageController::class, 'contactUs'])->name('contact');
+Route::get('/articles', [PublicPageController::class, 'blogIndex'])->name('articles.index');
+Route::get('/articles/{slug}', [PublicPageController::class, 'blogDetail'])->name('articles.show');
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -178,18 +205,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ══════════════════════════════════════════════════
     // AREA MANAJEMEN — Data Pegawai & Jabatan
     // ══════════════════════════════════════════════════
-    // Read-Only Access (Includes Kepala Sekolah)
+    // Read-Only Access & Exports (Includes Kepala Sekolah)
     Route::middleware(['role:Super Admin|Kepala Sekolah|Bendahara'])->group(function () {
         Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
         Route::get('employees/export', [EmployeeController::class, 'export'])->name('employees.export');
-        Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
 
         Route::get('positions', [PositionController::class, 'index'])->name('positions.index');
         Route::get('positions/export', [PositionController::class, 'export'])->name('positions.export');
-        Route::get('positions/{position}', [PositionController::class, 'show'])->name('positions.show');
     });
 
-    // Write Operations (Excludes Kepala Sekolah)
+    // Write Operations & Fixed Sub-routes (Excludes Kepala Sekolah)
     Route::middleware(['role:Super Admin|Bendahara'])->group(function () {
         Route::get('employees/template', [EmployeeController::class, 'template'])->name('employees.template');
         Route::post('employees/import', [EmployeeController::class, 'import'])->name('employees.import');
@@ -210,6 +235,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('positions/{position}', [PositionController::class, 'update'])->name('positions.update');
         Route::patch('positions/{position}', [PositionController::class, 'update']);
         Route::delete('positions/{position}', [PositionController::class, 'destroy'])->name('positions.destroy');
+    });
+
+    // Dynamic Parameterized Detail Routes (Placed last to prevent route collision)
+    Route::middleware(['role:Super Admin|Kepala Sekolah|Bendahara'])->group(function () {
+        Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
+        Route::get('positions/{position}', [PositionController::class, 'show'])->name('positions.show');
     });
 
     // ══════════════════════════════════════════════════
@@ -260,6 +291,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/holidays/bulk-destroy', [\App\Http\Controllers\HolidayController::class, 'bulkDestroy'])->name('holidays.bulk-destroy');
         Route::put('/holidays/{holiday}', [\App\Http\Controllers\HolidayController::class, 'update'])->name('holidays.update');
         Route::delete('/holidays/{holiday}', [\App\Http\Controllers\HolidayController::class, 'destroy'])->name('holidays.destroy');
+
+        // Special Workdays (Hari Kerja Khusus / Acara Sekolah)
+        Route::post('/special-workdays', [SystemSettingController::class, 'storeSpecialWorkday'])->name('special-workdays.store');
+        Route::delete('/special-workdays/{specialWorkday}', [SystemSettingController::class, 'destroySpecialWorkday'])->name('special-workdays.destroy');
 
         // User Authority
         Route::get('/user-authority', [UserAuthorityController::class, 'index'])->name('user-authority.index');

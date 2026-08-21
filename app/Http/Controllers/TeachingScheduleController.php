@@ -46,10 +46,15 @@ class TeachingScheduleController extends Controller
 
         // Today's monitoring data
         $todayDow = Carbon::now()->dayOfWeekIso; // 1=Mon, 7=Sun
+        $todayHoliday = \App\Models\Holiday::whereDate('date', Carbon::today())->first();
+        $isHoliday = (bool) $todayHoliday;
+        $todaySpecialWorkday = \App\Models\SpecialWorkday::whereDate('date', Carbon::today())->first();
+        $isSpecialWorkday = $todaySpecialWorkday && $todaySpecialWorkday->disable_kbm;
+
         $todaySchedules = [];
         $monitorStats = ['total' => 0, 'filled' => 0, 'empty' => 0];
 
-        if ($todayDow >= 1 && $todayDow <= 5) {
+        if (!$isHoliday && !$isSpecialWorkday && $todayDow >= 1 && $todayDow <= 5) {
             $todayTeachingAttendances = \App\Models\TeachingAttendance::whereDate('date', Carbon::today())
                 ->pluck('teaching_schedule_id')
                 ->toArray();
@@ -89,6 +94,17 @@ class TeachingScheduleController extends Controller
             'todaySchedules' => $todaySchedules,
             'monitorStats' => $monitorStats,
             'todayDow' => $todayDow,
+            'isHoliday' => $isHoliday,
+            'holidayInfo' => $todayHoliday ? [
+                'description' => $todayHoliday->description,
+                'is_national_holiday' => (bool) $todayHoliday->is_national_holiday,
+            ] : null,
+            'isSpecialWorkday' => $isSpecialWorkday,
+            'specialWorkdayInfo' => $todaySpecialWorkday ? [
+                'name' => $todaySpecialWorkday->name,
+                'jam_keluar' => $todaySpecialWorkday->jam_keluar,
+                'disable_kbm' => $todaySpecialWorkday->disable_kbm,
+            ] : null,
         ]);
     }
 

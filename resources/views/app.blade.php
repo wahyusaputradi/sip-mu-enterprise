@@ -57,11 +57,27 @@
 
         <title inertia>{{ config('app.name', 'SIP MU Enterprise') }}</title>
 
-        <!-- Google AdSense Official Script -->
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1006393524825968" crossorigin="anonymous"></script>
+        <!-- Google AdSense Deferred Script -->
+        <script>
+            window.addEventListener('load', function() {
+                var loadAdsense = function() {
+                    var s = document.createElement('script');
+                    s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1006393524825968';
+                    s.async = true;
+                    s.crossOrigin = 'anonymous';
+                    document.head.appendChild(s);
+                };
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(loadAdsense, { timeout: 3000 });
+                } else {
+                    setTimeout(loadAdsense, 3000);
+                }
+            });
+        </script>
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
+        <!-- Fonts & Preconnect Optimization -->
+        <link rel="dns-prefetch" href="https://fonts.bunny.net">
+        <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->

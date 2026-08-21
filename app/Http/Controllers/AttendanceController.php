@@ -399,7 +399,13 @@ class AttendanceController extends Controller
             'longitude' => 'required|numeric',
             'campus_location_id' => 'required|exists:campus_locations,id',
             'photo' => 'nullable|string',
+            'gps_telemetry' => 'nullable|string',
         ]);
+
+        $telemetryCheck = \App\Services\GpsTelemetryService::validateTelemetry($request->gps_telemetry);
+        if (!$telemetryCheck['valid']) {
+            return back()->withErrors(['message' => $telemetryCheck['message']]);
+        }
 
         $user = Auth::user();
         $employee = $user->employee;
@@ -430,15 +436,6 @@ class AttendanceController extends Controller
             ->where('status', 'approved')
             ->whereDate('start_date', '<=', $today)
             ->whereDate('end_date', '>=', $today)
-            ->where(function ($query) use ($now) {
-                $query->where('duration_type', 'full_day')
-                    ->orWhere(function ($q) use ($now) {
-                        $currentTime = $now->toTimeString();
-                        $q->where('duration_type', 'partial')
-                          ->where('start_time', '<=', $currentTime)
-                          ->where('end_time', '>=', $currentTime);
-                    });
-            })
             ->exists();
 
         // ── Geofencing ──
@@ -537,7 +534,13 @@ class AttendanceController extends Controller
             'longitude' => 'required|numeric',
             'campus_location_id' => 'required|exists:campus_locations,id',
             'photo' => 'nullable|string',
+            'gps_telemetry' => 'nullable|string',
         ]);
+
+        $telemetryCheck = \App\Services\GpsTelemetryService::validateTelemetry($request->gps_telemetry);
+        if (!$telemetryCheck['valid']) {
+            return back()->withErrors(['message' => $telemetryCheck['message']]);
+        }
 
         $user = Auth::user();
         $employee = $user->employee;
@@ -561,16 +564,6 @@ class AttendanceController extends Controller
             ->where('status', 'approved')
             ->whereDate('start_date', '<=', Carbon::today())
             ->whereDate('end_date', '>=', Carbon::today())
-            ->where(function ($query) {
-                $now = Carbon::now();
-                $query->where('duration_type', 'full_day')
-                    ->orWhere(function ($q) use ($now) {
-                        $currentTime = $now->toTimeString();
-                        $q->where('duration_type', 'partial')
-                          ->where('start_time', '<=', $currentTime)
-                          ->where('end_time', '>=', $currentTime);
-                    });
-            })
             ->exists();
 
         // ── Geofencing ──
@@ -686,7 +679,9 @@ class AttendanceController extends Controller
                 $monitoringData->push($att);
             } else {
                 // Determine if leave or alpha
-                $status = $todayHoliday ? 'holiday' : 'alpha';
+                $status = $todayHoliday ? 'present' : 'alpha';
+                $checkIn = $todayHoliday ? '07:00:00' : null;
+                $checkOut = $todayHoliday ? '14:40:00' : null;
                 if ($leaveRequests->has($employee->id)) {
                     $leave = $leaveRequests->get($employee->id);
                     if ($leave->type === 'Sakit' || $leave->type === 'sakit') $status = 'sick';
@@ -699,10 +694,10 @@ class AttendanceController extends Controller
                     'employee_id' => $employee->id,
                     'employee' => $employee,
                     'date' => $today->format('Y-m-d'),
-                    'check_in' => null,
-                    'check_out' => null,
+                    'check_in' => $checkIn,
+                    'check_out' => $checkOut,
                     'status' => $status,
-                    'campus_name' => '-',
+                    'campus_name' => $todayHoliday ? 'Hari Libur Nasional' : '-',
                     'photo_check_in' => null,
                     'photo_check_out' => null,
                 ]);
@@ -745,7 +740,7 @@ class AttendanceController extends Controller
         return Inertia::render('Monitoring/Attendance', [
             'attendances' => $monitoringData->values(),
             'stats'       => $stats,
-            'employees'   => $employees->map(fn($e) => ['id' => $e->id, 'name' => $e->name]),
+            'employees'   => $employees->map(fn($e) => ['id' => $e->id, 'name' => $e->name, 'user_id' => $e->user_id]),
             'todayHoliday' => $todayHoliday,
             'todaySchedules' => $this->getTodayTeachingSchedules(),
             'todayUnlocks' => $todayUnlocks,
@@ -919,6 +914,40 @@ class AttendanceController extends Controller
             'is_lateness_violation' => 'nullable|boolean',
         ]);
 
+        $currentUser = Auth::user();
+        $targetEmployee = Employee::with('user')->findOrFail($request->employee_id);
+
+        // 1. CEK DIRI SENDIRI: Petugas pengelola TIDAK BISA membuka akses presensinya sendiri
+        if ($targetEmployee->user_id === $currentUser->id) {
+            return back()->withErrors([
+                'message' => 'Anda tidak dapat membuka akses presensi untuk akun Anda sendiri. Pembukaan akses presensi pengelola yang terblokir wajib dilakukan oleh pengelola lain atau atasan yang lebih tinggi.'
+            ]);
+        }
+
+        // 2. CEK HIERARKI PERAN (Role Hierarchy)
+        $targetUser = $targetEmployee->user;
+        if ($targetUser) {
+            $isTargetSuperAdmin = $targetUser->hasRole('Super Admin');
+            $isTargetKepalaSekolah = $targetUser->hasRole('Kepala Sekolah');
+
+            $isCurrentSuperAdmin = $currentUser->hasRole('Super Admin');
+            $isCurrentKepalaSekolah = $currentUser->hasRole('Kepala Sekolah');
+
+            // Jika target adalah Super Admin, hanya Super Admin lain (bukan diri sendiri) yang bisa membuka
+            if ($isTargetSuperAdmin && !$isCurrentSuperAdmin) {
+                return back()->withErrors([
+                    'message' => 'Akses presensi untuk akun Super Admin hanya dapat dibuka oleh Super Admin lainnya.'
+                ]);
+            }
+
+            // Jika target adalah Kepala Sekolah, hanya Super Admin yang bisa membuka
+            if ($isTargetKepalaSekolah && !$isCurrentSuperAdmin) {
+                return back()->withErrors([
+                    'message' => 'Akses presensi untuk Kepala Sekolah hanya dapat dibuka oleh Super Admin.'
+                ]);
+            }
+        }
+
         $today = Carbon::today();
         $now = Carbon::now();
 
@@ -950,8 +979,7 @@ class AttendanceController extends Controller
             'expires_at' => Carbon::now()->addMinutes((int) $request->expires_in_minutes),
         ]);
 
-        $employee = Employee::find($request->employee_id);
-        return back()->with('message', "Akses presensi untuk {$employee->name} berhasil dibuka.");
+        return back()->with('message', "Akses presensi untuk {$targetEmployee->name} berhasil dibuka.");
     }
     /**
      * Get today's teaching schedules grouped by employee.

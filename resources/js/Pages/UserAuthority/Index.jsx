@@ -32,6 +32,7 @@ export default function UserAuthorityIndex({ users, roles, filters, auth }) {
         email: '',
         password: '',
         roles: [],
+        bypass_liveness: false,
     });
 
     const openEditModal = (user) => {
@@ -40,6 +41,7 @@ export default function UserAuthorityIndex({ users, roles, filters, auth }) {
             email: user.email,
             password: '',
             roles: user.roles || [],
+            bypass_liveness: !!user.bypass_liveness,
         });
         clearErrors();
         setIsEditModalOpen(true);
@@ -219,6 +221,11 @@ export default function UserAuthorityIndex({ users, roles, filters, auth }) {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex flex-wrap gap-2">
+                                                {user.bypass_liveness && (
+                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-black uppercase tracking-wider">
+                                                        ⚡ Bypass Wajah
+                                                    </span>
+                                                )}
                                                 {user.roles && user.roles.length > 0 ? (
                                                     user.roles.map((role, idx) => (
                                                         <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-wider">
@@ -362,6 +369,26 @@ export default function UserAuthorityIndex({ users, roles, filters, auth }) {
                                                 />
                                                 {errors.password && <p className="text-rose-500 text-xs font-bold mt-1">{errors.password}</p>}
                                                 <p className="text-xs text-slate-400 font-medium">Biarkan kosong jika Anda tidak ingin mengganti password saat ini.</p>
+                                            </div>
+
+                                            <div className="pt-4 border-t border-slate-100 space-y-3">
+                                                <Label className="text-slate-700 font-bold flex items-center text-sm">
+                                                    <UserCheck className="w-4 h-4 mr-2 text-indigo-500" /> Pengecualian Verifikasi Presensi
+                                                </Label>
+                                                <div className="flex items-start space-x-3 p-4 rounded-xl bg-indigo-50/50 border border-indigo-100">
+                                                    <Checkbox 
+                                                        id="bypass_liveness"
+                                                        checked={data.bypass_liveness}
+                                                        onCheckedChange={(checked) => setData('bypass_liveness', !!checked)}
+                                                        className="mt-0.5"
+                                                    />
+                                                    <label htmlFor="bypass_liveness" className="text-xs font-bold text-slate-800 cursor-pointer select-none leading-relaxed">
+                                                        Bypass Verifikasi Wajah (Bebaskan Gerakan Tengok Kanan)
+                                                        <span className="block text-[11px] text-slate-500 font-medium mt-0.5">
+                                                            Aktifkan untuk mengizinkan akun ini mengambil foto swafoto langsung tanpa wajib melakukan gerakan tengok kanan.
+                                                        </span>
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

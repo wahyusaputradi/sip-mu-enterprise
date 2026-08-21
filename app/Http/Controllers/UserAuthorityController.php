@@ -34,6 +34,7 @@ class UserAuthorityController extends Controller
                 'name' => $user->employee ? $user->employee->name : $user->name,
                 'email' => $user->email,
                 'email_verified_at' => $user->email_verified_at,
+                'bypass_liveness' => (bool)$user->bypass_liveness,
                 'roles' => $user->roles->pluck('name'),
                 'employee' => $user->employee ? [
                     'position' => $user->employee->positions->where('pivot.is_primary', true)->first() ? [
@@ -64,10 +65,14 @@ class UserAuthorityController extends Controller
         $request->validate([
             'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'password' => ['nullable', 'min:8'],
-            'roles' => ['array']
+            'roles' => ['array'],
+            'bypass_liveness' => ['nullable', 'boolean']
         ]);
 
-        $dataToUpdate = ['email' => $request->email];
+        $dataToUpdate = [
+            'email' => $request->email,
+            'bypass_liveness' => $request->boolean('bypass_liveness')
+        ];
         
         if ($request->filled('password')) {
             $dataToUpdate['password'] = Hash::make($request->password);

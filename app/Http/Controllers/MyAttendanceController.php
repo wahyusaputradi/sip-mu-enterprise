@@ -51,7 +51,8 @@ class MyAttendanceController extends Controller
                 $date = Carbon::create($year, $month, $i);
                 $dateStr = $date->format('Y-m-d');
 
-                if ($date->isWeekday() && !in_array($dateStr, $holidays)) {
+                $isHoliday = in_array($dateStr, $holidays);
+                if ($date->isWeekday() || $isHoliday) {
                     $tCount = isset($teachingAttendances[$dateStr]) ? $teachingAttendances[$dateStr]->count() : 0;
                     if ($existingAttendances->has($dateStr)) {
                         $a = $existingAttendances->get($dateStr);
@@ -59,12 +60,24 @@ class MyAttendanceController extends Controller
                         $fullAttendances->push([
                             'id' => $a->id,
                             'date' => $a->date,
-                            'check_in' => $a->check_in,
-                            'check_out' => $a->check_out,
-                            'status' => $a->status,
+                            'check_in' => $a->check_in ? Carbon::parse($a->check_in)->format('H:i') : ($isHoliday ? '07:00' : null),
+                            'check_out' => $a->check_out ? Carbon::parse($a->check_out)->format('H:i') : ($isHoliday ? '14:40' : null),
+                            'status' => $a->status === 'holiday' ? 'present' : $a->status,
                             'teaching_hours' => $totalTeaching,
                             'inval_hours' => $a->inval_hours,
                         ]);
+                    } elseif ($isHoliday) {
+                        if (!$date->isFuture()) {
+                            $fullAttendances->push([
+                                'id' => 'holiday_' . $dateStr,
+                                'date' => $dateStr,
+                                'check_in' => '07:00',
+                                'check_out' => '14:40',
+                                'status' => 'present',
+                                'teaching_hours' => 0,
+                                'inval_hours' => 0,
+                            ]);
+                        }
                     } else {
                         // Check leave
                         $onLeave = false;

@@ -24,4 +24,5 @@ backup_temp.sql
 test_*.php
 test.php
 check_payroll.php
+vite.config.js.timestamp-*
 

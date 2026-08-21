@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 
-export default function Index({ settings, holidays }) {
+export default function Index({ settings, holidays, specialWorkdays = [] }) {
     const { data: settingData, setData: setSettingData, post: postSettings, processing: processingSettings, errors: settingErrors } = useForm({
         school_name: settings.school_name || 'SMK Manbaul Ulum Cirebon',
         jam_masuk: settings.jam_masuk || '07:00',
@@ -33,6 +33,13 @@ export default function Index({ settings, holidays }) {
         end_date: '',
         description: '',
         is_national_holiday: true,
+    });
+
+    const { data: specialWorkdayData, setData: setSpecialWorkdayData, post: postSpecialWorkday, reset: resetSpecialWorkday, processing: processingSpecialWorkday, errors: specialWorkdayErrors } = useForm({
+        date: '',
+        name: '',
+        jam_keluar: '12:00',
+        disable_kbm: true,
     });
 
     const [activeTab, setActiveTab] = useState('umum');
@@ -71,6 +78,24 @@ export default function Index({ settings, holidays }) {
         });
     };
 
+    const submitSpecialWorkday = (e) => {
+        e.preventDefault();
+        postSpecialWorkday(route('special-workdays.store'), {
+            onSuccess: () => {
+                toast.success("Hari kerja khusus berhasil ditambahkan.");
+                resetSpecialWorkday();
+            }
+        });
+    };
+
+    const handleDeleteSpecialWorkday = (id) => {
+        if (confirm('Hapus hari kerja khusus ini?')) {
+            router.delete(route('special-workdays.destroy', id), {
+                onSuccess: () => toast.success("Hari kerja khusus berhasil dihapus.")
+            });
+        }
+    };
+
     const handleDeleteHoliday = (id) => {
         if(confirm('Hapus hari libur ini?')) {
             router.delete(route('holidays.destroy', id), {
@@ -96,6 +121,7 @@ export default function Index({ settings, holidays }) {
     const tabs = [
         { id: 'umum', label: 'Konfigurasi Umum', icon: <SettingsIcon className="w-4 h-4 mr-2" /> },
         { id: 'libur', label: 'Manajemen Hari Libur', icon: <CalendarDays className="w-4 h-4 mr-2" /> },
+        { id: 'khusus', label: 'Hari Kerja Khusus (Acara)', icon: <Clock className="w-4 h-4 mr-2" /> },
     ];
 
     return (
@@ -631,6 +657,167 @@ export default function Index({ settings, holidays }) {
                                                                     <div className="flex flex-col items-center justify-center text-slate-400">
                                                                         <CalendarDays className="w-10 h-10 mb-3 text-slate-200" />
                                                                         <p className="font-bold text-slate-500">Belum ada data hari libur.</p>
+                                                                    </div>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {activeTab === 'khusus' && (
+                                <motion.div 
+                                    key="khusus"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="p-6 lg:p-10 space-y-6"
+                                >
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                        <div className="lg:col-span-1">
+                                            <div className="p-6 rounded-[1.5rem] bg-slate-50 border border-slate-200/80 space-y-5">
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                                                        <Clock className="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-bold text-slate-900 text-base">Tambah Hari Kerja Khusus</h3>
+                                                        <p className="text-xs text-slate-500 font-semibold">Acara sekolah / Lomba / Jam pulang khusus</p>
+                                                    </div>
+                                                </div>
+
+                                                <form onSubmit={submitSpecialWorkday} className="space-y-4">
+                                                    <div className="space-y-2">
+                                                        <Label className="font-bold text-slate-700">Tanggal Acara <span className="text-rose-500">*</span></Label>
+                                                        <Input 
+                                                            type="date" 
+                                                            required
+                                                            value={specialWorkdayData.date} 
+                                                            onChange={e => setSpecialWorkdayData('date', e.target.value)} 
+                                                            className={`rounded-xl bg-white ${specialWorkdayErrors.date ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
+                                                        />
+                                                        {specialWorkdayErrors.date && <p className="text-xs text-rose-500 font-bold mt-1">{specialWorkdayErrors.date}</p>}
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label className="font-bold text-slate-700">Nama Acara / Kegiatan <span className="text-rose-500">*</span></Label>
+                                                        <Input 
+                                                            placeholder="Contoh: Lomba Kemerdekaan RI..."
+                                                            required
+                                                            value={specialWorkdayData.name} 
+                                                            onChange={e => setSpecialWorkdayData('name', e.target.value)} 
+                                                            className={`rounded-xl bg-white ${specialWorkdayErrors.name ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
+                                                        />
+                                                        {specialWorkdayErrors.name && <p className="text-xs text-rose-500 font-bold mt-1">{specialWorkdayErrors.name}</p>}
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label className="font-bold text-slate-700">Jam Pulang Khusus <span className="text-rose-500">*</span></Label>
+                                                        <Input 
+                                                            type="time"
+                                                            required
+                                                            value={specialWorkdayData.jam_keluar} 
+                                                            onChange={e => setSpecialWorkdayData('jam_keluar', e.target.value)} 
+                                                            className={`rounded-xl bg-white ${specialWorkdayErrors.jam_keluar ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
+                                                        />
+                                                        <p className="text-[11px] font-semibold text-slate-400">Jam pulang khusus untuk presensi harian pada tanggal ini.</p>
+                                                        {specialWorkdayErrors.jam_keluar && <p className="text-xs text-rose-500 font-bold mt-1">{specialWorkdayErrors.jam_keluar}</p>}
+                                                    </div>
+
+                                                    <div className="flex items-center space-x-3 pt-2 p-3 bg-white rounded-xl border border-slate-200">
+                                                        <Checkbox 
+                                                            id="disable_kbm" 
+                                                            checked={specialWorkdayData.disable_kbm}
+                                                            onCheckedChange={(checked) => setSpecialWorkdayData('disable_kbm', checked)}
+                                                            className="w-5 h-5 rounded text-indigo-600"
+                                                        />
+                                                        <Label htmlFor="disable_kbm" className="font-bold text-slate-700 cursor-pointer text-sm">
+                                                            Bebas KBM (Jadwal Mengajar Diliburkan)
+                                                        </Label>
+                                                    </div>
+
+                                                    <Button 
+                                                        type="submit" 
+                                                        disabled={processingSpecialWorkday} 
+                                                        className="w-full rounded-xl font-bold h-11 bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_4px_12px_rgba(79,70,229,0.2)] transition-all"
+                                                    >
+                                                        Simpan Hari Kerja Khusus
+                                                    </Button>
+                                                </form>
+                                            </div>
+                                        </div>
+
+                                        <div className="lg:col-span-2">
+                                            <div className="bg-amber-50/60 border border-amber-200/70 p-4 rounded-[1.5rem] mb-6 flex items-start gap-3">
+                                                <div className="p-2 bg-amber-100 rounded-lg text-amber-700 shrink-0">
+                                                    <Clock className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-amber-900 text-sm">Fungsi Hari Kerja Khusus</h4>
+                                                    <p className="text-xs font-semibold text-amber-800/80 mt-1">
+                                                        Digunakan untuk acara sekolah (seperti Lomba 17-an, Jalan Santai, dsb.) di mana pegawai/guru/karyawan tetap **Wajib Presensi Harian Masuk & Pulang**, namun jam pulang disesuaikan dan kegiatan KBM dapat dibebaskan tanpa dianggap *Kelas Kosong* / *Pulang Cepat*.
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="border border-slate-200 rounded-[1.5rem] overflow-hidden bg-white">
+                                                <Table>
+                                                    <TableHeader className="bg-slate-50 border-b border-slate-200">
+                                                        <TableRow className="hover:bg-transparent">
+                                                            <TableHead className="font-black text-slate-800 py-4 px-6">Tanggal</TableHead>
+                                                            <TableHead className="font-black text-slate-800">Nama Acara</TableHead>
+                                                            <TableHead className="font-black text-slate-800">Jam Pulang Khusus</TableHead>
+                                                            <TableHead className="font-black text-slate-800">Status KBM</TableHead>
+                                                            <TableHead className="font-black text-slate-800 text-right px-6">Aksi</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {specialWorkdays && specialWorkdays.length > 0 ? (
+                                                            specialWorkdays.map((sw) => (
+                                                                <TableRow key={sw.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100">
+                                                                    <TableCell className="font-bold text-slate-700 py-4 px-6">
+                                                                        {new Date(sw.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                                    </TableCell>
+                                                                    <TableCell className="font-extrabold text-slate-800">
+                                                                        {sw.name}
+                                                                    </TableCell>
+                                                                    <TableCell className="font-bold text-indigo-600">
+                                                                        {sw.jam_keluar} WIB
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        {sw.disable_kbm ? 
+                                                                            <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
+                                                                                KBM Diliburkan
+                                                                            </span> : 
+                                                                            <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
+                                                                                KBM Berjalan
+                                                                            </span>
+                                                                        }
+                                                                    </TableCell>
+                                                                    <TableCell className="text-right px-6">
+                                                                        <Button 
+                                                                            type="button"
+                                                                            variant="outline" 
+                                                                            size="icon" 
+                                                                            onClick={() => handleDeleteSpecialWorkday(sw.id)}
+                                                                            className="h-8 w-8 rounded-lg border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        </Button>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))
+                                                        ) : (
+                                                            <TableRow>
+                                                                <TableCell colSpan={5} className="text-center py-12">
+                                                                    <div className="flex flex-col items-center justify-center text-slate-400">
+                                                                        <Clock className="w-10 h-10 mb-3 text-slate-200" />
+                                                                        <p className="font-bold text-slate-500">Belum ada data hari kerja khusus.</p>
                                                                     </div>
                                                                 </TableCell>
                                                             </TableRow>

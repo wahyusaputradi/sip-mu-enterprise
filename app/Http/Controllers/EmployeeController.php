@@ -253,6 +253,15 @@ class EmployeeController extends Controller
         return redirect()->route('employees.index')->with('message', 'Data pegawai berhasil diperbarui.');
     }
 
+    public function show(Employee $employee)
+    {
+        $employee->load('positions', 'user');
+        $employee->position_names = $employee->positions->pluck('name')->toArray();
+        $employee->primary_position_name = $employee->positions->where('pivot.is_primary', true)->first()?->name ?? ($employee->positions->first()?->name ?? '-');
+
+        return redirect()->route('employees.edit', $employee->id);
+    }
+
     public function destroy(Employee $employee)
     {
         \Illuminate\Support\Facades\DB::transaction(function () use ($employee) {

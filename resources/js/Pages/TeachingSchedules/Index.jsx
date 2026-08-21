@@ -16,7 +16,7 @@ const SUBJECT_COLORS = [
 ];
 const hashColor = (str) => { let h = 0; for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h); return SUBJECT_COLORS[Math.abs(h) % SUBJECT_COLORS.length]; };
 
-export default function Index({ teachers, schoolClasses, schedules, hourSlots, dayLabels, todaySchedules, monitorStats, todayDow }) {
+export default function Index({ teachers, schoolClasses, schedules, hourSlots, dayLabels, todaySchedules, monitorStats, todayDow, isHoliday, holidayInfo, isSpecialWorkday, specialWorkdayInfo }) {
     const user = usePage().props.auth.user;
     const roleMappings = {
         'Administrator (IT)': ['Super Admin', 'Kepala Sekolah'],
@@ -287,6 +287,53 @@ export default function Index({ teachers, schoolClasses, schedules, hourSlots, d
 
                 {activeTab === 'monitor' && (
                     <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                        {/* Holiday Alert Banner */}
+                        {isHoliday && (
+                            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="p-5 rounded-[1.5rem] bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-rose-500/10 border border-amber-200/80 shadow-sm flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center font-bold shadow-md shadow-amber-200 shrink-0">
+                                    <Sparkles className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black uppercase tracking-wider">
+                                            {holidayInfo?.is_national_holiday ? 'Hari Libur Nasional' : 'Hari Libur Sekolah'}
+                                        </span>
+                                    </div>
+                                    <h4 className="text-base font-extrabold text-slate-900 mt-1">
+                                        {holidayInfo?.description || 'Hari Libur'}
+                                    </h4>
+                                    <p className="text-xs font-semibold text-slate-600 mt-0.5">
+                                        Hari ini telah ditetapkan sebagai hari libur pada Manajemen Hari Libur. Seluruh kegiatan presensi dan KBM diliburkan.
+                                    </p>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* Special Workday Alert Banner */}
+                        {isSpecialWorkday && !isHoliday && (
+                            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="p-5 rounded-[1.5rem] bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-indigo-500/10 border border-amber-300/80 shadow-sm flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center font-bold shadow-md shadow-amber-200 shrink-0">
+                                    <Sparkles className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black uppercase tracking-wider">
+                                            Hari Kerja Khusus / Acara Sekolah
+                                        </span>
+                                        <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-black uppercase tracking-wider">
+                                            Jam Pulang: {specialWorkdayInfo?.jam_keluar} WIB
+                                        </span>
+                                    </div>
+                                    <h4 className="text-base font-extrabold text-slate-900 mt-1">
+                                        {specialWorkdayInfo?.name || 'Hari Kerja Khusus'}
+                                    </h4>
+                                    <p className="text-xs font-semibold text-slate-600 mt-0.5">
+                                        Pegawai/Guru/Karyawan tetap wajib melakukan Presensi Harian. Kegiatan KBM per jam pelajaran ditiadakan.
+                                    </p>
+                                </div>
+                            </motion.div>
+                        )}
+
                         {/* Stats */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {[
@@ -311,14 +358,16 @@ export default function Index({ teachers, schoolClasses, schedules, hourSlots, d
                                 <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
                                     <div>
                                         <CardTitle className="text-lg font-black text-slate-900">
-                                            Monitor Kelas — {todayDow >= 1 && todayDow <= 5 ? dayName : 'Hari Libur'}
+                                            Monitor Kelas — {!isHoliday && !isSpecialWorkday && todayDow >= 1 && todayDow <= 5 ? dayName : (isSpecialWorkday ? `Acara Sekolah 🎉` : (isHoliday ? `Hari Libur 🎉` : 'Hari Libur Akhir Pekan'))}
                                         </CardTitle>
-                                        <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                            {todayDow >= 1 && todayDow <= 5 ? 'Status presensi guru pada setiap jam pelajaran hari ini' : 'Tidak ada jadwal karena hari libur'}
+                                        <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                                            {!isHoliday && !isSpecialWorkday && todayDow >= 1 && todayDow <= 5 
+                                                ? 'Status presensi guru pada setiap jam pelajaran hari ini' 
+                                                : (isSpecialWorkday ? (specialWorkdayInfo?.name || 'Acara Sekolah') : (isHoliday ? (holidayInfo?.description || 'Hari Libur Nasional / Sekolah') : 'Tidak ada jadwal mengajar pada akhir pekan'))}
                                         </CardDescription>
                                     </div>
                                     
-                                    {todayDow >= 1 && todayDow <= 5 && (
+                                    {!isHoliday && !isSpecialWorkday && todayDow >= 1 && todayDow <= 5 && (
                                         <div className="flex flex-wrap gap-2">
                                             <div className="relative">
                                                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -351,7 +400,7 @@ export default function Index({ teachers, schoolClasses, schedules, hourSlots, d
                                 </div>
                             </CardHeader>
                             <CardContent className="p-0">
-                                {todayDow >= 1 && todayDow <= 5 ? (
+                                {!isHoliday && !isSpecialWorkday && todayDow >= 1 && todayDow <= 5 ? (
                                     <div className="overflow-x-auto">
                                         <table className="w-full">
                                             <thead>
@@ -402,9 +451,20 @@ export default function Index({ teachers, schoolClasses, schedules, hourSlots, d
                                         </table>
                                     </div>
                                 ) : (
-                                    <div className="py-16 text-center">
-                                        <CalendarDays className="w-12 h-12 mx-auto mb-3 text-slate-200" />
-                                        <p className="font-bold text-slate-500">Hari ini bukan hari kerja</p>
+                                    <div className="py-16 text-center space-y-2">
+                                        <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mx-auto mb-2 border border-amber-100 shadow-sm">
+                                            <CalendarDays className="w-8 h-8" />
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-800">
+                                            {isSpecialWorkday ? (specialWorkdayInfo?.name || 'Hari Kerja Khusus') : (isHoliday ? (holidayInfo?.description || 'Hari Libur') : 'Akhir Pekan')}
+                                        </h3>
+                                        <p className="text-sm font-semibold text-slate-500 max-w-md mx-auto">
+                                            {isSpecialWorkday
+                                                ? 'Kegiatan KBM per jam pelajaran ditiadakan karena hari ini dilaksanakan acara sekolah.'
+                                                : (isHoliday 
+                                                    ? 'Tidak ada kegiatan KBM & presensi mengajar karena hari ini telah ditetapkan sebagai hari libur.' 
+                                                    : 'Tidak ada jadwal mengajar pada akhir pekan.')}
+                                        </p>
                                     </div>
                                 )}
                             </CardContent>

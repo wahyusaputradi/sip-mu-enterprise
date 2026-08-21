@@ -6,6 +6,12 @@ Allow: /
 Allow: /ads.txt
 Allow: /sitemap.xml
 
+User-agent: Google-PageSpeed-Insights
+Allow: /
+
+User-agent: Chrome-Lighthouse
+Allow: /
+
 User-agent: *
 Allow: /
 Allow: /login

@@ -1,10 +1,13 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import ThemeToggle from '@/Components/ThemeToggle';
+import LanguageToggle from '@/Components/LanguageToggle';
+import { useLanguage } from '@/Context/LanguageContext';
 import { Link } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ShieldCheck, Zap, MapPin, CheckCircle2 } from 'lucide-react';
 
 export default function GuestLayout({ children, title = "SIP MU Enterprise" }) {
+    const { t } = useLanguage();
     return (
         <div className="flex min-h-screen bg-slate-50/50 dark:bg-slate-950 font-sans selection:bg-indigo-500 selection:text-white">
             {/* Left Side: Branding & Visuals (Desktop > 1024px) */}
@@ -51,18 +54,18 @@ export default function GuestLayout({ children, title = "SIP MU Enterprise" }) {
                             transition={{ delay: 0.4 }}
                         >
                             <span className="inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mb-6 backdrop-blur-md">
-                                <Zap className="w-3.5 h-3.5 mr-2 text-indigo-400" /> System Authentication Gateway
+                                <Zap className="w-3.5 h-3.5 mr-2 text-indigo-400" /> {t('guest.gateway')}
                             </span>
 
                             <h1 className="text-4xl lg:text-5xl font-black leading-[1.15] mb-6 text-white tracking-tight">
-                                Sistem Terintegrasi<br />
+                                {t('guest.title_1')}<br />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-sky-400">
-                                    Presensi & Kehadiran.
+                                    {t('guest.title_2')}
                                 </span>
                             </h1>
                             
                             <p className="text-base text-slate-300 font-medium leading-relaxed mb-10">
-                                Efisiensi operasional tata kelola SDM sekolah melalui presensi Geofencing GPS presisi, verifikasi swafoto real-time, serta pencatatan kehadiran terotomatisasi.
+                                {t('guest.desc')}
                             </p>
 
                             {/* Floating Feature Badges */}
@@ -72,8 +75,8 @@ export default function GuestLayout({ children, title = "SIP MU Enterprise" }) {
                                         <MapPin className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-bold text-white">Geofencing Valid</p>
-                                        <p className="text-[11px] text-slate-400 font-medium">Kampus 1 & Kampus 2</p>
+                                        <p className="text-xs font-bold text-white">{t('guest.geofencing')}</p>
+                                        <p className="text-[11px] text-slate-400 font-medium">{t('guest.geofencing_sub')}</p>
                                     </div>
                                 </div>
 
@@ -82,8 +85,8 @@ export default function GuestLayout({ children, title = "SIP MU Enterprise" }) {
                                         <ShieldCheck className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-bold text-white">Enkripsi 256-Bit</p>
-                                        <p className="text-[11px] text-slate-400 font-medium">Autentikasi Aman SSL</p>
+                                        <p className="text-xs font-bold text-white">{t('guest.encryption')}</p>
+                                        <p className="text-[11px] text-slate-400 font-medium">{t('guest.encryption_sub')}</p>
                                     </div>
                                 </div>
                             </div>
@@ -117,12 +120,10 @@ export default function GuestLayout({ children, title = "SIP MU Enterprise" }) {
                         href="/" 
                         className="inline-flex items-center text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors bg-white dark:bg-slate-800 dark:text-slate-300 dark:hover:text-indigo-400 px-3.5 py-2 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-sm"
                     >
-                        <ArrowLeft className="w-4 h-4 mr-1.5" /> Beranda Utama
+                        <ArrowLeft className="w-4 h-4 mr-1.5" /> {t('guest.home')}
                     </Link>
                     <div className="flex items-center space-x-3">
-                        <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden sm:inline-block">
-                            Sign In Portal
-                        </span>
+                        <LanguageToggle />
                         <ThemeToggle />
                     </div>
                 </div>

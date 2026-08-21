@@ -21,7 +21,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 
-export default function Index({ auth, date, lowongan = [], invals, canApprove, employees, filters = {} }) {
+export default function Index({ auth, date, lowongan = [], invals, isHoliday, isWeekend, holidayInfo, isSpecialWorkday, specialWorkdayInfo, canApprove, employees, filters = {} }) {
     const [selectedDate, setSelectedDate] = useState(date);
     const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
     const [selectedSchedule, setSelectedSchedule] = useState(null);
@@ -181,9 +181,47 @@ export default function Index({ auth, date, lowongan = [], invals, canApprove, e
                     <div className="p-6 md:p-8">
                         {lowongan.length === 0 ? (
                             <div className="text-center py-12 px-4 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4 opacity-50" />
-                                <p className="text-lg font-black text-slate-700 dark:text-slate-300">Semua Kelas Aman!</p>
-                                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Tidak ada guru yang berhalangan hadir pada tanggal ini.</p>
+                                {isSpecialWorkday ? (
+                                    <>
+                                        <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mx-auto mb-4 border border-amber-100 shadow-sm">
+                                            <CalendarClock className="w-7 h-7" />
+                                        </div>
+                                        <p className="text-lg font-black text-slate-700 dark:text-slate-300">
+                                            Hari Kerja Khusus: {specialWorkdayInfo?.name || 'Acara Sekolah'} 🎉
+                                        </p>
+                                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
+                                            Tidak ada lowongan inval karena tanggal ini dilaksanakan acara sekolah dan KBM ditiadakan.
+                                        </p>
+                                    </>
+                                ) : isHoliday ? (
+                                    <>
+                                        <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mx-auto mb-4 border border-amber-100 shadow-sm">
+                                            <CalendarClock className="w-7 h-7" />
+                                        </div>
+                                        <p className="text-lg font-black text-slate-700 dark:text-slate-300">
+                                            Hari Libur: {holidayInfo?.description || 'Hari Libur'} 🎉
+                                        </p>
+                                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
+                                            Tidak ada lowongan inval karena tanggal ini telah ditetapkan sebagai hari libur pada Manajemen Hari Libur.
+                                        </p>
+                                    </>
+                                ) : isWeekend ? (
+                                    <>
+                                        <div className="w-14 h-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-4 border border-slate-200 shadow-sm">
+                                            <CalendarClock className="w-7 h-7" />
+                                        </div>
+                                        <p className="text-lg font-black text-slate-700 dark:text-slate-300">Hari Libur Akhir Pekan</p>
+                                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
+                                            Tidak ada kegiatan KBM dan lowongan inval pada hari Sabtu & Minggu.
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4 opacity-50" />
+                                        <p className="text-lg font-black text-slate-700 dark:text-slate-300">Semua Kelas Aman!</p>
+                                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Tidak ada guru yang berhalangan hadir pada tanggal ini.</p>
+                                    </>
+                                )}
                             </div>
                         ) : (
                             <>

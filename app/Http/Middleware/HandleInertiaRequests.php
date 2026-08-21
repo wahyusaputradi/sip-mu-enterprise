@@ -31,9 +31,20 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
         $hasSession = $request->hasSession();
+        $locale = $request->cookie('app_locale', 'id');
+        if (in_array($locale, ['id', 'en'])) {
+            app()->setLocale($locale);
+        } else {
+            $locale = 'id';
+        }
+
+        $jsonPath = base_path("lang/{$locale}.json");
+        $laravelTranslations = file_exists($jsonPath) ? json_decode(file_get_contents($jsonPath), true) : [];
 
         return [
             ...parent::share($request),
+            'locale' => $locale,
+            'translations' => $laravelTranslations,
             'auth' => [
                 'user' => $user ? [
                     'id' => $user->id,

@@ -23,6 +23,7 @@ class User extends Authenticatable
         'email',
         'username',
         'password',
+        'bypass_liveness',
     ];
 
     /**
@@ -45,6 +46,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'bypass_liveness' => 'boolean',
         ];
     }
 

@@ -9,6 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import ThemeToggle from '@/Components/ThemeToggle';
+import LanguageToggle from '@/Components/LanguageToggle';
+import { useLanguage } from '@/Context/LanguageContext';
 import PwaInstallPrompt from '@/Components/PwaInstallPrompt';
 
 const TikTokIcon = () => (
@@ -19,6 +21,7 @@ const InstagramIcon = () => (
 );
 
 export default function Welcome({ auth }) {
+    const { t } = useLanguage();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [activeFeatureTab, setActiveFeatureTab] = useState(0);
     const [openFaqIndex, setOpenFaqIndex] = useState(0);
@@ -109,7 +112,18 @@ export default function Welcome({ auth }) {
 
     return (
         <div className="min-h-screen bg-slate-50/50 text-slate-900 flex flex-col selection:bg-indigo-500 selection:text-white font-sans">
-            <Head title="SIP MU Enterprise - Sistem Informasi Presensi & Kehadiran" />
+            <Head>
+                <title>SIP-MU Enterprise | Presensi Presisi & E-Absensi SMK Manbaul Ulum Cirebon</title>
+                <meta name="description" head-key="description" content="SIP-MU Enterprise adalah Sistem Tata Kelola Kepegawaian, Presensi Swafoto Geofencing Presisi, dan Manajemen Kedisiplinan Resmi SMK Manbaul Ulum Cirebon." />
+                <meta name="keywords" head-key="keywords" content="SIP-MU Enterprise, SMK Manbaul Ulum Cirebon, Presensi Guru, E-Absensi, Presensi Pegawai, Bursa Inval" />
+                <meta name="robots" head-key="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+                <meta property="og:title" head-key="og:title" content="SIP-MU Enterprise - SMK Manbaul Ulum Cirebon" />
+                <meta property="og:description" head-key="og:description" content="Sistem Tata Kelola Kepegawaian, Presensi Swafoto Geofencing Presisi, dan Manajemen Kedisiplinan Resmi SMK Manbaul Ulum Cirebon." />
+                <meta property="og:image" head-key="og:image" content="https://sipmuenterprise.my.id/images/logo.png" />
+                <meta property="og:url" head-key="og:url" content="https://sipmuenterprise.my.id/" />
+                <meta property="og:type" head-key="og:type" content="website" />
+                <link rel="canonical" head-key="canonical" href="https://sipmuenterprise.my.id/" />
+            </Head>
 
             {/* Glassmorphic Navbar */}
             <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 shadow-sm transition-all duration-300">
@@ -129,22 +143,23 @@ export default function Welcome({ auth }) {
 
                         {/* Desktop Links & Theme Toggle */}
                         <div className="hidden md:flex items-center space-x-6 text-sm font-semibold text-slate-600">
-                            <a href="#features" className="hover:text-indigo-600 transition-colors">Fitur Utama</a>
-                            <a href="#about" className="hover:text-indigo-600 transition-colors">Tentang Aplikasi</a>
-                            <a href="#privacy" className="hover:text-indigo-600 transition-colors">Privasi</a>
-                            <a href="#faq" className="hover:text-indigo-600 transition-colors">FAQ</a>
-                            <a href="#contact" className="hover:text-indigo-600 transition-colors">Kontak</a>
+                            <a href="#features" className="hover:text-indigo-600 transition-colors">{t('welcome.nav_features')}</a>
+                            <a href="#about" className="hover:text-indigo-600 transition-colors">{t('welcome.nav_about')}</a>
+                            <a href="#privacy" className="hover:text-indigo-600 transition-colors">{t('welcome.nav_privacy')}</a>
+                            <a href="#faq" className="hover:text-indigo-600 transition-colors">{t('welcome.nav_faq')}</a>
+                            <a href="#contact" className="hover:text-indigo-600 transition-colors">{t('welcome.nav_contact')}</a>
+                            <LanguageToggle />
                             <ThemeToggle />
                             {auth.user ? (
                                 <Link href={route('dashboard')}>
                                     <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 hover:shadow-indigo-300 rounded-full px-6 transition-all duration-300 transform hover:-translate-y-0.5">
-                                        Dashboard <ArrowRight className="ml-2 w-4 h-4" />
+                                        {t('welcome.btn_dashboard')} <ArrowRight className="ml-2 w-4 h-4" />
                                     </Button>
                                 </Link>
                             ) : (
                                 <Link href={route('login')}>
                                     <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 hover:shadow-indigo-300 rounded-full px-6 transition-all duration-300 transform hover:-translate-y-0.5">
-                                        Masuk Aplikasi
+                                        {t('welcome.btn_login')}
                                     </Button>
                                 </Link>
                             )}
@@ -152,14 +167,15 @@ export default function Welcome({ auth }) {
 
                         {/* Mobile Action & Toggle */}
                         <div className="flex md:hidden items-center space-x-2">
+                            <LanguageToggle />
                             <ThemeToggle />
                             {auth.user ? (
                                 <Link href={route('dashboard')}>
-                                    <Button size="sm" className="bg-indigo-600 text-white rounded-full px-4 text-xs h-9">Dashboard</Button>
+                                    <Button size="sm" className="bg-indigo-600 text-white rounded-full px-4 text-xs h-9">{t('welcome.btn_dashboard')}</Button>
                                 </Link>
                             ) : (
                                 <Link href={route('login')}>
-                                    <Button size="sm" className="bg-indigo-600 text-white rounded-full px-4 text-xs h-9">Masuk</Button>
+                                    <Button size="sm" className="bg-indigo-600 text-white rounded-full px-4 text-xs h-9">{t('welcome.btn_login')}</Button>
                                 </Link>
                             )}
                             <button
@@ -259,29 +275,29 @@ export default function Welcome({ auth }) {
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                                     </span>
-                                    <span>Platform SDM & Presensi Modern — SMK Manbaul Ulum Cirebon</span>
+                                    <span>{t('welcome.tagline')}</span>
                                 </div>
 
                                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 mb-6 leading-[1.12]">
-                                    Kelola Presensi & Kehadiran<br />
+                                    {t('welcome.hero_title_1')}<br />
                                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-sky-600">
                                         SIP MU Enterprise.
                                     </span>
                                 </h1>
 
                                 <p className="max-w-2xl mx-auto lg:mx-0 text-base sm:text-lg text-slate-600 mb-10 leading-relaxed font-medium">
-                                    Solusi terintegrasi untuk mengotomatisasi pencatatan kehadiran guru, karyawan, jam mengajar (JTM), pengajuan izin/cuti digital, dan rekapitulasi SDM secara real-time.
+                                    {t('welcome.hero_subtitle')}
                                 </p>
 
                                 <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-12">
                                     <Link href={route('login')} className="w-full sm:w-auto">
                                         <Button size="lg" className="h-14 px-8 text-base font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-200 hover:shadow-indigo-300 rounded-2xl w-full sm:w-auto transition-all duration-300 transform hover:-translate-y-0.5">
-                                            Mulai Sekarang <ArrowRight className="ml-2 w-5 h-5" />
+                                            {t('welcome.btn_start')} <ArrowRight className="ml-2 w-5 h-5" />
                                         </Button>
                                     </Link>
                                     <a href="#features" className="w-full sm:w-auto">
                                         <Button size="lg" variant="outline" className="h-14 px-8 text-base font-bold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 rounded-2xl w-full sm:w-auto shadow-sm">
-                                            Jelajahi Fitur
+                                            {t('welcome.btn_features')}
                                         </Button>
                                     </a>
                                 </div>
@@ -775,10 +791,21 @@ export default function Welcome({ auth }) {
 
                 {/* Bottom Bar */}
                 <div className="border-t border-slate-800/80">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-center items-center">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row justify-between items-center gap-4">
                         <p className="text-slate-500 text-xs sm:text-sm font-medium text-center">
                             &copy; {new Date().getFullYear()} SIP MU Enterprise — SMK Manbaul Ulum Cirebon. All Rights Reserved.
                         </p>
+                        <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-slate-400">
+                            <Link href="/about" className="hover:text-indigo-400 transition-colors">Tentang Kami</Link>
+                            <span>•</span>
+                            <Link href="/articles" className="hover:text-indigo-400 transition-colors">Artikel & Edukasi</Link>
+                            <span>•</span>
+                            <Link href="/contact" className="hover:text-indigo-400 transition-colors">Kontak</Link>
+                            <span>•</span>
+                            <Link href="/privacy-policy" className="hover:text-indigo-400 transition-colors">Privacy Policy</Link>
+                            <span>•</span>
+                            <Link href="/terms-of-service" className="hover:text-indigo-400 transition-colors">Terms of Service</Link>
+                        </div>
                     </div>
                 </div>
             </footer>

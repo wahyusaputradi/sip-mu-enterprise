@@ -48,68 +48,77 @@ class SubstituteTeachingController extends Controller
         $now = Carbon::now();
         $isToday = $carbonDate->isToday();
 
-        // ── Settings: Grace period for teaching sessions ──
-        $teachingLateTolerance = (int) (\App\Models\SystemSetting::where('key', 'teaching_late_tolerance')->first()?->value ?? 15);
-        $hourSlots = TeachingSchedule::hourSlots();
+        // ── Check if selected date is a holiday, weekend, or special workday ──
+        $todayHoliday = \App\Models\Holiday::whereDate('date', $date)->first();
+        $isHoliday = (bool) $todayHoliday;
+        $isWeekend = $dayOfWeek > 5;
+        $todaySpecialWorkday = \App\Models\SpecialWorkday::whereDate('date', $date)->first();
+        $isSpecialWorkday = $todaySpecialWorkday && $todaySpecialWorkday->disable_kbm;
 
-        // 1. Get employees on approved leave today
-        $employeesOnLeave = LeaveRequest::where('status', 'approved')
-            ->whereDate('start_date', '<=', $date)
-            ->whereDate('end_date', '>=', $date)
-            ->pluck('employee_id')
-            ->toArray();
+        $lowongan = collect();
 
-        // 2. Get ALL teaching schedules for the selected day
-        $allSchedulesToday = TeachingSchedule::with(['employee', 'schoolClass'])
-            ->where('day_of_week', $dayOfWeek)
-            ->get();
+        // Only calculate lowongan if NOT a holiday, NOT a weekend, and NOT a special workday with disabled KBM
+        if (!$isHoliday && !$isWeekend && !$isSpecialWorkday) {
+            // ── Settings: Grace period for teaching sessions ──
+            $teachingLateTolerance = (int) (\App\Models\SystemSetting::where('key', 'teaching_late_tolerance')->first()?->value ?? 15);
+            $hourSlots = TeachingSchedule::hourSlots();
 
-        // 3. Get teaching attendances that have already been submitted today
-        $teachingAttendancesToday = \App\Models\TeachingAttendance::whereDate('date', $date)
-            ->pluck('teaching_schedule_id')
-            ->toArray();
+            // 1. Get employees on approved leave today
+            $employeesOnLeave = LeaveRequest::where('status', 'approved')
+                ->whereDate('start_date', '<=', $date)
+                ->whereDate('end_date', '>=', $date)
+                ->pluck('employee_id')
+                ->toArray();
 
-        // 4. Per-Session Tracking: determine which classes are "empty"
-        // A class is empty if:
-        //   a) The teacher is on approved leave, OR
-        //   b) It's today, the session start time + grace period has PASSED, AND the teacher has NOT submitted teaching attendance for this session
-        $availableSchedules = $allSchedulesToday->filter(function ($schedule) use ($employeesOnLeave, $teachingAttendancesToday, $hourSlots, $teachingLateTolerance, $now, $isToday) {
-            // Already attended → NOT empty
-            if (in_array($schedule->id, $teachingAttendancesToday)) {
-                return false;
-            }
+            // 2. Get ALL teaching schedules for the selected day
+            $allSchedulesToday = TeachingSchedule::with(['employee', 'schoolClass'])
+                ->where('day_of_week', $dayOfWeek)
+                ->get();
 
-            // On approved leave → empty (regardless of time)
-            if (in_array($schedule->employee_id, $employeesOnLeave)) {
+            // 3. Get teaching attendances that have already been submitted today
+            $teachingAttendancesToday = \App\Models\TeachingAttendance::whereDate('date', $date)
+                ->pluck('teaching_schedule_id')
+                ->toArray();
+
+            // 4. Per-Session Tracking: determine which classes are "empty"
+            $availableSchedules = $allSchedulesToday->filter(function ($schedule) use ($employeesOnLeave, $teachingAttendancesToday, $hourSlots, $teachingLateTolerance, $now, $isToday) {
+                // Already attended → NOT empty
+                if (in_array($schedule->id, $teachingAttendancesToday)) {
+                    return false;
+                }
+
+                // On approved leave → empty (regardless of time)
+                if (in_array($schedule->employee_id, $employeesOnLeave)) {
+                    return true;
+                }
+
+                // Per-session time check (only for today, future dates show all unattended)
+                if ($isToday) {
+                    $slot = $hourSlots[$schedule->hour_number] ?? null;
+                    if (!$slot) return false;
+
+                    $sessionStartStr = ($schedule->hour_number == 10) ? $slot['end'] : $slot['start'];
+                    $sessionStart = Carbon::createFromFormat('H:i', $sessionStartStr);
+                    $deadline = $sessionStart->copy()->addMinutes($teachingLateTolerance);
+
+                    // Only show as empty if the grace period has elapsed
+                    return $now->gte($deadline);
+                }
+
+                // For past dates, show all unattended classes
                 return true;
-            }
+            });
 
-            // Per-session time check (only for today, future dates show all unattended)
-            if ($isToday) {
-                $slot = $hourSlots[$schedule->hour_number] ?? null;
-                if (!$slot) return false;
+            // 5. Filter out those that already have Inval (pending or approved)
+            $existingInvals = SubstituteTeaching::where('date', $date)
+                ->whereIn('teaching_schedule_id', $availableSchedules->pluck('id'))
+                ->get()
+                ->keyBy('teaching_schedule_id');
 
-                $sessionStartStr = ($schedule->hour_number == 10) ? $slot['end'] : $slot['start'];
-                $sessionStart = Carbon::createFromFormat('H:i', $sessionStartStr);
-                $deadline = $sessionStart->copy()->addMinutes($teachingLateTolerance);
-
-                // Only show as empty if the grace period has elapsed
-                return $now->gte($deadline);
-            }
-
-            // For past dates, show all unattended classes
-            return true;
-        });
-
-        // 5. Filter out those that already have Inval (pending or approved)
-        $existingInvals = SubstituteTeaching::where('date', $date)
-            ->whereIn('teaching_schedule_id', $availableSchedules->pluck('id'))
-            ->get()
-            ->keyBy('teaching_schedule_id');
-
-        $lowongan = $availableSchedules->filter(function($schedule) use ($existingInvals) {
-            return !isset($existingInvals[$schedule->id]) || $existingInvals[$schedule->id]->status === 'rejected';
-        })->values();
+            $lowongan = $availableSchedules->filter(function($schedule) use ($existingInvals) {
+                return !isset($existingInvals[$schedule->id]) || $existingInvals[$schedule->id]->status === 'rejected';
+            })->values();
+        }
 
         // 4. Get all invals for the selected date or overall
         $invalsQuery = SubstituteTeaching::with(['absentEmployee', 'substituteEmployee', 'teachingSchedule.schoolClass', 'approver.roles'])
@@ -152,6 +161,15 @@ class SubstituteTeachingController extends Controller
             'date' => $date,
             'lowongan' => $lowongan,
             'invals' => $invals,
+            'isHoliday' => $isHoliday,
+            'isWeekend' => $isWeekend,
+            'holidayInfo' => $todayHoliday ? ['description' => $todayHoliday->description] : null,
+            'isSpecialWorkday' => (bool)$isSpecialWorkday,
+            'specialWorkdayInfo' => $todaySpecialWorkday ? [
+                'name' => $todaySpecialWorkday->name,
+                'jam_keluar' => $todaySpecialWorkday->jam_keluar,
+                'disable_kbm' => $todaySpecialWorkday->disable_kbm,
+            ] : null,
             'canApprove' => $this->canApprove(),
             'employees' => Employee::where('status', 'active')->orderBy('name')->get(['id', 'name']),
             'filters' => [

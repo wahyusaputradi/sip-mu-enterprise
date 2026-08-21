@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, PieChart, Pie, LabelList } from 'recharts';
 import { motion } from 'framer-motion';
+import { useLanguage } from '@/Context/LanguageContext';
 
 const container = {
     hidden: { opacity: 0 },
@@ -49,6 +50,9 @@ const item = {
 };
 
 export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, employee, todayAttendance, campusLocations, monthlyStats, adminStats, executiveStats, todayHoliday, primaryRole, roleData, managementMonthlyStats, dailyTrendStats }) {
+    const { t, language } = useLanguage();
+    const dateLocale = language === 'en' ? 'en-US' : 'id-ID';
+
     // We redirect to attendance.presensi instead of posting directly from dashboard.
     const [initialServerTime] = useState(() => serverTimestamp || Date.now());
     const [initialPerformanceTime] = useState(() => performance.now());
@@ -84,10 +88,10 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
     const [personalTab, setPersonalTab] = useState('harian');
 
     const chartData = [
-        { name: 'Hadir', value: monthlyStats?.present || 0, color: '#6366f1' },
-        { name: 'Terlambat', value: monthlyStats?.late || 0, color: '#f59e0b' },
-        { name: 'Sakit/Izin', value: (monthlyStats?.sick || 0) + (monthlyStats?.permit || 0), color: '#3b82f6' },
-        { name: 'Alfa', value: monthlyStats?.alpha || 0, color: '#ef4444' },
+        { name: t('dash.present_month'), value: monthlyStats?.present || 0, color: '#6366f1' },
+        { name: t('dash.late'), value: monthlyStats?.late || 0, color: '#f59e0b' },
+        { name: t('dash.sick_permit'), value: (monthlyStats?.sick || 0) + (monthlyStats?.permit || 0), color: '#3b82f6' },
+        { name: t('dash.alpha'), value: monthlyStats?.alpha || 0, color: '#ef4444' },
     ];
 
     const jtmChartData = [
@@ -99,55 +103,55 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
     ];
 
     const mgmtChartData = [
-        { name: 'Hadir', value: managementMonthlyStats?.present || 0, color: '#10b981' },
-        { name: 'Terlambat', value: managementMonthlyStats?.late || 0, color: '#f59e0b' },
-        { name: 'Sakit/Izin', value: (managementMonthlyStats?.sick || 0) + (managementMonthlyStats?.permit || 0), color: '#3b82f6' },
-        { name: 'Alfa', value: managementMonthlyStats?.alpha || 0, color: '#ef4444' },
+        { name: t('dash.present_month'), value: managementMonthlyStats?.present || 0, color: '#10b981' },
+        { name: t('dash.late'), value: managementMonthlyStats?.late || 0, color: '#f59e0b' },
+        { name: t('dash.sick_permit'), value: (managementMonthlyStats?.sick || 0) + (managementMonthlyStats?.permit || 0), color: '#3b82f6' },
+        { name: t('dash.alpha'), value: managementMonthlyStats?.alpha || 0, color: '#ef4444' },
     ];
 
     const statsConfig = (() => {
         if (primaryRole === 'Super Admin' && adminStats) {
             return [
-                { title: 'Total Pegawai', value: adminStats.total_employees, icon: <Users className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'employees.index' },
-                { title: 'Hadir Hari Ini', value: adminStats.present_today, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'monitoring.attendance' },
-                { title: 'Terlambat Hari Ini', value: adminStats.late_today, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'monitoring.attendance' },
-                { title: 'Pending Cuti', value: adminStats.pending_leaves, icon: <CalendarDays className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'leave-requests.approval' },
+                { title: t('dash.total_employees'), value: adminStats.total_employees, icon: <Users className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'employees.index' },
+                { title: t('dash.present_today'), value: adminStats.present_today, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'monitoring.attendance' },
+                { title: t('dash.late_today'), value: adminStats.late_today, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'monitoring.attendance' },
+                { title: t('dash.pending_leaves'), value: adminStats.pending_leaves, icon: <CalendarDays className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'leave-requests.approval' },
             ];
         } else if (primaryRole === 'Kepala Sekolah' && adminStats) {
             const pct = adminStats.total_employees > 0 ? Math.round((adminStats.present_today / adminStats.total_employees) * 100) : 0;
             return [
-                { title: 'Kedisiplinan Sekolah', value: `${pct}%`, icon: <Trophy className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'monitoring.attendance' },
-                { title: 'Hadir Hari Ini', value: adminStats.present_today, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'monitoring.attendance' },
-                { title: 'Belum Absen', value: roleData?.unrecordedTodayCount || 0, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'monitoring.attendance' },
-                { title: 'Persetujuan Cuti', value: adminStats.pending_leaves, icon: <CalendarDays className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'leave-requests.approval' },
+                { title: t('dash.discipline'), value: `${pct}%`, icon: <Trophy className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'monitoring.attendance' },
+                { title: t('dash.present_today'), value: adminStats.present_today, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'monitoring.attendance' },
+                { title: t('dash.unrecorded'), value: roleData?.unrecordedTodayCount || 0, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'monitoring.attendance' },
+                { title: t('dash.pending_leaves'), value: adminStats.pending_leaves, icon: <CalendarDays className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'leave-requests.approval' },
             ];
         } else if (primaryRole === 'Kurikulum') {
             return [
-                { title: 'Bursa Inval Terbuka', value: roleData?.openBursaInvalCount || 0, icon: <Briefcase className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'invals.index' },
-                { title: 'Jadwal Mengajar', value: roleData?.totalTeachingSchedules || 0, icon: <CalendarDays className="w-5 h-5" />, color: 'from-indigo-500 to-purple-600', link: 'teaching-schedules.index' },
-                { title: 'Hadir Hari Ini', value: adminStats?.present_today || 0, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'monitoring.attendance' },
-                { title: 'Pending Cuti', value: adminStats?.pending_leaves || 0, icon: <CalendarDays className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'leave-requests.approval' },
+                { title: t('dash.open_inval'), value: roleData?.openBursaInvalCount || 0, icon: <Briefcase className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'invals.index' },
+                { title: t('dash.teaching_schedules'), value: roleData?.totalTeachingSchedules || 0, icon: <CalendarDays className="w-5 h-5" />, color: 'from-indigo-500 to-purple-600', link: 'teaching-schedules.index' },
+                { title: t('dash.present_today'), value: adminStats?.present_today || 0, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'monitoring.attendance' },
+                { title: t('dash.pending_leaves'), value: adminStats?.pending_leaves || 0, icon: <CalendarDays className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'leave-requests.approval' },
             ];
         } else if (primaryRole === 'Absensi' && adminStats) {
             return [
-                { title: 'Hadir Hari Ini', value: adminStats.present_today, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'monitoring.attendance' },
-                { title: 'Terlambat', value: adminStats.late_today, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'monitoring.attendance' },
-                { title: 'Belum Absen', value: roleData?.unrecordedTodayCount || 0, icon: <Clock className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'monitoring.attendance' },
-                { title: 'Pending Cuti', value: adminStats.pending_leaves, icon: <CalendarDays className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'leave-requests.approval' },
+                { title: t('dash.present_today'), value: adminStats.present_today, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'monitoring.attendance' },
+                { title: t('dash.late'), value: adminStats.late_today, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'monitoring.attendance' },
+                { title: t('dash.unrecorded'), value: roleData?.unrecordedTodayCount || 0, icon: <Clock className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'monitoring.attendance' },
+                { title: t('dash.pending_leaves'), value: adminStats.pending_leaves, icon: <CalendarDays className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'leave-requests.approval' },
             ];
         } else if (primaryRole === 'Guru') {
             return [
-                { title: 'Hadir Bulan Ini', value: monthlyStats?.present || 0, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'my-attendance.index' },
-                { title: 'Terlambat', value: monthlyStats?.late || 0, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'my-attendance.index' },
-                { title: 'JTM Mengajar', value: `${monthlyStats?.jtm_present || 0} Jam`, icon: <CalendarDays className="w-5 h-5" />, color: 'from-indigo-500 to-purple-600', link: 'my-schedule.index' },
-                { title: 'Jam Inval', value: `${monthlyStats?.jtm_inval || 0} Jam`, icon: <Briefcase className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'invals.index' },
+                { title: t('dash.present_month'), value: monthlyStats?.present || 0, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'my-attendance.index' },
+                { title: t('dash.late'), value: monthlyStats?.late || 0, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'my-attendance.index' },
+                { title: t('dash.jtm_teaching'), value: `${monthlyStats?.jtm_present || 0} ${t('dash.hours_unit')}`, icon: <CalendarDays className="w-5 h-5" />, color: 'from-indigo-500 to-purple-600', link: 'my-schedule.index' },
+                { title: t('dash.inval_hours'), value: `${monthlyStats?.jtm_inval || 0} ${t('dash.hours_unit')}`, icon: <Briefcase className="w-5 h-5" />, color: 'from-purple-500 to-fuchsia-600', link: 'invals.index' },
             ];
         } else {
             return [
-                { title: 'Hadir Bulan Ini', value: monthlyStats?.present || 0, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'my-attendance.index' },
-                { title: 'Terlambat', value: monthlyStats?.late || 0, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'my-attendance.index' },
-                { title: 'Sakit / Izin', value: (monthlyStats?.sick || 0) + (monthlyStats?.permit || 0), icon: <CalendarDays className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'my-attendance.index' },
-                { title: 'Alpha', value: monthlyStats?.alpha || 0, icon: <AlertCircle className="w-5 h-5" />, color: 'from-rose-500 to-red-600', link: 'my-attendance.index' },
+                { title: t('dash.present_month'), value: monthlyStats?.present || 0, icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-emerald-400 to-teal-500', link: 'my-attendance.index' },
+                { title: t('dash.late'), value: monthlyStats?.late || 0, icon: <AlertCircle className="w-5 h-5" />, color: 'from-orange-400 to-rose-500', link: 'my-attendance.index' },
+                { title: t('dash.sick_permit'), value: (monthlyStats?.sick || 0) + (monthlyStats?.permit || 0), icon: <CalendarDays className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600', link: 'my-attendance.index' },
+                { title: t('dash.alpha'), value: monthlyStats?.alpha || 0, icon: <AlertCircle className="w-5 h-5" />, color: 'from-rose-500 to-red-600', link: 'my-attendance.index' },
             ];
         }
     })();
@@ -164,7 +168,7 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                             </span>
                         </div>
                         <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-                            Selamat Datang, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">{employee?.name || 'Administrator'}</span> 👋
+                            {t('dash.welcome')}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">{employee?.name || 'Administrator'}</span> 👋
                         </h2>
                     </div>
                     <div className="bg-white/80 dark:bg-card/80 backdrop-blur-md p-2 rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white dark:border-border flex items-center space-x-5 pr-5">
@@ -172,11 +176,11 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                             <Calendar className="w-5 h-5" />
                         </div>
                         <div className="text-right">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1.5">Hari & Jam</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1.5">{t('dash.day_time')}</p>
                             <p className="text-sm font-black text-slate-900 dark:text-slate-100 leading-none flex items-center justify-end gap-2">
-                                <span>{currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' })}</span>
+                                <span>{currentTime.toLocaleDateString(dateLocale, { weekday: 'long', day: 'numeric', month: 'short' })}</span>
                                 <span className="text-indigo-600 dark:text-indigo-400 font-extrabold tabular-nums">
-                                    {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                    {currentTime.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                 </span>
                             </p>
                         </div>
@@ -242,7 +246,7 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                                 <CardHeader className="p-6 pb-2">
                                     <CardTitle className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center">
                                         <Activity className="w-5 h-5 mr-2 text-indigo-500" />
-                                        Kehadiran Hari Ini
+                                        {t('dash.present_today')}
                                     </CardTitle>
                                     <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Live School Overview</CardDescription>
                                 </CardHeader>
@@ -292,10 +296,10 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                                     <div>
                                         <CardTitle className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center">
                                             <Award className="w-5 h-5 mr-2 text-indigo-500" />
-                                            Kedisiplinan Bulan Ini
+                                            {t('dash.discipline_month')}
                                         </CardTitle>
                                         <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center">
-                                            Performance Overview <span className="mx-2 w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span> {new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}
+                                            Performance Overview <span className="mx-2 w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span> {new Date().toLocaleString(dateLocale, { month: 'long', year: 'numeric' })}
                                         </CardDescription>
                                     </div>
                                 </CardHeader>
@@ -303,7 +307,7 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                                     {/* Top Performers */}
                                     <div className="space-y-4">
                                         <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-600 flex items-center mb-4 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full w-max border border-emerald-100 dark:border-emerald-500/20 shadow-sm">
-                                            <Trophy className="w-3.5 h-3.5 mr-2" /> Top Performers
+                                            <Trophy className="w-3.5 h-3.5 mr-2" /> {t('dash.top_performers')}
                                         </h4>
                                         <div className="space-y-3">
                                             {executiveStats.topPerformers.map((emp, i) => (
@@ -315,7 +319,7 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                                                         <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 transition-colors truncate" title={emp.name}>{emp.name}</span>
                                                     </div>
                                                     <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 px-2 sm:px-2.5 py-1.5 rounded-lg shrink-0 text-center whitespace-nowrap">
-                                                        {emp.count} Hadir
+                                                        {emp.count} {t('dash.present_unit')}
                                                     </span>
                                                 </div>
                                             ))}

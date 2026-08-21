@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SystemSetting;
+use App\Models\SpecialWorkday;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,9 +13,12 @@ class SystemSettingController extends Controller
     {
         $settings = SystemSetting::all()->pluck('value', 'key');
         $holidays = \App\Models\Holiday::orderBy('date', 'desc')->get();
+        $specialWorkdays = SpecialWorkday::orderBy('date', 'desc')->get();
+
         return Inertia::render('Settings/Index', [
             'settings' => $settings,
-            'holidays' => $holidays
+            'holidays' => $holidays,
+            'specialWorkdays' => $specialWorkdays,
         ]);
     }
 
@@ -44,4 +48,30 @@ class SystemSettingController extends Controller
 
         return back()->with('message', 'Pengaturan berhasil diperbarui.');
     }
+
+    public function storeSpecialWorkday(Request $request)
+    {
+        $request->validate([
+            'date' => 'required|date|unique:special_workdays,date',
+            'name' => 'required|string|max:255',
+            'jam_keluar' => 'required|date_format:H:i',
+            'disable_kbm' => 'required|boolean',
+        ]);
+
+        SpecialWorkday::create([
+            'date' => $request->date,
+            'name' => $request->name,
+            'jam_keluar' => $request->jam_keluar,
+            'disable_kbm' => (bool) $request->disable_kbm,
+        ]);
+
+        return back()->with('message', 'Hari kerja khusus berhasil ditambahkan.');
+    }
+
+    public function destroySpecialWorkday(SpecialWorkday $specialWorkday)
+    {
+        $specialWorkday->delete();
+        return back()->with('message', 'Hari kerja khusus berhasil dihapus.');
+    }
 }
+

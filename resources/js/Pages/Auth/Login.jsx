@@ -7,8 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UserCircle, Lock, LogIn, Loader2, Eye, EyeOff, ShieldCheck, ShieldX, Timer, KeyRound } from 'lucide-react';
+import { useLanguage } from '@/Context/LanguageContext';
 
 export default function Login({ status, canResetPassword }) {
+    const { t } = useLanguage();
     const { data, setData, post, processing, errors, reset } = useForm({
         login: '',
         password: '',
@@ -36,13 +38,13 @@ export default function Login({ status, canResetPassword }) {
             <div className="mb-8">
                 <div className="inline-flex items-center space-x-2 px-3 py-1 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-bold border border-indigo-100 dark:border-indigo-800/50 mb-3">
                     <KeyRound className="w-3.5 h-3.5" />
-                    <span>Autentikasi Akun</span>
+                    <span>{t('login.auth_badge')}</span>
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2">
-                    Selamat Datang
+                    {t('login.welcome')}
                 </h2>
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                    Silakan masukkan email/username & password Anda untuk melanjutkan.
+                    {t('login.subtitle')}
                 </p>
             </div>
 
@@ -87,7 +89,7 @@ export default function Login({ status, canResetPassword }) {
                     className="space-y-2"
                 >
                     <Label htmlFor="login" className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                        Email atau Username
+                        {t('login.label_login')}
                     </Label>
                     <div className="relative group">
                         <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors" />
@@ -99,7 +101,7 @@ export default function Login({ status, canResetPassword }) {
                             autoComplete="username"
                             autoFocus
                             onChange={(e) => setData('login', e.target.value)}
-                            placeholder="Masukkan Email atau Username..."
+                            placeholder={t('login.placeholder_login')}
                         />
                     </div>
                 </motion.div>
@@ -113,14 +115,14 @@ export default function Login({ status, canResetPassword }) {
                 >
                     <div className="flex items-center justify-between">
                         <Label htmlFor="password" className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                            Password
+                            {t('login.label_password')}
                         </Label>
                         {canResetPassword && (
                             <Link
                                 href={route('password.request')}
                                 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
                             >
-                                Lupa Password?
+                                {t('login.forgot_password')}
                             </Link>
                         )}
                     </div>
@@ -133,7 +135,7 @@ export default function Login({ status, canResetPassword }) {
                             className={`pl-11 pr-11 h-12 bg-slate-50/50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 rounded-2xl text-sm font-semibold transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 placeholder:font-normal ${errors.password ? 'border-rose-500 bg-rose-50/30' : ''}`}
                             autoComplete="current-password"
                             onChange={(e) => setData('password', e.target.value)}
-                            placeholder="Masukkan Password Anda..."
+                            placeholder={t('login.placeholder_password')}
                         />
                         <button
                             type="button"
@@ -166,7 +168,7 @@ export default function Login({ status, canResetPassword }) {
                         className="rounded-lg border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                     />
                     <Label htmlFor="remember" className="text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer select-none">
-                        Ingat sesi saya di perangkat ini
+                        {t('login.remember_me')}
                     </Label>
                 </motion.div>
 
@@ -182,7 +184,7 @@ export default function Login({ status, canResetPassword }) {
                 >
                     <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                        Koneksi aman terenkripsi SSL 256-bit & Proteksi Anti-Bot
+                        {t('login.ssl_badge')}
                     </span>
                 </motion.div>
 
@@ -202,7 +204,7 @@ export default function Login({ status, canResetPassword }) {
                             <Loader2 className="h-5 w-5 animate-spin text-white" />
                         ) : (
                             <>
-                                <span>Sign In ke SIP MU Enterprise</span>
+                                <span>{t('login.submit_btn')}</span>
                                 <LogIn className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                             </>
                         )}
@@ -218,7 +220,7 @@ export default function Login({ status, canResetPassword }) {
                 className="mt-8 text-center pt-6 border-t border-slate-100 dark:border-slate-800"
             >
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    Kendala saat login? <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">Hubungi Administrator Sekolah</span>
+                    {t('login.help_contact')} <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">{t('login.help_admin')}</span>
                 </p>
             </motion.div>
         </GuestLayout>

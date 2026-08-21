@@ -5,6 +5,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from 'next-themes';
+import { LanguageProvider } from '@/Context/LanguageContext';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -20,7 +21,9 @@ createInertiaApp({
 
         root.render(
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true} storageKey="theme">
-                <App {...props} />
+                <LanguageProvider>
+                    <App {...props} />
+                </LanguageProvider>
             </ThemeProvider>
         );
     },

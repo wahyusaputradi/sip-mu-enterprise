@@ -6,7 +6,7 @@ import { Camera, MapPin, CheckCircle2, Clock, GraduationCap, CalendarDays, LogOu
 import { motion } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import * as faceapi from 'face-api.js';
+import { useLanguage } from '@/Context/LanguageContext';
 
 const FILTER_PRESETS = {
     enhance: { name: 'Auto-Enhance', css: 'brightness(1.08) contrast(1.05) saturate(1.05)', icon: '✨' },
@@ -24,12 +24,14 @@ export default function Presensi({
     serverTimestamp,
     requiresDailyAttendance, hasTeachingSchedule, isGuruMurni,
     isHoliday, holidayInfo,
+    isSpecialWorkday, specialWorkdayInfo,
     today, currentTime, attendance, schedules,
     campusLocations, settings, dailyCheckinBlocked, dailyCheckinBlockReason,
     dailyCheckinTooEarly, dailyCheckinEarlyTime,
     dailyCheckoutAvailable, dailyCheckoutBlocked, dailyCheckoutBlockReason,
-    activeUnlocks, userRoles, hasApprovedDinasLuar
+    activeUnlocks, userRoles, hasApprovedDinasLuar, userBypassLiveness
 }) {
+    const { t, language } = useLanguage();
     const { auth } = usePage().props;
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
@@ -44,6 +46,65 @@ export default function Presensi({
     const [processing, setProcessing] = useState(false);
     const watchIdRef = useRef(null);
     const [locationAccuracy, setLocationAccuracy] = useState(null);
+
+    // Anti-Fake GPS & Telemetry States
+    const [gpsSamples, setGpsSamples] = useState([]);
+    const [isGpsAuthentic, setIsGpsAuthentic] = useState(true);
+    const [gpsSecurityStatus, setGpsSecurityStatus] = useState('Menganalisis Sinyal GPS...');
+    const [hasMotionSensor, setHasMotionSensor] = useState(false);
+    const [motionDetected, setMotionDetected] = useState(false);
+    const isMockDetectedRef = useRef(false);
+
+    useEffect(() => {
+        const handleMotion = (event) => {
+            if (event.accelerationIncludingGravity) {
+                const { x, y, z } = event.accelerationIncludingGravity;
+                if (x !== null || y !== null || z !== null) {
+                    setHasMotionSensor(true);
+                    const total = Math.abs(x || 0) + Math.abs(y || 0) + Math.abs(z || 0);
+                    if (total > 0.5) {
+                        setMotionDetected(true);
+                    }
+                }
+            }
+        };
+
+        if (window.DeviceMotionEvent) {
+            window.addEventListener('devicemotion', handleMotion, true);
+        }
+        return () => {
+            if (window.DeviceMotionEvent) {
+                window.removeEventListener('devicemotion', handleMotion, true);
+            }
+        };
+    }, []);
+
+    const calculateDriftVariance = (samples) => {
+        if (!samples || samples.length < 2) return { variance: 0.000001, isMock: false };
+
+        const lats = samples.map(s => s.lat);
+        const lngs = samples.map(s => s.lng);
+        const meanLat = lats.reduce((a, b) => a + b, 0) / lats.length;
+        const meanLng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
+
+        const varLat = lats.reduce((a, b) => a + Math.pow(b - meanLat, 2), 0) / lats.length;
+        const varLng = lngs.reduce((a, b) => a + Math.pow(b - meanLng, 2), 0) / lngs.length;
+        const totalVariance = varLat + varLng;
+
+        // Check for impossible teleportation speed (> 150m/s jump)
+        let isMock = false;
+        if (samples.length >= 2) {
+            const p1 = samples[samples.length - 2];
+            const p2 = samples[samples.length - 1];
+            const dist = haversineDistance(p1.lat, p1.lng, p2.lat, p2.lng);
+            const timeDiffSec = (p2.time - p1.time) / 1000;
+            if (timeDiffSec > 0 && timeDiffSec < 3 && dist > 300) {
+                isMock = true; // Teleportation jump detected
+            }
+        }
+
+        return { variance: totalVariance, isMock };
+    };
 
     // Clock Sync and Network states
     const [initialServerTime] = useState(() => serverTimestamp || Date.now());
@@ -71,22 +132,29 @@ export default function Presensi({
     }, []);
 
     // Liveness states
-    const isLivenessEnabled = settings?.liveness_detection_enabled !== '0' && settings?.liveness_detection_enabled !== 0 && settings?.liveness_detection_enabled !== false;
+    const isLivenessEnabled = settings?.liveness_detection_enabled !== '0' &&
+        settings?.liveness_detection_enabled !== 0 &&
+        settings?.liveness_detection_enabled !== false &&
+        !userBypassLiveness;
+
     const [isLivenessVerified, setIsLivenessVerified] = useState(false);
     const [livenessMessage, setLivenessMessage] = useState('Memuat Model AI...');
     const [modelsLoaded, setModelsLoaded] = useState(false);
     const [rotationRatio, setRotationRatio] = useState(1.0);
     const detectionIntervalRef = useRef(null);
+    const faceapiRef = useRef(null);
 
     useEffect(() => {
         if (!isLivenessEnabled) {
             setModelsLoaded(true);
             setIsLivenessVerified(true);
-            setLivenessMessage('Verifikasi Wajah Dinonaktifkan');
+            setLivenessMessage(userBypassLiveness ? '⚡ Bypass Verifikasi Wajah Aktif (Akun Khusus)' : 'Verifikasi Wajah Dinonaktifkan');
             return;
         }
         const loadModels = async () => {
             try {
+                const faceapi = await import('face-api.js');
+                faceapiRef.current = faceapi;
                 await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
                 await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
                 setModelsLoaded(true);
@@ -97,7 +165,7 @@ export default function Presensi({
             }
         };
         loadModels();
-    }, [isLivenessEnabled]);
+    }, [isLivenessEnabled, userBypassLiveness]);
 
     useEffect(() => {
         startCamera();
@@ -112,6 +180,12 @@ export default function Presensi({
             }
         };
     }, []);
+
+    useEffect(() => {
+        if (campusLocations && campusLocations.length > 0 && !selectedCampus) {
+            setSelectedCampus(campusLocations[0]);
+        }
+    }, [campusLocations, selectedCampus]);
 
     useEffect(() => {
         if (location && selectedCampus) {
@@ -155,8 +229,22 @@ export default function Presensi({
         }
         watchIdRef.current = navigator.geolocation.watchPosition(
             (p) => {
+                const newPoint = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy, time: Date.now() };
                 setLocation({ latitude: p.coords.latitude, longitude: p.coords.longitude });
                 setLocationAccuracy(p.coords.accuracy);
+
+                setGpsSamples((prev) => {
+                    const updated = [...prev.slice(-9), newPoint];
+                    const drift = calculateDriftVariance(updated);
+                    if (drift.isMock) {
+                        setIsGpsAuthentic(false);
+                        setGpsSecurityStatus('Terdeteksi Pemalsuan Lompatan Lokasi (Fake GPS)!');
+                    } else {
+                        setIsGpsAuthentic(true);
+                        setGpsSecurityStatus('Sinyal GPS Terverifikasi (Authentic)');
+                    }
+                    return updated;
+                });
             },
             (err) => {
                 console.error('GPS error:', err);
@@ -221,7 +309,7 @@ export default function Presensi({
             setLivenessMessage('Harap tengok ke kanan untuk verifikasi');
         } else {
             setIsLivenessVerified(true);
-            setLivenessMessage('Verifikasi Wajah Dinonaktifkan');
+            setLivenessMessage(userBypassLiveness ? '⚡ Bypass Verifikasi Wajah Aktif (Akun Khusus)' : 'Verifikasi Wajah Dinonaktifkan');
         }
         setRotationRatio(1.0);
     };
@@ -252,6 +340,11 @@ export default function Presensi({
             scrollToSection('location-card');
             return false;
         }
+        if (!isGpsAuthentic) {
+            toast.error("Presensi Ditolak: Terdeteksi sinyal sinyal pemalsu lokasi (Fake GPS / Mock Location). Silakan matikan aplikasi pemalsu lokasi Anda.");
+            scrollToSection('location-card');
+            return false;
+        }
         if (!isGpsAccurate) {
             toast.warning(`Akurasi GPS kurang baik (${locationAccuracy ? Math.round(locationAccuracy) : '?'}m, batas maks ${GPS_ACCURACY_THRESHOLD}m). Silakan cari tempat terbuka.`);
             scrollToSection('location-card');
@@ -275,12 +368,25 @@ export default function Presensi({
         return true;
     };
 
-    const GPS_ACCURACY_THRESHOLD = 60;
+    const GPS_ACCURACY_THRESHOLD = settings?.gps_accuracy_threshold ? parseInt(settings.gps_accuracy_threshold) : 150;
     const isGpsAccurate = locationAccuracy !== null && locationAccuracy <= GPS_ACCURACY_THRESHOLD;
-    const canSubmit = photoData && location && selectedCampus && (isWithinRadius || hasApprovedDinasLuar) && !processing && isGpsAccurate && isLivenessVerified && !isOffline;
+    const canSubmit = photoData && location && selectedCampus && (isWithinRadius || hasApprovedDinasLuar) && !processing && isGpsAccurate && isLivenessVerified && !isOffline && isGpsAuthentic;
+
+    const getTelemetryPayload = () => {
+        const driftInfo = calculateDriftVariance(gpsSamples);
+        return JSON.stringify({
+            sample_count: gpsSamples.length,
+            accuracies: gpsSamples.map(s => s.acc),
+            drift_variance: driftInfo.variance,
+            has_motion: hasMotionSensor,
+            motion_detected: motionDetected,
+            is_authentic: isGpsAuthentic && !driftInfo.isMock
+        });
+    };
 
     const handleVideoPlay = () => {
-        if (!modelsLoaded || isLivenessVerified) return;
+        const faceapi = faceapiRef.current;
+        if (!modelsLoaded || isLivenessVerified || !faceapi) return;
         
         detectionIntervalRef.current = setInterval(async () => {
             if (!videoRef.current || isLivenessVerified) {
@@ -390,7 +496,8 @@ export default function Presensi({
         const watermarkedPhoto = await addWatermark(photoData, 'Presensi Masuk');
         router.post(route('attendance.check-in'), {
             latitude: location.latitude, longitude: location.longitude,
-            campus_location_id: selectedCampus.id, photo: watermarkedPhoto
+            campus_location_id: selectedCampus.id, photo: watermarkedPhoto,
+            gps_telemetry: getTelemetryPayload()
         }, { onSuccess: () => { toast.success('Presensi masuk berhasil!'); router.reload(); }, onError: (e) => { if(e.message) toast.error(e.message); setProcessing(false); }, onFinish: () => setProcessing(false) });
     };
 
@@ -400,7 +507,8 @@ export default function Presensi({
         const watermarkedPhoto = await addWatermark(photoData, 'Presensi Pulang');
         router.post(route('attendance.check-out'), {
             latitude: location.latitude, longitude: location.longitude,
-            campus_location_id: selectedCampus.id, photo: watermarkedPhoto
+            campus_location_id: selectedCampus.id, photo: watermarkedPhoto,
+            gps_telemetry: getTelemetryPayload()
         }, { onSuccess: () => { toast.success('Presensi pulang berhasil!'); router.reload(); }, onError: (e) => { if(e.message) toast.error(e.message); setProcessing(false); }, onFinish: () => setProcessing(false) });
     };
 
@@ -411,7 +519,8 @@ export default function Presensi({
         router.post(route('attendance.guru'), {
             teaching_schedule_id: scheduleId,
             latitude: location.latitude, longitude: location.longitude,
-            campus_location_id: selectedCampus.id, photo: watermarkedPhoto
+            campus_location_id: selectedCampus.id, photo: watermarkedPhoto,
+            gps_telemetry: getTelemetryPayload()
         }, { onSuccess: () => { toast.success('Presensi jam pelajaran berhasil!'); retakePhoto(); router.reload(); }, onError: (e) => { if(e.message) toast.error(e.message); setProcessing(false); }, onFinish: () => setProcessing(false) });
     };
 
@@ -460,7 +569,29 @@ export default function Presensi({
                 </div>
             )}
 
-            {/* Holiday Banner */}
+            {/* Special Workday Banner (Hari Kerja Khusus / Acara Sekolah) */}
+            {isSpecialWorkday && !isHoliday && (
+                <div className="max-w-7xl mx-auto mb-8">
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}
+                        className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-indigo-500/10 border-2 border-amber-300/80 rounded-[2rem] p-6 flex flex-col md:flex-row items-center gap-6 shadow-lg shadow-amber-100/50">
+                        <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl flex items-center justify-center text-white shrink-0 shadow-md shadow-amber-200">
+                            <Sparkles className="w-8 h-8" />
+                        </div>
+                        <div className="flex-1 text-center md:text-left space-y-1">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 border border-amber-200 text-amber-800 text-[10px] font-black uppercase tracking-widest">
+                                <Clock className="w-3 h-3" /> Hari Kerja Khusus / Acara Sekolah
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900">
+                                {specialWorkdayInfo?.name || 'Hari Kerja Khusus'}
+                            </h3>
+                            <p className="text-xs font-bold text-slate-600">
+                                Presensi Masuk tetap wajib. Jam Pulang disesuaikan menjadi pukul <span className="text-indigo-600 font-extrabold">{specialWorkdayInfo?.jam_keluar} WIB</span>.
+                                {specialWorkdayInfo?.disable_kbm && ' Kegiatan KBM ditiadakan.'}
+                            </p>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
             {isHoliday && (
                 <div className="max-w-7xl mx-auto mb-8">
                     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}
@@ -554,6 +685,15 @@ export default function Presensi({
                                     </div>
                                 </div>
                             )}
+
+                            {/* GPS Telemetry Security Badge */}
+                            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-2.5 h-2.5 rounded-full ${isGpsAuthentic ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
+                                    <span className={`font-bold ${isGpsAuthentic ? 'text-slate-700' : 'text-rose-600'}`}>{gpsSecurityStatus}</span>
+                                </div>
+                                <span className="text-[10px] text-slate-400 font-mono font-bold">Sampel: {gpsSamples.length}/5</span>
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -708,7 +848,7 @@ export default function Presensi({
                 <div className="lg:col-span-7 space-y-6">
 
                     {/* ═══ TEACHING SCHEDULE SECTION ═══ */}
-                    {hasTeachingSchedule && schedules && (
+                    {!isHoliday && hasTeachingSchedule && schedules && (
                         <Card className="border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white/80 backdrop-blur-xl overflow-hidden">
                             <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100 p-6">
                                 <CardTitle className="text-xl font-black text-indigo-900 flex items-center">

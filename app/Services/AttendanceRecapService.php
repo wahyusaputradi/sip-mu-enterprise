@@ -56,9 +56,15 @@ class AttendanceRecapService
             $periodLabel = ($months[$month] ?? '') . ' ' . $year;
         }
 
-        // Get working days & holidays
+        // Get working days & holidays & special workdays
         $workingDaysDates = [];
         $holidays = Holiday::whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->pluck('date')
+            ->map(fn($d) => Carbon::parse($d)->format('Y-m-d'))
+            ->toArray();
+
+        $specialWorkdaysNoKbm = \App\Models\SpecialWorkday::where('disable_kbm', true)
+            ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
             ->pluck('date')
             ->map(fn($d) => Carbon::parse($d)->format('Y-m-d'))
             ->toArray();
@@ -220,9 +226,10 @@ class AttendanceRecapService
                 $jtm_effective_12 = $jtm_present_12;
                 $jtm_effective = $jtm_effective_10 + $jtm_effective_11 + $jtm_effective_12;
 
-                // Perhitungan JTM Libur (Hanya dihitung jika tanggal libur sudah terlewati atau hari ini)
+                // Perhitungan JTM Libur & Hari Kerja Khusus Bebas KBM (Hanya dihitung jika tanggal libur/acara sudah terlewati atau hari ini)
                 $jtm_holiday = 0;
-                foreach ($holidays as $hDate) {
+                $allHolidayAndSpecialDates = array_unique(array_merge($holidays, $specialWorkdaysNoKbm));
+                foreach ($allHolidayAndSpecialDates as $hDate) {
                     if ($hDate <= $todayStr) {
                         $dayOfWeek = Carbon::parse($hDate)->dayOfWeekIso;
                         if ($dayOfWeek >= 1 && $dayOfWeek <= 5) {
@@ -241,7 +248,7 @@ class AttendanceRecapService
                 $hourSlots = TeachingSchedule::hourSlots();
 
                 foreach ($workingDaysDates as $wDate) {
-                    if (in_array($wDate, $holidays)) continue;
+                    if (in_array($wDate, $holidays) || in_array($wDate, $specialWorkdaysNoKbm)) continue;
 
                     $dayOfWeek = Carbon::parse($wDate)->dayOfWeekIso;
                     $schedulesOnDay = $schedules->where('day_of_week', $dayOfWeek);

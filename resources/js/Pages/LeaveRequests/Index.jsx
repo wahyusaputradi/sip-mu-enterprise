@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, CalendarDays, FileText, Upload, Trash2, Paperclip, Eye, AlertCircle, Pencil, X, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLanguage } from '@/Context/LanguageContext';
 
 const TYPE_CFG = {
     cuti: { label: 'Cuti', bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-100' },
@@ -22,6 +23,7 @@ const TYPE_CFG = {
 const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
 export default function Index({ leaveRequests, hasEmployee, isGuru }) {
+    const { t } = useLanguage();
     const user = usePage().props.auth.user;
     const now = new Date();
     const [isFormOpen, setIsFormOpen] = useState(false);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -21,6 +21,8 @@ const STATUS_CFG = {
 };
 
 export default function Attendance({ attendances, stats, employees, todayHoliday, todaySchedules, todayUnlocks }) {
+    const { auth } = usePage().props;
+    const currentUserId = auth?.user?.id;
     const today = new Date();
     const formattedDate = new Intl.DateTimeFormat('id-ID', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
@@ -427,9 +429,15 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
                                             <Select value={unlockData.employee_id} onValueChange={handleUnlockEmployeeChange}>
                                                 <SelectTrigger className="h-12 rounded-xl bg-slate-50/50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700 dark:text-slate-100"><SelectValue placeholder="Pilih pegawai..." /></SelectTrigger>
                                                 <SelectContent className="rounded-2xl shadow-xl max-h-80 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-                                                    {(employees || []).map(emp => (
-                                                        <SelectItem key={emp.id} value={String(emp.id)} className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">{emp.name}</SelectItem>
-                                                    ))}
+                                                     {(employees || []).map(emp => {
+                                                         const isSelf = Boolean(emp.user_id && currentUserId && Number(emp.user_id) === Number(currentUserId));
+                                                         const label = isSelf ? `${emp.name} (Akun Anda — Wajib Pengelola Lain)` : emp.name;
+                                                         return (
+                                                             <SelectItem key={emp.id} value={String(emp.id)} className={`font-semibold text-sm p-3 cursor-pointer ${isSelf ? 'text-rose-600 font-bold bg-rose-50/50' : 'hover:bg-indigo-50 text-slate-900 dark:text-slate-100'}`}>
+                                                                 {label}
+                                                             </SelectItem>
+                                                         );
+                                                     })}
                                                 </SelectContent>
                                             </Select>
                                         </div>

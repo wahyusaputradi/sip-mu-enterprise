@@ -53,15 +53,6 @@ class PresensiController extends Controller
             ->where('status', 'approved')
             ->whereDate('start_date', '<=', $today)
             ->whereDate('end_date', '>=', $today)
-            ->where(function ($query) use ($now) {
-                $query->where('duration_type', 'full_day')
-                    ->orWhere(function ($q) use ($now) {
-                        $currentTime = $now->toTimeString();
-                        $q->where('duration_type', 'partial')
-                          ->where('start_time', '<=', $currentTime)
-                          ->where('end_time', '>=', $currentTime);
-                    });
-            })
             ->exists();
 
         // ── Settings ──
@@ -72,8 +63,15 @@ class PresensiController extends Controller
         $teachingLateTolerance = (int)($settings['teaching_late_tolerance'] ?? 10);
 
         // ── Holiday Check ──
-        $todayHoliday = Holiday::where('date', $today->toDateString())->first();
+        $todayHoliday = Holiday::whereDate('date', $today)->first();
         $isHoliday = (bool) $todayHoliday;
+
+        // ── Special Workday Check (Hari Kerja Khusus / Acara Sekolah) ──
+        $todaySpecialWorkday = \App\Models\SpecialWorkday::whereDate('date', $today)->first();
+        $isSpecialWorkday = (bool) $todaySpecialWorkday;
+        if ($todaySpecialWorkday) {
+            $jamKeluar = $todaySpecialWorkday->jam_keluar;
+        }
 
         // ── Campus Locations ──
         $campusLocations = CampusLocation::all();
@@ -93,7 +91,7 @@ class PresensiController extends Controller
 
         $invalScheduleIds = [];
 
-        if ($todayDow >= 1 && $todayDow <= 5) {
+        if (!$isHoliday && $todayDow >= 1 && $todayDow <= 5) {
             $schedules = TeachingSchedule::with('schoolClass')
                 ->where('employee_id', $employee->id)
                 ->where('day_of_week', $todayDow)
@@ -296,6 +294,12 @@ class PresensiController extends Controller
             'isGuruMurni' => $isGuruMurni,
             'isHoliday' => $isHoliday,
             'holidayInfo' => $todayHoliday ? ['name' => $todayHoliday->description, 'date' => $todayHoliday->date] : null,
+            'isSpecialWorkday' => $isSpecialWorkday,
+            'specialWorkdayInfo' => $todaySpecialWorkday ? [
+                'name' => $todaySpecialWorkday->name,
+                'jam_keluar' => $todaySpecialWorkday->jam_keluar,
+                'disable_kbm' => $todaySpecialWorkday->disable_kbm,
+            ] : null,
             'today' => $today->translatedFormat('l, d F Y'),
             'currentTime' => $currentTimeStr,
             'attendance' => $attendance ? [
@@ -317,6 +321,7 @@ class PresensiController extends Controller
                 'batas_terlambat_mengajar' => $teachingLateTolerance,
                 'buffer_presensi_masuk' => (int)($settings['buffer_presensi_masuk'] ?? 10),
                 'buffer_presensi_keluar' => (int)($settings['buffer_presensi_keluar'] ?? 10),
+                'gps_accuracy_threshold' => (int)($settings['gps_accuracy_threshold'] ?? 150),
             ],
             'dailyCheckinBlocked' => $dailyCheckinBlocked,
             'dailyCheckinBlockReason' => $dailyCheckinBlockReason,
@@ -328,6 +333,7 @@ class PresensiController extends Controller
             'activeUnlocks' => $activeUnlocks,
             'userRoles' => $roles,
             'hasApprovedDinasLuar' => $onDinasLuar,
+            'userBypassLiveness' => (bool) $user->bypass_liveness,
         ]);
     }
 
@@ -342,7 +348,13 @@ class PresensiController extends Controller
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
             'photo' => 'required|string',
+            'gps_telemetry' => 'nullable|string',
         ]);
+
+        $telemetryCheck = \App\Services\GpsTelemetryService::validateTelemetry($request->gps_telemetry);
+        if (!$telemetryCheck['valid']) {
+            return back()->withErrors(['message' => $telemetryCheck['message']]);
+        }
 
         $user = Auth::user();
         $employee = $user->employee;
@@ -365,18 +377,6 @@ class PresensiController extends Controller
             ->where('status', 'approved')
             ->whereDate('start_date', '<=', $today)
             ->whereDate('end_date', '>=', $today)
-            ->where(function ($query) use ($slot) {
-                $query->where('duration_type', 'full_day')
-                    ->orWhere(function ($q) use ($slot) {
-                        if ($slot) {
-                            $q->where('duration_type', 'partial')
-                              ->where('start_time', '<=', $slot['end'])
-                              ->where('end_time', '>=', $slot['start']);
-                        } else {
-                            $q->whereRaw('1 = 0');
-                        }
-                    });
-            })
             ->exists();
 
         // ── Holiday Check ──

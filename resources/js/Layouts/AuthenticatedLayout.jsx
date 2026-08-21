@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import ThemeToggle from '@/Components/ThemeToggle';
+import LanguageToggle from '@/Components/LanguageToggle';
+import { useLanguage } from '@/Context/LanguageContext';
 import PwaInstallPrompt from '@/Components/PwaInstallPrompt';
 import Dropdown from '@/Components/Dropdown';
 import { Link, usePage, router } from '@inertiajs/react';
@@ -41,14 +43,17 @@ import axios from 'axios';
 
 const RealtimeClock = () => {
     const [time, setTime] = useState(new Date());
+    const { language } = useLanguage();
 
     useEffect(() => {
         const timer = setInterval(() => setTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
 
-    const dateStr = time.toLocaleDateString('id-ID', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }).replace('.', '').toUpperCase();
-    const timeStr = time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/:/g, '.');
+    const locale = language === 'en' ? 'en-US' : 'id-ID';
+    const dateStr = time.toLocaleDateString(locale, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }).replace('.', '').toUpperCase();
+    const timeStr = time.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/:/g, '.');
+    const timeZoneLabel = language === 'en' ? 'WIB (UTC+7)' : 'WIB';
 
     return (
         <div className="flex items-center bg-white/90 dark:bg-slate-900/90 rounded-full px-4 md:px-5 py-2 border border-slate-200/80 dark:border-slate-800 shadow-sm backdrop-blur-md">
@@ -64,7 +69,7 @@ const RealtimeClock = () => {
             <div className="flex items-center">
                 <Clock className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mr-2" />
                 <span className="font-black text-slate-800 dark:text-slate-100 text-[12px] md:text-[13px] tracking-tight">
-                    {timeStr} WIB
+                    {timeStr} {timeZoneLabel}
                 </span>
             </div>
         </div>
@@ -74,6 +79,7 @@ const RealtimeClock = () => {
 export default function AuthenticatedLayout({ header, children }) {
     const user = usePage().props.auth.user;
     const { flash, errors } = usePage().props;
+    const { t } = useLanguage();
     
     // Map new custom roles to system roles for backward compatibility with menu filtering
     const roleMappings = {
@@ -207,31 +213,31 @@ export default function AuthenticatedLayout({ header, children }) {
 
     const menuItems = [
         // ═══ AREA PRIBADI ═══
-        { group: 'Area Pribadi', items: [
-            { name: 'Dashboard', route: 'dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
-            { name: 'Presensi', route: 'attendance.presensi', icon: <MapPin className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
-            { name: 'Data Profil', route: 'profile.edit', icon: <UserIcon className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
-            { name: 'Jadwal Saya', route: 'my-schedule.index', icon: <GraduationCap className="w-5 h-5" />, roles: ['Guru'] },
-            { name: 'Rekap Absensi', route: 'my-attendance.index', icon: <History className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
-            { name: 'Pengajuan Cuti/Izin', route: 'leave-requests.index', icon: <FilePlus className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
-            { name: 'Bursa Inval', route: 'invals.index', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
+        { group: t('group.personal'), items: [
+            { name: t('menu.dashboard'), route: 'dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
+            { name: t('menu.presensi'), route: 'attendance.presensi', icon: <MapPin className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
+            { name: t('menu.profile'), route: 'profile.edit', icon: <UserIcon className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
+            { name: t('menu.my_schedule'), route: 'my-schedule.index', icon: <GraduationCap className="w-5 h-5" />, roles: ['Guru'] },
+            { name: t('menu.recap'), route: 'my-attendance.index', icon: <History className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
+            { name: t('menu.leave_request'), route: 'leave-requests.index', icon: <FilePlus className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
+            { name: t('menu.inval'), route: 'invals.index', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
         ]},
         // ═══ AREA MANAJEMEN ═══
-        { group: 'Manajemen', items: [
-            { name: 'Data Pegawai', route: 'employees.index', icon: <Users className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Bendahara'] },
-            { name: 'Jabatan', route: 'positions.index', icon: <ClipboardList className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Bendahara'] },
-            { name: 'Monitoring', route: 'monitoring.attendance', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
-            { name: 'Rekap Presensi', route: 'attendance.recap', icon: <ClipboardList className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
-            { name: 'Foto Presensi', route: 'monitoring.photos.index', icon: <Image className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
-            { name: 'Jadwal Mengajar', route: 'teaching-schedules.index', icon: <CalendarDays className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
-            { name: 'Data Kelas', route: 'school-classes.index', icon: <School className="w-5 h-5" />, roles: ['Super Admin', 'Kurikulum'] },
-            { name: 'Persetujuan Cuti', route: 'leave-requests.approval', icon: <ClipboardCheck className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum'] },
+        { group: t('group.management'), items: [
+            { name: t('menu.employees'), route: 'employees.index', icon: <Users className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Bendahara'] },
+            { name: t('menu.positions'), route: 'positions.index', icon: <ClipboardList className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Bendahara'] },
+            { name: t('menu.monitoring'), route: 'monitoring.attendance', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: t('menu.attendance_recap'), route: 'attendance.recap', icon: <ClipboardList className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: t('menu.photos'), route: 'monitoring.photos.index', icon: <Image className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: t('menu.schedules'), route: 'teaching-schedules.index', icon: <CalendarDays className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: t('menu.classes'), route: 'school-classes.index', icon: <School className="w-5 h-5" />, roles: ['Super Admin', 'Kurikulum'] },
+            { name: t('menu.leave_approval'), route: 'leave-requests.approval', icon: <ClipboardCheck className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum'] },
         ]},
         // ═══ KONFIGURASI ═══
-        { group: 'Konfigurasi', items: [
-            { name: 'Lokasi Kampus', route: 'campus-locations.index', icon: <MapPin className="w-5 h-5" />, roles: ['Super Admin'] },
-            { name: 'Otoritas User', route: 'user-authority.index', icon: <ShieldCheck className="w-5 h-5" />, roles: ['Super Admin'] },
-            { name: 'Pengaturan', route: 'settings.index', icon: <Settings className="w-5 h-5" />, roles: ['Super Admin'] },
+        { group: t('group.config'), items: [
+            { name: t('menu.campus'), route: 'campus-locations.index', icon: <MapPin className="w-5 h-5" />, roles: ['Super Admin'] },
+            { name: t('menu.user_authority'), route: 'user-authority.index', icon: <ShieldCheck className="w-5 h-5" />, roles: ['Super Admin'] },
+            { name: t('menu.settings'), route: 'settings.index', icon: <Settings className="w-5 h-5" />, roles: ['Super Admin'] },
         ]}
     ];
 
@@ -401,6 +407,9 @@ export default function AuthenticatedLayout({ header, children }) {
 
                         <div className="flex items-center space-x-4 md:space-x-6">
                             <div className="hidden sm:flex items-center space-x-3">
+                                {/* Language Toggle */}
+                                <LanguageToggle />
+
                                 {/* Theme Toggle */}
                                 <ThemeToggle />
 
@@ -416,10 +425,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                     </Dropdown.Trigger>
                                     <Dropdown.Content align="right" width="80" contentClasses="py-2 bg-white dark:bg-card rounded-2xl shadow-xl border border-slate-100 dark:border-border overflow-hidden">
                                         <div className="px-4 py-3 border-b border-slate-100 dark:border-border flex justify-between items-center bg-slate-50/50 dark:bg-secondary/50">
-                                            <h3 className="text-[13px] font-black text-slate-800 dark:text-slate-100">Notifikasi</h3>
+                                            <h3 className="text-[13px] font-black text-slate-800 dark:text-slate-100">{t('nav.notifications')}</h3>
                                             {unreadCount > 0 && (
                                                 <button onClick={markAllAsRead} className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800">
-                                                    Tandai semua dibaca
+                                                    {t('nav.mark_all_read')}
                                                 </button>
                                             )}
                                         </div>
@@ -486,17 +495,17 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <div className="px-2">
                                         <Dropdown.Link href={route('profile.edit')}>
                                             <div className="flex items-center font-bold text-[13px] py-1.5 px-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                                <UserIcon className="w-4 h-4 mr-3 text-slate-400" /> Profil Saya
+                                                <UserIcon className="w-4 h-4 mr-3 text-slate-400" /> {t('nav.profile')}
                                             </div>
                                         </Dropdown.Link>
                                         <Dropdown.Link href={route('account.edit')}>
                                             <div className="flex items-center font-bold text-[13px] py-1.5 px-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mt-1">
-                                                <Settings className="w-4 h-4 mr-3 text-slate-400" /> Pengaturan Akun
+                                                <Settings className="w-4 h-4 mr-3 text-slate-400" /> {t('nav.settings')}
                                             </div>
                                         </Dropdown.Link>
                                         <Dropdown.Link href={route('logout')} method="post" as="button">
                                             <div className="flex items-center font-bold text-[13px] py-1.5 px-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors mt-1">
-                                                <LogOut className="w-4 h-4 mr-3" /> Keluar Sistem
+                                                <LogOut className="w-4 h-4 mr-3" /> {t('nav.logout')}
                                             </div>
                                         </Dropdown.Link>
                                     </div>

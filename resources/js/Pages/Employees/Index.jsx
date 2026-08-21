@@ -9,11 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Plus, Edit2, Trash2, Users, AlertCircle, Search, Download, Upload, FileUp, CheckSquare, Square, CheckCircle2, XCircle, Loader2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLanguage } from '@/Context/LanguageContext';
 
 export default function Index({ employees }) {
+    const { t } = useLanguage();
     const { flash, auth } = usePage().props;
     const userRoles = auth?.user?.roles || (auth?.user?.role ? [auth.user.role] : []);
-    const canManage = userRoles.some(r => ['Super Admin', 'Bendahara'].includes(r));
+    const canManage = userRoles.some(r => ['Super Admin', 'Bendahara', 'Kepala Sekolah', 'Admin'].includes(r)) || auth?.user?.id === 1;
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
@@ -101,6 +103,25 @@ export default function Index({ employees }) {
     };
     const toggleOne = (id) => setCheckedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
+    const handleFileImport = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        setImportLoading(true);
+        setNotification(null);
+
+        router.post(route('employees.import'), formData, {
+            preserveScroll: true,
+            onFinish: () => {
+                e.target.value = '';
+                setImportLoading(false);
+            },
+        });
+    };
+
     return (
         <AuthenticatedLayout
             header={
@@ -117,53 +138,46 @@ export default function Index({ employees }) {
                         </h2>
                     </div>
                     <div className="flex items-center flex-wrap gap-2">
-                        {/* Import/Export */}
-                        <div className="hidden sm:flex items-center gap-2">
+                        {/* Import/Export Buttons */}
+                        <div className="flex items-center flex-wrap gap-2">
                             {canManage && (
                                 <>
-                                    <form onSubmit={(e) => {
-                                        e.preventDefault();
-                                        const fileInput = document.getElementById('import_excel');
-                                        if (fileInput.files.length > 0) {
-                                            const formData = new FormData();
-                                            formData.append('file', fileInput.files[0]);
-                                            setImportLoading(true);
-                                            setNotification(null);
-                                            router.post(route('employees.import'), formData, {
-                                                preserveScroll: true,
-                                                onFinish: () => {
-                                                    fileInput.value = '';
-                                                    setImportLoading(false);
-                                                },
-                                            });
-                                        }
-                                    }} className="flex items-center">
-                                        <input type="file" id="import_excel" accept=".xlsx, .xls, .csv" className="hidden" onChange={(e) => {
-                                            if(e.target.files.length > 0) e.target.closest('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                                        }} />
-                                        <Button type="button" disabled={importLoading} onClick={() => document.getElementById('import_excel').click()} className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-lg shadow-amber-200 hover:shadow-amber-300 transition-all disabled:opacity-60">
-                                            {importLoading ? <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" /> : <Upload className="w-4 h-4 sm:mr-2" />}
-                                            <span className="hidden sm:inline">{importLoading ? 'Mengimpor...' : 'Import Excel'}</span>
+                                    <div className="flex items-center">
+                                        <input 
+                                            type="file" 
+                                            id="import_excel" 
+                                            accept=".xlsx, .xls, .csv" 
+                                            className="hidden" 
+                                            onChange={handleFileImport} 
+                                        />
+                                        <Button 
+                                            type="button" 
+                                            disabled={importLoading} 
+                                            onClick={() => document.getElementById('import_excel').click()} 
+                                            className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-lg shadow-amber-200 hover:shadow-amber-300 transition-all disabled:opacity-60"
+                                        >
+                                            {importLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                                            <span>{importLoading ? t('common.loading') : t('common.import_excel')}</span>
                                         </Button>
-                                    </form>
+                                    </div>
                                     
                                     <a href={route('employees.template')}>
-                                        <Button className="rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all">
-                                            <FileUp className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Template</span>
+                                        <Button type="button" className="rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all">
+                                            <FileUp className="w-4 h-4 mr-2" /><span>{t('common.template')}</span>
                                         </Button>
                                     </a>
                                 </>
                             )}
                             
                             <a href={route('employees.export')}>
-                                <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-200 hover:shadow-emerald-300 transition-all">
-                                    <Download className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Export Excel</span>
+                                <Button type="button" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-200 hover:shadow-emerald-300 transition-all">
+                                    <Download className="w-4 h-4 mr-2" /><span>{t('common.export_excel')}</span>
                                 </Button>
                             </a>
                         </div>
                         {canManage && checkedIds.length > 0 && (
                             <Button onClick={() => setIsBulkDeleteOpen(true)} variant="outline" className="rounded-xl border-rose-200 text-rose-600 font-bold hover:bg-rose-50">
-                                <Trash2 className="w-4 h-4 mr-2" /> Hapus ({checkedIds.length})
+                                <Trash2 className="w-4 h-4 mr-2" /> {t('common.delete')} ({checkedIds.length})
                             </Button>
                         )}
                         {canManage && (
@@ -171,7 +185,7 @@ export default function Index({ employees }) {
                                 <Button 
                                     className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-[0_8px_20px_rgba(99,102,241,0.3)] hover:shadow-[0_10px_25px_rgba(99,102,241,0.4)] transition-all hover:-translate-y-0.5"
                                 >
-                                    <Plus className="w-5 h-5 sm:mr-2" /><span className="hidden sm:inline">Tambah Pegawai</span>
+                                    <Plus className="w-5 h-5 mr-2" /><span>{t('emp.add_btn')}</span>
                                 </Button>
                             </Link>
                         )}

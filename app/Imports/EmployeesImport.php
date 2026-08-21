@@ -128,8 +128,17 @@ class EmployeesImport implements ToCollection
                     $positionId = Position::first()?->id ?? 1;
                 }
 
-                // --- Step 5: Upsert Employee ---
-                $isNew = !Employee::where('nik', $nik)->exists();
+                // --- Step 5: Upsert Employee safely ---
+                $existingEmployee = Employee::where('nik', $nik)->first();
+                if ($existingEmployee && Str::lower(trim($existingEmployee->name)) !== Str::lower(trim($name))) {
+                    // Prevent overwriting a completely different employee record!
+                    DB::rollBack();
+                    $this->skippedCount++;
+                    $this->errors[] = "Baris {$rowNumber} (NIK: {$nik}): NIK ini sudah digunakan oleh pegawai lain ('{$existingEmployee->name}'). Harap gunakan NIK yang unik.";
+                    continue;
+                }
+
+                $isNew = !$existingEmployee;
 
                 $employee = Employee::updateOrCreate(
                     ['nik' => $nik],
