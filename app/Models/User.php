@@ -24,6 +24,7 @@ class User extends Authenticatable
         'username',
         'password',
         'bypass_liveness',
+        'bypass_geofencing',
     ];
 
     /**
@@ -47,6 +48,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'bypass_liveness' => 'boolean',
+            'bypass_geofencing' => 'boolean',
         ];
     }
 

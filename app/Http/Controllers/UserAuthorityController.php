@@ -35,6 +35,7 @@ class UserAuthorityController extends Controller
                 'email' => $user->email,
                 'email_verified_at' => $user->email_verified_at,
                 'bypass_liveness' => (bool)$user->bypass_liveness,
+                'bypass_geofencing' => (bool)$user->bypass_geofencing,
                 'roles' => $user->roles->pluck('name'),
                 'employee' => $user->employee ? [
                     'position' => $user->employee->positions->where('pivot.is_primary', true)->first() ? [
@@ -66,12 +67,14 @@ class UserAuthorityController extends Controller
             'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'password' => ['nullable', 'min:8'],
             'roles' => ['array'],
-            'bypass_liveness' => ['nullable', 'boolean']
+            'bypass_liveness' => ['nullable', 'boolean'],
+            'bypass_geofencing' => ['nullable', 'boolean']
         ]);
 
         $dataToUpdate = [
             'email' => $request->email,
-            'bypass_liveness' => $request->boolean('bypass_liveness')
+            'bypass_liveness' => $request->boolean('bypass_liveness'),
+            'bypass_geofencing' => $request->boolean('bypass_geofencing')
         ];
         
         if ($request->filled('password')) {

@@ -334,6 +334,7 @@ class PresensiController extends Controller
             'userRoles' => $roles,
             'hasApprovedDinasLuar' => $onDinasLuar,
             'userBypassLiveness' => (bool) $user->bypass_liveness,
+            'userBypassGeofencing' => (bool) $user->bypass_geofencing,
         ]);
     }
 
@@ -396,7 +397,7 @@ class PresensiController extends Controller
         }
 
         // ── Geofencing validation ──
-        if (!$onDinasLuar) {
+        if (!$onDinasLuar && !$user->bypass_geofencing) {
             $campus = CampusLocation::findOrFail($request->campus_location_id);
             $distance = $this->haversineDistance(
                 $request->latitude, $request->longitude,

@@ -33,6 +33,7 @@ export default function UserAuthorityIndex({ users, roles, filters, auth }) {
         password: '',
         roles: [],
         bypass_liveness: false,
+        bypass_geofencing: false,
     });
 
     const openEditModal = (user) => {
@@ -42,6 +43,7 @@ export default function UserAuthorityIndex({ users, roles, filters, auth }) {
             password: '',
             roles: user.roles || [],
             bypass_liveness: !!user.bypass_liveness,
+            bypass_geofencing: !!user.bypass_geofencing,
         });
         clearErrors();
         setIsEditModalOpen(true);
@@ -226,6 +228,11 @@ export default function UserAuthorityIndex({ users, roles, filters, auth }) {
                                                         ⚡ Bypass Wajah
                                                     </span>
                                                 )}
+                                                {user.bypass_geofencing && (
+                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-cyan-50 border border-cyan-200 text-cyan-700 text-[10px] font-black uppercase tracking-wider">
+                                                        📍 Bypass Geofence
+                                                    </span>
+                                                )}
                                                 {user.roles && user.roles.length > 0 ? (
                                                     user.roles.map((role, idx) => (
                                                         <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-wider">
@@ -386,6 +393,21 @@ export default function UserAuthorityIndex({ users, roles, filters, auth }) {
                                                         Bypass Verifikasi Wajah (Bebaskan Gerakan Tengok Kanan)
                                                         <span className="block text-[11px] text-slate-500 font-medium mt-0.5">
                                                             Aktifkan untuk mengizinkan akun ini mengambil foto swafoto langsung tanpa wajib melakukan gerakan tengok kanan.
+                                                        </span>
+                                                    </label>
+                                                </div>
+
+                                                <div className="flex items-start space-x-3 p-4 rounded-xl bg-cyan-50/50 border border-cyan-100">
+                                                    <Checkbox 
+                                                        id="bypass_geofencing"
+                                                        checked={data.bypass_geofencing}
+                                                        onCheckedChange={(checked) => setData('bypass_geofencing', !!checked)}
+                                                        className="mt-0.5"
+                                                    />
+                                                    <label htmlFor="bypass_geofencing" className="text-xs font-bold text-slate-800 cursor-pointer select-none leading-relaxed">
+                                                        Bypass Geofencing (Pengecualian Radius Lokasi GPS)
+                                                        <span className="block text-[11px] text-slate-500 font-medium mt-0.5">
+                                                            Aktifkan untuk mengizinkan akun ini melakukan presensi dari mana saja tanpa dibatasi radius lokasi GPS kampus.
                                                         </span>
                                                     </label>
                                                 </div>

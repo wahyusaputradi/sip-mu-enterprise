@@ -29,7 +29,7 @@ export default function Presensi({
     campusLocations, settings, dailyCheckinBlocked, dailyCheckinBlockReason,
     dailyCheckinTooEarly, dailyCheckinEarlyTime,
     dailyCheckoutAvailable, dailyCheckoutBlocked, dailyCheckoutBlockReason,
-    activeUnlocks, userRoles, hasApprovedDinasLuar, userBypassLiveness
+    activeUnlocks, userRoles, hasApprovedDinasLuar, userBypassLiveness, userBypassGeofencing
 }) {
     const { t, language } = useLanguage();
     const { auth } = usePage().props;
@@ -350,7 +350,7 @@ export default function Presensi({
             scrollToSection('location-card');
             return false;
         }
-        if (!isWithinRadius && !hasApprovedDinasLuar) {
+        if (!isWithinRadius && !hasApprovedDinasLuar && !userBypassGeofencing) {
             toast.error(`Anda berada di luar radius lokasi kampus ${selectedCampus.name}. Silakan mendekat ke area kampus.`);
             scrollToSection('location-card');
             return false;
@@ -370,7 +370,7 @@ export default function Presensi({
 
     const GPS_ACCURACY_THRESHOLD = settings?.gps_accuracy_threshold ? parseInt(settings.gps_accuracy_threshold) : 150;
     const isGpsAccurate = locationAccuracy !== null && locationAccuracy <= GPS_ACCURACY_THRESHOLD;
-    const canSubmit = photoData && location && selectedCampus && (isWithinRadius || hasApprovedDinasLuar) && !processing && isGpsAccurate && isLivenessVerified && !isOffline && isGpsAuthentic;
+    const canSubmit = photoData && location && selectedCampus && (isWithinRadius || hasApprovedDinasLuar || userBypassGeofencing) && !processing && isGpsAccurate && isLivenessVerified && !isOffline && isGpsAuthentic;
 
     const getTelemetryPayload = () => {
         const driftInfo = calculateDriftVariance(gpsSamples);
@@ -537,6 +537,11 @@ export default function Presensi({
                         <span className="px-3 py-1 rounded-full bg-purple-50 border border-purple-100 text-purple-700 text-[10px] font-black uppercase tracking-widest">
                             Mode: {modeLabel}
                         </span>
+                        {userBypassGeofencing && (
+                            <span className="px-3 py-1 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-700 text-[10px] font-black uppercase tracking-widest shadow-sm">
+                                📍 Bypass Geofence
+                            </span>
+                        )}
                     </div>
                     <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
                         Presensi <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Harian</span>
@@ -656,8 +661,8 @@ export default function Presensi({
                                             </div>
                                             <div className="text-right">
                                                 {location ? (
-                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${within || hasApprovedDinasLuar ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>
-                                                        {within ? '✓ Dalam Radius' : (hasApprovedDinasLuar ? '✓ Dinas Luar' : `✗ ${dist}m`)}
+                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${within || hasApprovedDinasLuar || userBypassGeofencing ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>
+                                                        {within ? '✓ Dalam Radius' : (hasApprovedDinasLuar ? '✓ Dinas Luar' : (userBypassGeofencing ? '✓ Bypass Geofence' : `✗ ${dist}m`))}
                                                     </span>
                                                 ) : <span className="text-xs text-slate-400">Mencari GPS...</span>}
                                             </div>
@@ -676,7 +681,7 @@ export default function Presensi({
                                 </div>
                             )}
 
-                            {selectedCampus && !isWithinRadius && location && !hasApprovedDinasLuar && (
+                            {selectedCampus && !isWithinRadius && location && !hasApprovedDinasLuar && !userBypassGeofencing && (
                                 <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3">
                                     <ShieldAlert className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
                                     <div>
@@ -780,7 +785,7 @@ export default function Presensi({
                                             />
                                             <div className="absolute inset-0 border-2 border-dashed border-white/20 m-4 rounded-xl pointer-events-none" />
                                             <div className="absolute bottom-6 left-0 right-0 flex justify-center z-10">
-                                                <Button type="button" onClick={capturePhoto} disabled={!selectedCampus || !isWithinRadius || !isLivenessVerified || isOffline}
+                                                <Button type="button" onClick={capturePhoto} disabled={!selectedCampus || (!isWithinRadius && !hasApprovedDinasLuar && !userBypassGeofencing) || !isLivenessVerified || isOffline}
                                                     className="rounded-full w-16 h-16 bg-white/20 hover:bg-white/40 backdrop-blur-md border-4 border-white shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all transform hover:scale-110 flex items-center justify-center p-0 disabled:opacity-50 disabled:hover:scale-100">
                                                     <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-inner">
                                                         <Camera className="w-6 h-6 text-indigo-600" />

@@ -439,7 +439,7 @@ class AttendanceController extends Controller
             ->exists();
 
         // ── Geofencing ──
-        if (!$onDinasLuar) {
+        if (!$onDinasLuar && !$user->bypass_geofencing) {
             $campus = CampusLocation::findOrFail($request->campus_location_id);
             $distance = $this->haversineDistance(
                 $request->latitude, $request->longitude,
@@ -567,7 +567,7 @@ class AttendanceController extends Controller
             ->exists();
 
         // ── Geofencing ──
-        if (!$onDinasLuar) {
+        if (!$onDinasLuar && !$user->bypass_geofencing) {
             $campus = CampusLocation::findOrFail($request->campus_location_id);
             $distance = $this->haversineDistance(
                 $request->latitude, $request->longitude,
