@@ -259,9 +259,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/teaching-schedules/import/excel', [TeachingScheduleController::class, 'import'])->name('teaching-schedules.import');
     });
 
-    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum'])->group(function () {
-        // Persetujuan Cuti/Izin
+    // Halaman Lihat Persetujuan Cuti/Izin (Super Admin, Kepala Sekolah, Kurikulum, Absensi)
+    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi'])->group(function () {
         Route::get('/leave-requests/approval', [LeaveRequestController::class, 'approval'])->name('leave-requests.approval');
+    });
+
+    // Aksi Persetujuan Cuti/Izin (Excludes Absensi - Approver Only)
+    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum'])->group(function () {
         Route::post('/leave-requests/{leaveRequest}/approve', [LeaveRequestController::class, 'approve'])->name('leave-requests.approve');
         Route::post('/leave-requests/{leaveRequest}/reject', [LeaveRequestController::class, 'reject'])->name('leave-requests.reject');
         Route::delete('/leave-requests/admin/{leaveRequest}', [LeaveRequestController::class, 'destroyByAdmin'])->name('leave-requests.destroy-admin');
@@ -301,7 +305,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/user-authority/{user}', [UserAuthorityController::class, 'update'])->name('user-authority.update');
         Route::post('/user-authority/bulk-reset-password', [UserAuthorityController::class, 'bulkResetPassword'])->name('user-authority.bulk-reset-password');
 
-
+        // Backup & Restore System
+        Route::get('/settings/backup', [\App\Http\Controllers\BackupController::class, 'index'])->name('backups.index');
+        Route::post('/settings/backup/create', [\App\Http\Controllers\BackupController::class, 'create'])->name('backups.create');
+        Route::get('/settings/backup/download', [\App\Http\Controllers\BackupController::class, 'download'])->name('backups.download');
+        Route::delete('/settings/backup/destroy', [\App\Http\Controllers\BackupController::class, 'destroy'])->name('backups.destroy');
+        Route::post('/settings/backup/restore', [\App\Http\Controllers\BackupController::class, 'restoreDatabase'])->name('backups.restore-db');
+        Route::post('/settings/backup/upload-restore', [\App\Http\Controllers\BackupController::class, 'uploadRestore'])->name('backups.upload-restore');
     });
 });
 

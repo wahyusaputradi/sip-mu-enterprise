@@ -23,6 +23,7 @@ export const translations = {
         "menu.leave_approval": "Persetujuan Cuti",
         "menu.campus": "Lokasi Kampus",
         "menu.user_authority": "Otoritas User",
+        "menu.backup": "Backup System",
         "menu.settings": "Pengaturan",
 
         // Navbar & Layout Header

@@ -286,6 +286,91 @@ class BackupController extends Controller
     }
 
     /**
+     * Restore database dari file cadangan yang diunggah pengguna (.sql atau .zip).
+     */
+    public function uploadRestore(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|max:102400', // Maks 100MB
+        ], [
+            'file.required' => 'Berkas cadangan wajib diunggah.',
+            'file.max' => 'Ukuran berkas maksimal 100 MB.',
+        ]);
+
+        $uploadedFile = $request->file('file');
+        $extension = strtolower($uploadedFile->getClientOriginalExtension());
+
+        if (!in_array($extension, ['zip', 'sql'])) {
+            return back()->withErrors(['message' => 'Format berkas harus berupa .sql atau .zip']);
+        }
+
+        set_time_limit(600); // 10 menit
+
+        $tempPath = storage_path('app/temp_upload_restore');
+        if (!file_exists($tempPath)) {
+            mkdir($tempPath, 0755, true);
+        }
+
+        $sqlFilePath = null;
+
+        if ($extension === 'sql') {
+            $targetName = 'restore_' . time() . '.sql';
+            $uploadedFile->move($tempPath, $targetName);
+            $sqlFilePath = $tempPath . DIRECTORY_SEPARATOR . $targetName;
+        } else {
+            // Zip file
+            $zipName = 'restore_' . time() . '.zip';
+            $uploadedFile->move($tempPath, $zipName);
+            $zipPath = $tempPath . DIRECTORY_SEPARATOR . $zipName;
+
+            $zip = new \ZipArchive;
+            if ($zip->open($zipPath) !== true) {
+                $this->cleanTempDir($tempPath);
+                return back()->withErrors(['message' => 'Gagal membuka file arsip (.zip) yang diunggah.']);
+            }
+
+            $sqlFileNameInZip = null;
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $filename = $zip->getNameIndex($i);
+                if (preg_match('/\.sql$/i', $filename)) {
+                    $sqlFileNameInZip = $filename;
+                    break;
+                }
+            }
+
+            if (!$sqlFileNameInZip) {
+                $zip->close();
+                $this->cleanTempDir($tempPath);
+                return back()->withErrors(['message' => 'Tidak ditemukan file database (.sql) di dalam berkas zip ini.']);
+            }
+
+            $zip->extractTo($tempPath, $sqlFileNameInZip);
+            $zip->close();
+            @unlink($zipPath);
+
+            $sqlFilePath = $tempPath . DIRECTORY_SEPARATOR . $sqlFileNameInZip;
+        }
+
+        try {
+            $restored = $this->restoreViaCli($sqlFilePath);
+
+            if (!$restored) {
+                $sqlContent = file_get_contents($sqlFilePath);
+                if (strlen($sqlContent) > 50 * 1024 * 1024) {
+                    throw new \Exception('File SQL terlalu besar untuk di-restore via web. Gunakan mysql CLI secara manual.');
+                }
+                DB::unprepared($sqlContent);
+            }
+
+            $this->cleanTempDir($tempPath);
+            return back()->with('message', 'Database berhasil dipulihkan dari berkas yang diunggah.');
+        } catch (\Exception $e) {
+            $this->cleanTempDir($tempPath);
+            return back()->withErrors(['message' => 'Gagal memulihkan database: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
      * Nama disk backup dari konfigurasi.
      */
     private function getDiskName(): string

@@ -63,7 +63,8 @@ class LeaveRequestController extends Controller
      */
     public function approval()
     {
-        if (!$this->isApprover()) {
+        $user = Auth::user();
+        if (!$this->isApprover() && !$user->hasRole('Absensi')) {
             abort(403, 'Anda tidak memiliki akses ke halaman ini.');
         }
 
@@ -73,6 +74,7 @@ class LeaveRequestController extends Controller
 
         return Inertia::render('LeaveRequests/Approval', [
             'leaveRequests' => $leaveRequests,
+            'canApprove'    => $this->isApprover(),
         ]);
     }
 

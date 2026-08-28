@@ -31,6 +31,7 @@ import {
     GraduationCap,
     History,
     ShieldCheck,
+    DatabaseBackup,
     Sun,
     Moon,
     AlertCircle,
@@ -231,12 +232,13 @@ export default function AuthenticatedLayout({ header, children }) {
             { name: t('menu.photos'), route: 'monitoring.photos.index', icon: <Image className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: t('menu.schedules'), route: 'teaching-schedules.index', icon: <CalendarDays className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: t('menu.classes'), route: 'school-classes.index', icon: <School className="w-5 h-5" />, roles: ['Super Admin', 'Kurikulum'] },
-            { name: t('menu.leave_approval'), route: 'leave-requests.approval', icon: <ClipboardCheck className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum'] },
+            { name: t('menu.leave_approval'), route: 'leave-requests.approval', icon: <ClipboardCheck className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
         ]},
         // ═══ KONFIGURASI ═══
         { group: t('group.config'), items: [
             { name: t('menu.campus'), route: 'campus-locations.index', icon: <MapPin className="w-5 h-5" />, roles: ['Super Admin'] },
             { name: t('menu.user_authority'), route: 'user-authority.index', icon: <ShieldCheck className="w-5 h-5" />, roles: ['Super Admin'] },
+            { name: t('menu.backup'), route: 'backups.index', icon: <DatabaseBackup className="w-5 h-5" />, roles: ['Super Admin'] },
             { name: t('menu.settings'), route: 'settings.index', icon: <Settings className="w-5 h-5" />, roles: ['Super Admin'] },
         ]}
     ];
