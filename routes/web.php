@@ -75,6 +75,12 @@ Route::get('/sitemap.xml', function () {
         'https://sipmuenterprise.my.id/articles/panduan-presensi-geofencing-gps-sekolah-digital',
         'https://sipmuenterprise.my.id/articles/efisiensi-manajemen-jam-mengajar-jtm-guru-kejuruan',
         'https://sipmuenterprise.my.id/articles/integrasi-pwa-dan-aplikasi-mobile-presensi-sekolah',
+        'https://sipmuenterprise.my.id/articles/keamanan-data-dan-privasi-sistem-informasi-sekolah',
+        'https://sipmuenterprise.my.id/articles/otomatisasi-penggajian-dan-tunjangan-kinerja-guru',
+        'https://sipmuenterprise.my.id/articles/solusi-mengatasi-kendala-mesin-fingerprint-konvensional-sekolah',
+        'https://sipmuenterprise.my.id/articles/peran-kepala-sekolah-dalam-supervisi-kedisiplinan-guru-digital',
+        'https://sipmuenterprise.my.id/articles/tata-cara-pengajuan-cuti-online-dan-alokasi-guru-pengganti',
+        'https://sipmuenterprise.my.id/articles/transformasi-digital-smk-menuju-era-smart-campus-4-0',
     ];
 
     $xml = '<?xml version="1.0" encoding="UTF-8"?>';
