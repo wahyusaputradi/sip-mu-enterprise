@@ -103,6 +103,9 @@ export default function StudentMonitoring({ auth, students, stats, schoolClasses
                     </div>
 
                     <div className="flex items-center flex-wrap gap-3">
+                        <Button onClick={() => window.location.href = route('student-attendance.export-monthly-excel', { class_id: filterClass, month: new Date(filterDate).getMonth() + 1, year: new Date(filterDate).getFullYear() })} variant="outline" className="rounded-xl font-bold border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400">
+                            <FileSpreadsheet className="w-4 h-4 mr-2" /> Rekap Bulanan (.xlsx)
+                        </Button>
                         <Button onClick={() => router.visit(route('student-attendance.kiosk'))} className="rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-200 dark:shadow-none">
                             <QrCode className="w-4 h-4 mr-2" /> Open Kiosk Gate Scanner
                         </Button>

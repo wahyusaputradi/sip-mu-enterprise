@@ -307,4 +307,22 @@ class StudentAttendanceController extends Controller
 
         return back()->with('message', 'Status presensi siswa berhasil diperbarui.');
     }
+
+    /**
+     * Export Monthly Student Attendance Recap to Excel (.xlsx)
+     */
+    public function exportMonthlyExcel(Request $request)
+    {
+        $month = (int) $request->input('month', Carbon::now()->month);
+        $year = (int) $request->input('year', Carbon::now()->year);
+        $classId = $request->input('class_id');
+
+        $monthName = Carbon::create()->month($month)->translatedFormat('F');
+        $fileName = "Rekap_Presensi_Siswa_{$monthName}_{$year}.xlsx";
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\StudentMonthlyRecapExport($month, $year, $classId),
+            $fileName
+        );
+    }
 }
