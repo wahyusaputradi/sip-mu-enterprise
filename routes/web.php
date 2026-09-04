@@ -257,6 +257,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/student-attendance/scan-qr', [\App\Http\Controllers\StudentAttendanceController::class, 'scanQr'])->name('student-attendance.scan-qr');
         Route::post('/student-attendance/sync-offline', [\App\Http\Controllers\StudentAttendanceController::class, 'syncOffline'])->name('student-attendance.sync-offline');
         Route::get('/student-attendance/monitoring', [\App\Http\Controllers\StudentAttendanceController::class, 'monitoring'])->name('student-attendance.monitoring');
+        Route::get('/student-attendance/recap', [\App\Http\Controllers\StudentAttendanceController::class, 'recap'])->name('student-attendance.recap');
         Route::post('/student-attendance/update-status', [\App\Http\Controllers\StudentAttendanceController::class, 'updateStatus'])->name('student-attendance.update-status');
         Route::get('/student-attendance/export/monthly-excel', [\App\Http\Controllers\StudentAttendanceController::class, 'exportMonthlyExcel'])->name('student-attendance.export-monthly-excel');
 

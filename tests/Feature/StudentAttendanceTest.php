@@ -165,4 +165,27 @@ class StudentAttendanceTest extends TestCase
             'notes' => 'Surat Keterangan Dokter Puskesmas',
         ]);
     }
+
+    public function test_can_view_student_attendance_monthly_recap_page()
+    {
+        $admin = $this->createAdmin();
+        $schoolClass = SchoolClass::create(['name' => 'X TJKT 1']);
+        $student = Student::create([
+            'nis' => '2026005',
+            'name' => 'Eka Putra',
+            'gender' => 'Laki-laki',
+            'school_class_id' => $schoolClass->id,
+            'qr_token' => 'SIPMU-STD-2026005-HASH999',
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get(route('student-attendance.recap', [
+                'month' => Carbon::now()->month,
+                'year' => Carbon::now()->year,
+                'class_id' => $schoolClass->id,
+            ]));
+
+        $response->assertStatus(200);
+    }
 }

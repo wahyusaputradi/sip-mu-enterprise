@@ -1,9 +1,10 @@
 export const translations = {
     id: {
         // Sidebar Groups
-        "group.personal": "Area Pribadi",
-        "group.management": "Manajemen",
-        "group.config": "Konfigurasi",
+        "group.personal": "Area Utama & Self-Service",
+        "group.employees": "Presensi & Kepegawaian",
+        "group.students": "Presensi & Kesiswaan",
+        "group.config": "Konfigurasi & Master Data",
 
         // Sidebar Menu Items
         "menu.dashboard": "Dashboard",
@@ -15,8 +16,8 @@ export const translations = {
         "menu.inval": "Bursa Inval",
         "menu.employees": "Data Pegawai",
         "menu.positions": "Jabatan",
-        "menu.monitoring": "Monitoring",
-        "menu.attendance_recap": "Rekap Presensi",
+        "menu.monitoring": "Monitoring Pegawai",
+        "menu.attendance_recap": "Rekap Presensi Pegawai",
         "menu.photos": "Foto Presensi",
         "menu.schedules": "Jadwal Mengajar",
         "menu.classes": "Data Kelas",
@@ -24,6 +25,11 @@ export const translations = {
         "menu.campus": "Lokasi Kampus",
         "menu.student_attendance": "Presensi Siswa",
         "menu.students": "Data Siswa",
+        "menu.student_monitoring": "Monitoring Harian Siswa",
+        "menu.student_recap": "Rekap Bulanan Siswa",
+        "menu.student_kiosk": "Kiosk Gate Scanner",
+        "menu.student_cards": "Cetak Kartu QR Code",
+        "menu.school_classes": "Data Kelas & Rombel",
         "menu.user_authority": "Otoritas User",
         "menu.backup": "Backup System",
         "menu.settings": "Pengaturan",
@@ -285,9 +291,10 @@ export const translations = {
     },
     en: {
         // Sidebar Groups
-        "group.personal": "Personal Area",
-        "group.management": "Management",
-        "group.config": "Configuration",
+        "group.personal": "Main & Self-Service Area",
+        "group.employees": "Employee Attendance & HR",
+        "group.students": "Student Attendance & Affairs",
+        "group.config": "Configuration & Master Data",
 
         // Sidebar Menu Items
         "menu.dashboard": "Dashboard",
@@ -299,13 +306,19 @@ export const translations = {
         "menu.inval": "Inval Exchange",
         "menu.employees": "Employee Data",
         "menu.positions": "Job Positions",
-        "menu.monitoring": "Monitoring",
-        "menu.attendance_recap": "Attendance Recap",
+        "menu.monitoring": "Employee Monitoring",
+        "menu.attendance_recap": "Employee Recap",
         "menu.photos": "Attendance Photos",
         "menu.schedules": "Teaching Schedule",
         "menu.classes": "Class Data",
         "menu.leave_approval": "Leave Approval",
         "menu.campus": "Campus Locations",
+        "menu.students": "Student Data",
+        "menu.student_monitoring": "Daily Student Monitoring",
+        "menu.student_recap": "Monthly Student Recap",
+        "menu.student_kiosk": "Kiosk Gate Scanner",
+        "menu.student_cards": "Print QR Cards",
+        "menu.school_classes": "Classes & Study Groups",
         "menu.user_authority": "User Roles & Permissions",
         "menu.settings": "System Settings",
 

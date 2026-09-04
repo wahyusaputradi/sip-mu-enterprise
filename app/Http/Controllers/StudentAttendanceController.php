@@ -309,6 +309,82 @@ class StudentAttendanceController extends Controller
     }
 
     /**
+     * Dedicated Monthly Student Attendance Recap Page
+     */
+    public function recap(Request $request)
+    {
+        $month = (int) $request->input('month', Carbon::now()->month);
+        $year = (int) $request->input('year', Carbon::now()->year);
+        $classId = $request->input('class_id');
+        $search = $request->input('search');
+
+        $daysInMonth = Carbon::createFromDate($year, $month, 1)->daysInMonth;
+
+        $studentsQuery = Student::with(['schoolClass', 'attendances' => function ($q) use ($year, $month) {
+            $q->whereYear('date', $year)->whereMonth('date', $month);
+        }])
+        ->where('status', 'active')
+        ->when($classId, fn($q, $c) => $q->where('school_class_id', $c))
+        ->when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%")->orWhere('nis', 'like', "%{$s}%"));
+
+        $students = $studentsQuery->orderBy('name')->get();
+
+        $matrix = $students->map(function ($student) use ($daysInMonth) {
+            $attMap = $student->attendances->keyBy(function ($item) {
+                return (int) Carbon::parse($item->date)->format('j');
+            });
+
+            $daily = [];
+            $present = 0;
+            $late = 0;
+            $sick = 0;
+            $permit = 0;
+            $alpha = 0;
+
+            for ($d = 1; $d <= $daysInMonth; $d++) {
+                $status = $attMap->has($d) ? $attMap[$d]->check_in_status : null;
+                $daily[$d] = $status;
+
+                if ($status === 'present') $present++;
+                elseif ($status === 'late') $late++;
+                elseif ($status === 'sick') $sick++;
+                elseif ($status === 'permit') $permit++;
+                elseif ($status === 'alpha') $alpha++;
+            }
+
+            return [
+                'id' => $student->id,
+                'nis' => $student->nis,
+                'name' => $student->name,
+                'class_name' => $student->schoolClass?->name ?? '-',
+                'daily' => $daily,
+                'stats' => [
+                    'present' => $present,
+                    'late' => $late,
+                    'sick' => $sick,
+                    'permit' => $permit,
+                    'alpha' => $alpha,
+                    'total_recorded' => $present + $late + $sick + $permit + $alpha,
+                ],
+            ];
+        });
+
+        $schoolClasses = SchoolClass::orderBy('name')->get(['id', 'name']);
+
+        return Inertia::render('StudentAttendance/Recap', [
+            'matrix' => $matrix,
+            'daysInMonth' => $daysInMonth,
+            'schoolClasses' => $schoolClasses,
+            'filters' => [
+                'month' => $month,
+                'year' => $year,
+                'class_id' => $classId,
+                'search' => $search,
+            ],
+        ]);
+    }
+
+    /**
      * Export Monthly Student Attendance Recap to Excel (.xlsx)
      */
     public function exportMonthlyExcel(Request $request)

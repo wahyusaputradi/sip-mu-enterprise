@@ -36,7 +36,9 @@ import {
     Moon,
     AlertCircle,
     Image,
-    QrCode
+    QrCode,
+    Printer,
+    FileSpreadsheet
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -214,7 +216,7 @@ export default function AuthenticatedLayout({ header, children }) {
     }, [flash, errors]);
 
     const menuItems = [
-        // ═══ AREA PRIBADI ═══
+        // ═══ AREA UTAMA & SELF-SERVICE ═══
         { group: t('group.personal'), items: [
             { name: t('menu.dashboard'), route: 'dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
             { name: t('menu.presensi'), route: 'attendance.presensi', icon: <MapPin className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
@@ -224,21 +226,27 @@ export default function AuthenticatedLayout({ header, children }) {
             { name: t('menu.leave_request'), route: 'leave-requests.index', icon: <FilePlus className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
             { name: t('menu.inval'), route: 'invals.index', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
         ]},
-        // ═══ AREA MANAJEMEN ═══
-        { group: t('group.management'), items: [
-            { name: t('menu.employees'), route: 'employees.index', icon: <Users className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Bendahara'] },
-            { name: t('menu.positions'), route: 'positions.index', icon: <ClipboardList className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Bendahara'] },
+        // ═══ PRESENSI & KEPEGAWAIAN ═══
+        { group: t('group.employees'), items: [
             { name: t('menu.monitoring'), route: 'monitoring.attendance', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: t('menu.attendance_recap'), route: 'attendance.recap', icon: <ClipboardList className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: t('menu.photos'), route: 'monitoring.photos.index', icon: <Image className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
-            { name: t('menu.student_attendance'), route: 'student-attendance.monitoring', icon: <QrCode className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
-            { name: t('menu.students'), route: 'students.index', icon: <GraduationCap className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: t('menu.schedules'), route: 'teaching-schedules.index', icon: <CalendarDays className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
-            { name: t('menu.classes'), route: 'school-classes.index', icon: <School className="w-5 h-5" />, roles: ['Super Admin', 'Kurikulum'] },
             { name: t('menu.leave_approval'), route: 'leave-requests.approval', icon: <ClipboardCheck className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
         ]},
-        // ═══ KONFIGURASI ═══
+        // ═══ PRESENSI & KESISWAAN (SMK) ═══
+        { group: t('group.students'), items: [
+            { name: t('menu.students'), route: 'students.index', icon: <GraduationCap className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: t('menu.school_classes'), route: 'school-classes.index', icon: <School className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: t('menu.student_monitoring'), route: 'student-attendance.monitoring', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: t('menu.student_recap'), route: 'student-attendance.recap', icon: <FileSpreadsheet className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: t('menu.student_kiosk'), route: 'student-attendance.kiosk', icon: <QrCode className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: t('menu.student_cards'), route: 'students.cards', icon: <Printer className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+        ]},
+        // ═══ KONFIGURASI & MASTER DATA ═══
         { group: t('group.config'), items: [
+            { name: t('menu.employees'), route: 'employees.index', icon: <Users className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Bendahara'] },
+            { name: t('menu.positions'), route: 'positions.index', icon: <ClipboardList className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Bendahara'] },
             { name: t('menu.campus'), route: 'campus-locations.index', icon: <MapPin className="w-5 h-5" />, roles: ['Super Admin'] },
             { name: t('menu.user_authority'), route: 'user-authority.index', icon: <ShieldCheck className="w-5 h-5" />, roles: ['Super Admin'] },
             { name: t('menu.backup'), route: 'backups.index', icon: <DatabaseBackup className="w-5 h-5" />, roles: ['Super Admin'] },
