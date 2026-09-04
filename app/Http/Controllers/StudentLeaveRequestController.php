@@ -86,18 +86,18 @@ class StudentLeaveRequestController extends Controller
             $students = Student::where('status', 'active')
                 ->with('schoolClass:id,name')
                 ->orderBy('name')
-                ->get(['id', 'nis', 'name', 'class_id', 'parent_phone']);
+                ->get(['id', 'nis', 'name', 'school_class_id', 'parent_phone']);
         } else {
-            $students = Student::whereIn('class_id', $teacherClassIds)
+            $students = Student::whereIn('school_class_id', $teacherClassIds)
                 ->where('status', 'active')
                 ->with('schoolClass:id,name')
                 ->orderBy('name')
-                ->get(['id', 'nis', 'name', 'class_id', 'parent_phone']);
+                ->get(['id', 'nis', 'name', 'school_class_id', 'parent_phone']);
         }
 
         // Main Query
         $query = StudentLeaveRequest::with([
-            'student:id,nis,name,class_id,parent_phone',
+            'student:id,nis,name,school_class_id,parent_phone',
             'student.schoolClass:id,name',
             'class:id,name',
             'approver:id,name'

@@ -314,7 +314,7 @@ export default function Index({ leaveRequests, classes = [], students = [], stat
                                                                     <span>NIS: {item.student?.nis || '-'}</span>
                                                                     <span>•</span>
                                                                     <span className="font-semibold text-slate-700 dark:text-slate-300">
-                                                                        {item.class?.name || item.student?.school_class?.name || '-'}
+                                                                        {item.class?.name || item.student?.schoolClass?.name || item.student?.school_class?.name || '-'}
                                                                     </span>
                                                                 </div>
                                                             </div>
@@ -591,7 +591,7 @@ export default function Index({ leaveRequests, classes = [], students = [], stat
                                 <SelectContent className="max-h-60">
                                     {students.map((s) => (
                                         <SelectItem key={s.id} value={String(s.id)}>
-                                            {s.name} ({s.nis}) - Kelas {s.school_class?.name || '-'}
+                                            {s.name} ({s.nis}) - Kelas {s.schoolClass?.name || s.school_class?.name || '-'}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
