@@ -68,32 +68,44 @@ class StudentsImport implements ToCollection, WithHeadingRow
                 }
             }
 
-            $existing = Student::where('nis', $nis)->first();
+            try {
+                $existing = Student::where('nis', $nis)
+                    ->when(!empty($nisn), fn($q) => $q->orWhere('nisn', $nisn))
+                    ->first();
 
-            if ($existing) {
-                $existing->update([
-                    'nisn' => $nisn ?: $existing->nisn,
-                    'name' => $name,
-                    'gender' => $gender,
-                    'school_class_id' => $classId ?: $existing->school_class_id,
-                    'parent_name' => $parentName ?: $existing->parent_name,
-                    'parent_phone' => $parentPhone ?: $existing->parent_phone,
-                    'status' => $status,
-                ]);
-                $this->updatedCount++;
-            } else {
-                Student::create([
-                    'nis' => $nis,
-                    'nisn' => $nisn ?: null,
-                    'name' => $name,
-                    'gender' => $gender,
-                    'school_class_id' => $classId,
-                    'parent_name' => $parentName ?: null,
-                    'parent_phone' => $parentPhone ?: null,
-                    'qr_token' => Student::generateQrToken($nis),
-                    'status' => $status,
-                ]);
-                $this->successCount++;
+                if ($existing) {
+                    $existing->update([
+                        'nis' => $nis,
+                        'nisn' => $nisn ?: $existing->nisn,
+                        'name' => $name,
+                        'gender' => $gender,
+                        'school_class_id' => $classId ?: $existing->school_class_id,
+                        'parent_name' => $parentName ?: $existing->parent_name,
+                        'parent_phone' => $parentPhone ?: $existing->parent_phone,
+                        'status' => $status,
+                    ]);
+                    $this->updatedCount++;
+                } else {
+                    Student::create([
+                        'nis' => $nis,
+                        'nisn' => $nisn ?: null,
+                        'name' => $name,
+                        'gender' => $gender,
+                        'school_class_id' => $classId,
+                        'parent_name' => $parentName ?: null,
+                        'parent_phone' => $parentPhone ?: null,
+                        'qr_token' => Student::generateQrToken($nis),
+                        'status' => $status,
+                    ]);
+                    $this->successCount++;
+                }
+            } catch (\Throwable $e) {
+                $this->skippedCount++;
+                if (str_contains($e->getMessage(), 'Duplicate entry')) {
+                    $this->errors[] = "Baris {$rowNum} ({$name}): NIS '{$nis}' atau NISN '{$nisn}' sudah terdaftar pada siswa lain.";
+                } else {
+                    $this->errors[] = "Baris {$rowNum} ({$name}): Gagal diproses. Detail: " . $e->getMessage();
+                }
             }
         }
     }

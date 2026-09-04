@@ -188,4 +188,38 @@ class StudentAttendanceTest extends TestCase
 
         $response->assertStatus(200);
     }
+
+    public function test_import_students_handles_existing_nisn_gracefully()
+    {
+        $schoolClass = SchoolClass::create(['name' => 'X TJKT 1']);
+        $student = Student::create([
+            'nis' => '262710306',
+            'nisn' => '0109562748',
+            'name' => 'Alya Soraya',
+            'gender' => 'Perempuan',
+            'school_class_id' => $schoolClass->id,
+            'qr_token' => 'SIPMU-STD-262710306-HASH123',
+            'status' => 'active',
+        ]);
+
+        $import = new \App\Imports\StudentsImport();
+        $rows = collect([
+            [
+                'nis' => '262710306',
+                'nisn' => '0109562748',
+                'nama_lengkap' => 'Alya Soraya Updated',
+                'jenis_kelamin' => 'Perempuan',
+                'nama_kelas' => 'X TJKT 1',
+                'status' => 'active',
+            ]
+        ]);
+
+        $import->collection($rows);
+
+        $this->assertEquals(1, $import->updatedCount);
+        $this->assertDatabaseHas('students', [
+            'nis' => '262710306',
+            'name' => 'Alya Soraya Updated',
+        ]);
+    }
 }
