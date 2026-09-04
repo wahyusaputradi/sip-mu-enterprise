@@ -270,6 +270,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/students/download-template', [\App\Http\Controllers\StudentController::class, 'downloadTemplate'])->name('students.download-template');
         Route::post('/students/import/excel', [\App\Http\Controllers\StudentController::class, 'import'])->name('students.import');
         Route::get('/students/cards', [\App\Http\Controllers\StudentController::class, 'cards'])->name('students.cards');
+    });
+
+    // Persetujuan Izin/Sakit Siswa (Accessible by Admins and Homeroom Teachers/Guru)
+    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi|Guru'])->group(function () {
+        Route::get('/student-leave-requests', [\App\Http\Controllers\StudentLeaveRequestController::class, 'index'])->name('student-leave-requests.index');
+        Route::post('/student-leave-requests', [\App\Http\Controllers\StudentLeaveRequestController::class, 'store'])->name('student-leave-requests.store');
+        Route::post('/student-leave-requests/{id}/approve', [\App\Http\Controllers\StudentLeaveRequestController::class, 'approve'])->name('student-leave-requests.approve');
+        Route::post('/student-leave-requests/{id}/reject', [\App\Http\Controllers\StudentLeaveRequestController::class, 'reject'])->name('student-leave-requests.reject');
+        Route::delete('/student-leave-requests/{id}', [\App\Http\Controllers\StudentLeaveRequestController::class, 'destroy'])->name('student-leave-requests.destroy');
+    });
+
+    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi'])->group(function () {
 
         Route::get('/school-classes', [\App\Http\Controllers\SchoolClassController::class, 'index'])->name('school-classes.index');
         Route::post('/school-classes', [\App\Http\Controllers\SchoolClassController::class, 'store'])->name('school-classes.store');

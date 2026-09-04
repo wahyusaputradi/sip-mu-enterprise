@@ -51,4 +51,46 @@ class WhatsAppNotificationService
             return false;
         }
     }
+
+    public static function sendStudentLeaveNotification($student, $leaveRequest, $statusStr)
+    {
+        try {
+            $enabled = SystemSetting::where('key', 'wa_notification_enabled')->value('value');
+            if ($enabled !== 'true' && $enabled !== '1') {
+                return false;
+            }
+
+            $gatewayUrl = SystemSetting::where('key', 'wa_gateway_url')->value('value');
+            $apiKey = SystemSetting::where('key', 'wa_gateway_api_key')->value('value');
+
+            if (empty($gatewayUrl) || empty($student->parent_phone)) {
+                return false;
+            }
+
+            $phone = preg_replace('/[^0-9]/', '', $student->parent_phone);
+            if (str_starts_with($phone, '08')) {
+                $phone = '628' . substr($phone, 2);
+            }
+
+            $className = $student->schoolClass?->name ?? 'SMK';
+            $typeStr = $leaveRequest->type === 'sick' ? 'SAKIT' : 'IZIN';
+            $startDate = \Carbon\Carbon::parse($leaveRequest->start_date)->translatedFormat('d M Y');
+            $endDate = \Carbon\Carbon::parse($leaveRequest->end_date)->translatedFormat('d M Y');
+
+            $message = "Assalamu'alaikum Bpk/Ibu, permohonan *{$typeStr}* ananda *{$student->name}* ({$className}) tanggal {$startDate} s/d {$endDate} telah *{$statusStr}* oleh Wali Kelas.\nCatatan: " . ($leaveRequest->notes ?? '-');
+
+            Http::timeout(5)->withHeaders([
+                'Authorization' => $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($gatewayUrl, [
+                'target' => $phone,
+                'message' => $message,
+            ]);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('WhatsApp Leave Notification Error: ' . $e->getMessage());
+            return false;
+        }
+    }
 }
