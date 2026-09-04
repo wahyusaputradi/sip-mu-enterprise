@@ -339,9 +339,9 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                             </div>
                         </div>
 
-                        <DialogFooter className="gap-2">
-                            <Button type="button" variant="outline" onClick={() => setIsImportModalOpen(false)} className="rounded-xl font-bold w-full">Batal</Button>
-                            <Button type="submit" disabled={importForm.processing || !importForm.data.file} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full">
+                        <DialogFooter className="gap-3 pt-4">
+                            <Button type="button" variant="outline" onClick={() => setIsImportModalOpen(false)} className="rounded-xl font-bold w-full sm:w-auto h-11 px-6">Batal</Button>
+                            <Button type="submit" disabled={importForm.processing || !importForm.data.file} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto h-11 px-6 shadow-lg shadow-indigo-600/20">
                                 <Upload className="w-4 h-4 mr-2" />
                                 {importForm.processing ? 'Memproses Import...' : 'Unggah & Import'}
                             </Button>
@@ -414,9 +414,9 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                             </div>
                         </div>
 
-                        <DialogFooter className="gap-2">
-                            <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="rounded-xl font-bold w-full">Batal</Button>
-                            <Button type="submit" disabled={processing} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full">Simpan Siswa</Button>
+                        <DialogFooter className="gap-3 pt-4">
+                            <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="rounded-xl font-bold w-full sm:w-auto h-11 px-6">Batal</Button>
+                            <Button type="submit" disabled={processing} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto h-11 px-6 shadow-lg shadow-indigo-600/20">Simpan Siswa</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -496,9 +496,9 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                             </div>
                         </div>
 
-                        <DialogFooter className="gap-2">
-                            <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="rounded-xl font-bold w-full">Batal</Button>
-                            <Button type="submit" disabled={processing} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full">Perbarui Data</Button>
+                        <DialogFooter className="gap-3 pt-4">
+                            <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="rounded-xl font-bold w-full sm:w-auto h-11 px-6">Batal</Button>
+                            <Button type="submit" disabled={processing} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto h-11 px-6 shadow-lg shadow-indigo-600/20">Perbarui Data</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>

@@ -193,9 +193,9 @@ export default function SchoolClassesIndex({ auth, classes, teachers }) {
                             </div>
                         </div>
 
-                        <DialogFooter className="gap-2">
-                            <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="rounded-xl font-bold w-full">Batal</Button>
-                            <Button type="submit" disabled={processing} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full">Simpan Kelas</Button>
+                        <DialogFooter className="gap-3 pt-4">
+                            <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="rounded-xl font-bold w-full sm:w-auto h-11 px-6">Batal</Button>
+                            <Button type="submit" disabled={processing} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto h-11 px-6 shadow-lg shadow-indigo-600/20">Simpan Kelas</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -248,9 +248,9 @@ export default function SchoolClassesIndex({ auth, classes, teachers }) {
                             </div>
                         </div>
 
-                        <DialogFooter className="gap-2">
-                            <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="rounded-xl font-bold w-full">Batal</Button>
-                            <Button type="submit" disabled={processing} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full">Perbarui Kelas</Button>
+                        <DialogFooter className="gap-3 pt-4">
+                            <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="rounded-xl font-bold w-full sm:w-auto h-11 px-6">Batal</Button>
+                            <Button type="submit" disabled={processing} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto h-11 px-6 shadow-lg shadow-indigo-600/20">Perbarui Kelas</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
