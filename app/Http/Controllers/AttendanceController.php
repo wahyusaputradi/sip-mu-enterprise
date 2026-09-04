@@ -729,6 +729,7 @@ class AttendanceController extends Controller
                         'class_name' => $unlock->teachingSchedule->schoolClass->name ?? '-',
                     ] : null,
                     'reason' => $unlock->reason,
+                    'is_lateness_violation' => (bool)$unlock->is_lateness_violation,
                     'used' => $unlock->used,
                     'unlocked_by_name' => $unlock->unlockedByUser->name ?? 'System',
                     'created_at' => $unlock->created_at->format('H:i'),
