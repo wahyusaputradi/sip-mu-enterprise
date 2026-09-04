@@ -130,13 +130,21 @@ export default function StudentCards({ auth, students, schoolClasses, filters })
                                         </div>
                                     </div>
 
-                                    {/* Encrypted QR Code Render */}
+                                    {/* Encrypted QR Code Render with School Logo Center */}
                                     <div className="bg-white p-2.5 rounded-2xl shadow-lg border border-indigo-400/50 shrink-0">
                                         <QRCodeSVG
                                             value={student.qr_token || student.nis}
                                             size={90}
                                             level="H"
                                             includeMargin={false}
+                                            imageSettings={{
+                                                src: "/images/logo.png",
+                                                x: undefined,
+                                                y: undefined,
+                                                height: 22,
+                                                width: 22,
+                                                excavate: true,
+                                            }}
                                         />
                                     </div>
                                 </div>
