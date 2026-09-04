@@ -1,34 +1,102 @@
 import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, router } from '@inertiajs/react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Shield, Search, Lock, UserCheck, KeyRound, ShieldAlert, ArrowRight, Save, Trash2, ShieldCheck, Mail, CheckCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+    ShieldCheck, 
+    Search, 
+    Lock, 
+    UserCheck, 
+    KeyRound, 
+    ShieldAlert, 
+    Save, 
+    Users, 
+    GraduationCap, 
+    QrCode, 
+    RefreshCw, 
+    Phone, 
+    CheckCircle2, 
+    XCircle, 
+    Filter, 
+    UserX,
+    Building2,
+    Shield
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function UserAuthorityIndex({ users, roles, filters, auth }) {
+export default function UserAuthorityIndex({ 
+    users = { data: [] }, 
+    roles = [], 
+    employeeStats = {}, 
+    students = { data: [] }, 
+    studentStats = {}, 
+    classes = [], 
+    activeTab: initialTab = 'employees', 
+    filters = {} 
+}) {
+    const [activeTab, setActiveTab] = useState(initialTab || 'employees');
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
+    const [selectedClass, setSelectedClass] = useState(filters.class_id || 'all');
+    const [selectedStudentStatus, setSelectedStudentStatus] = useState(filters.status || 'all');
+
+    // Modals Employee
     const [selectedUser, setSelectedUser] = useState(null);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isBulkResetModalOpen, setIsBulkResetModalOpen] = useState(false);
+    const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+    const [isBulkResetPasswordModalOpen, setIsBulkResetPasswordModalOpen] = useState(false);
     const [selectedUsersForBulk, setSelectedUsersForBulk] = useState([]);
-    
-    // Timer for debounced search
+
+    // Modals Student
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false);
+    const [isBulkRegenerateQrModalOpen, setIsBulkRegenerateQrModalOpen] = useState(false);
+    const [isBulkStudentStatusModalOpen, setIsBulkStudentStatusModalOpen] = useState(false);
+    const [selectedStudentsForBulk, setSelectedStudentsForBulk] = useState([]);
+    const [bulkTargetStatus, setBulkTargetStatus] = useState('active');
+
+    // Debounced search & filter handler
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (searchTerm !== (filters.search || '')) {
-                router.get(route('user-authority.index'), { search: searchTerm }, { preserveState: true, replace: true });
+            if (
+                searchTerm !== (filters.search || '') || 
+                selectedClass !== (filters.class_id || 'all') || 
+                selectedStudentStatus !== (filters.status || 'all')
+            ) {
+                router.get(
+                    route('user-authority.index'), 
+                    { 
+                        tab: activeTab,
+                        search: searchTerm || undefined, 
+                        class_id: selectedClass !== 'all' ? selectedClass : undefined,
+                        status: selectedStudentStatus !== 'all' ? selectedStudentStatus : undefined,
+                    }, 
+                    { preserveState: true, replace: true }
+                );
             }
-        }, 500);
+        }, 400);
         return () => clearTimeout(timer);
-    }, [searchTerm, filters.search]);
+    }, [searchTerm, selectedClass, selectedStudentStatus, activeTab]);
 
-    const { data, setData, put, processing, errors, reset, clearErrors } = useForm({
+    // Handle Tab Switch
+    const handleTabChange = (tabName) => {
+        setActiveTab(tabName);
+        setSelectedUsersForBulk([]);
+        setSelectedStudentsForBulk([]);
+        router.get(
+            route('user-authority.index'),
+            { tab: tabName },
+            { preserveState: true, replace: true }
+        );
+    };
+
+    // Employee Form
+    const userForm = useForm({
         email: '',
         password: '',
         roles: [],
@@ -36,49 +104,42 @@ export default function UserAuthorityIndex({ users, roles, filters, auth }) {
         bypass_geofencing: false,
     });
 
-    const openEditModal = (user) => {
+    const openEditUserModal = (user) => {
         setSelectedUser(user);
-        setData({
+        userForm.setData({
             email: user.email,
             password: '',
             roles: user.roles || [],
             bypass_liveness: !!user.bypass_liveness,
             bypass_geofencing: !!user.bypass_geofencing,
         });
-        clearErrors();
-        setIsEditModalOpen(true);
+        userForm.clearErrors();
+        setIsEditUserModalOpen(true);
     };
 
-    const closeEditModal = () => {
-        setIsEditModalOpen(false);
-        setTimeout(() => {
-            setSelectedUser(null);
-            reset();
-        }, 300);
-    };
-
-    const toggleRole = (roleName) => {
-        const newRoles = data.roles.includes(roleName)
-            ? data.roles.filter(r => r !== roleName)
-            : [...data.roles, roleName];
-        setData('roles', newRoles);
-    };
-
-    const submitEdit = (e) => {
+    const submitUserEdit = (e) => {
         e.preventDefault();
-        put(route('user-authority.update', selectedUser.id), {
+        userForm.put(route('user-authority.update', selectedUser.id), {
             preserveScroll: true,
-            onSuccess: () => closeEditModal(),
+            onSuccess: () => setIsEditUserModalOpen(false),
         });
     };
 
-    const toggleBulkSelect = (userId) => {
+    const toggleUserRole = (roleName) => {
+        const currentRoles = userForm.data.roles;
+        const newRoles = currentRoles.includes(roleName)
+            ? currentRoles.filter(r => r !== roleName)
+            : [...currentRoles, roleName];
+        userForm.setData('roles', newRoles);
+    };
+
+    const toggleBulkUserSelect = (userId) => {
         setSelectedUsersForBulk(prev => 
             prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
         );
     };
 
-    const toggleSelectAll = () => {
+    const toggleSelectAllUsers = () => {
         if (selectedUsersForBulk.length === users.data.length) {
             setSelectedUsersForBulk([]);
         } else {
@@ -86,30 +147,97 @@ export default function UserAuthorityIndex({ users, roles, filters, auth }) {
         }
     };
 
-    const confirmBulkReset = () => {
+    const confirmBulkResetPassword = () => {
         router.post(route('user-authority.bulk-reset-password'), { user_ids: selectedUsersForBulk }, {
+            preserveScroll: true,
             onSuccess: () => {
                 setSelectedUsersForBulk([]);
-                setIsBulkResetModalOpen(false);
-            },
-            preserveScroll: true
+                setIsBulkResetPasswordModalOpen(false);
+            }
         });
     };
 
-    const getInitials = (name) => {
-        if (!name) return 'U';
-        return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    // Student Form
+    const studentForm = useForm({
+        status: 'active',
+        parent_phone: '',
+        regenerate_qr: false,
+    });
+
+    const openEditStudentModal = (student) => {
+        setSelectedStudent(student);
+        studentForm.setData({
+            status: student.status || 'active',
+            parent_phone: student.parent_phone || '',
+            regenerate_qr: false,
+        });
+        studentForm.clearErrors();
+        setIsEditStudentModalOpen(true);
     };
 
-    // Role description maps
+    const submitStudentEdit = (e) => {
+        e.preventDefault();
+        studentForm.put(route('user-authority.students.update', selectedStudent.id), {
+            preserveScroll: true,
+            onSuccess: () => setIsEditStudentModalOpen(false),
+        });
+    };
+
+    const handleSingleRegenerateQr = (student) => {
+        if (confirm(`Apakah Anda yakin ingin me-regenerate QR Token baru untuk ${student.name}? Token lama tidak akan bisa digunakan lagi.`)) {
+            router.put(route('user-authority.students.update', student.id), {
+                status: student.status,
+                parent_phone: student.parent_phone,
+                regenerate_qr: true,
+            }, { preserveScroll: true });
+        }
+    };
+
+    const toggleBulkStudentSelect = (studentId) => {
+        setSelectedStudentsForBulk(prev =>
+            prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
+        );
+    };
+
+    const toggleSelectAllStudents = () => {
+        if (selectedStudentsForBulk.length === students.data.length) {
+            setSelectedStudentsForBulk([]);
+        } else {
+            setSelectedStudentsForBulk(students.data.map(s => s.id));
+        }
+    };
+
+    const confirmBulkRegenerateQr = () => {
+        router.post(route('user-authority.students.bulk-regenerate-qr'), { student_ids: selectedStudentsForBulk }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSelectedStudentsForBulk([]);
+                setIsBulkRegenerateQrModalOpen(false);
+            }
+        });
+    };
+
+    const confirmBulkUpdateStudentStatus = () => {
+        router.post(route('user-authority.students.bulk-update-status'), { 
+            student_ids: selectedStudentsForBulk,
+            status: bulkTargetStatus 
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSelectedStudentsForBulk([]);
+                setIsBulkStudentStatusModalOpen(false);
+            }
+        });
+    };
+
     const roleDescriptions = {
-        'Super Admin': { mgmt: 'Memberikan akses penuh tanpa batas ke seluruh fitur sistem.', personal: '(Pengecualian Presensi)' },
-        'Bendahara': { mgmt: 'Memberikan akses ke fitur data pegawai dan jabatan.', personal: 'Data profil, presensi harian, pengajuan izin, rekap presensi' },
-        'Absensi': { mgmt: 'Memberikan akses untuk mengelola data kehadiran/edit dan rekap absensi.', personal: 'Data profil, presensi harian, pengajuan izin, rekap presensi' },
-        'Kepala Sekolah': { mgmt: 'Memberikan akses untuk monitoring laporan dan evaluasi kinerja.', personal: 'Data profil, presensi harian, pengajuan izin, rekap presensi' },
-        'Kurikulum': { mgmt: 'Memberikan akses untuk mengelola SDM, jadwal, dan struktur jabatan.', personal: 'Data profil, presensi harian, pengajuan izin, rekap presensi' },
-        'Guru': { mgmt: '(Hanya Area Pribadi)', personal: 'Dashboard, data profil, presensi harian, pengajuan izin, rekap presensi' },
-        'Karyawan': { mgmt: '(Hanya Area Pribadi)', personal: 'Dashboard, data profil, presensi harian, pengajuan izin, rekap presensi' },
+        'Super Admin': 'Akses penuh tanpa batas ke seluruh fitur sistem.',
+        'Kepala Sekolah': 'Monitoring laporan, presensi, evaluasi kinerja sekolah.',
+        'Kurikulum': 'Pengelolaan SDM, data kelas, jadwal mengajar & presensi siswa.',
+        'Bendahara': 'Pengelolaan data pegawai, jabatan, dan struktur kepegawaian.',
+        'Absensi': 'Monitoring presensi pegawai & verifikasi foto kehadiran.',
+        'Guru': 'Presensi harian, jadwal mengajar, persetujuan izin/sakit siswa.',
+        'Karyawan': 'Presensi harian, data profil pribadi, dan rekap absensi.',
     };
 
     return (
@@ -118,446 +246,805 @@ export default function UserAuthorityIndex({ users, roles, filters, auth }) {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div>
                         <div className="flex items-center space-x-2 mb-2">
-                            <span className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-widest flex items-center shadow-sm">
-                                <ShieldCheck className="w-3 h-3 mr-1.5" />
-                                Access Control
+                            <span className="px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-300 text-[10px] font-black uppercase tracking-widest flex items-center shadow-sm">
+                                <ShieldCheck className="w-3 h-3 mr-1.5" /> Access Control & Credentials
                             </span>
                         </div>
-                        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                            Otoritas <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">User</span>
+                        <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                            Otoritas <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-sky-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">User & Kredensial</span>
                         </h2>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            Pusat tata kelola peran pegawai serta manajemen kredensial & akses presensi siswa-siswi.
+                        </p>
                     </div>
                 </div>
             }
         >
             <Head title="Otoritas User" />
 
-            <div className="space-y-8 pb-8">
-                {/* Search & Actions */}
-                <Card className="border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white/60 backdrop-blur-xl">
-                    <CardContent className="p-6">
-                        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                            <div className="relative w-full md:w-96">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <div className="space-y-6 pb-8">
+                {/* Modern Navigation Tabs */}
+                <div className="flex items-center gap-2 p-1.5 bg-slate-200/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl w-fit">
+                    <button
+                        onClick={() => handleTabChange('employees')}
+                        className={`px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all flex items-center gap-2.5 ${
+                            activeTab === 'employees'
+                                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-md shadow-slate-200/50 dark:shadow-none'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                    >
+                        <Users className="w-4 h-4" />
+                        Otoritas Pegawai, Guru & Karyawan
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-[10px] font-black">
+                            {employeeStats.total_users || 0}
+                        </span>
+                    </button>
+
+                    <button
+                        onClick={() => handleTabChange('students')}
+                        className={`px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all flex items-center gap-2.5 ${
+                            activeTab === 'students'
+                                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-md shadow-slate-200/50 dark:shadow-none'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                    >
+                        <GraduationCap className="w-4 h-4" />
+                        Otoritas & Akses Siswa-Siswi
+                        <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 text-[10px] font-black">
+                            {studentStats.total_students || 0}
+                        </span>
+                    </button>
+                </div>
+
+                {/* ══════════════════════════════════════════════════ */}
+                {/* TAB 1: PEGAWAI / GURU / KARYAWAN                   */}
+                {/* ══════════════════════════════════════════════════ */}
+                {activeTab === 'employees' && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="space-y-6">
+                        {/* KPI Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <Card className="border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-2xl">
+                                <CardContent className="p-5 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500">Total Akun Pegawai</p>
+                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{employeeStats.total_users || 0}</h3>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">Terdaftar di sistem</p>
+                                    </div>
+                                    <div className="p-3 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                                        <Users className="w-6 h-6" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-2xl">
+                                <CardContent className="p-5 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500">Super Administrator</p>
+                                        <h3 className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">{employeeStats.total_super_admin || 0}</h3>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">Akses penuh sistem</p>
+                                    </div>
+                                    <div className="p-3 bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 rounded-xl">
+                                        <ShieldCheck className="w-6 h-6" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-2xl">
+                                <CardContent className="p-5 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500">Tenaga Pendidik (Guru)</p>
+                                        <h3 className="text-2xl font-black text-sky-600 dark:text-sky-400 mt-1">{employeeStats.total_guru || 0}</h3>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">Guru & Wali Kelas</p>
+                                    </div>
+                                    <div className="p-3 bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 rounded-xl">
+                                        <GraduationCap className="w-6 h-6" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-2xl">
+                                <CardContent className="p-5 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500">Presensi Ter-Bypass</p>
+                                        <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{employeeStats.total_bypassed || 0}</h3>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">Bypass GPS / Swafoto</p>
+                                    </div>
+                                    <div className="p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl">
+                                        <ShieldAlert className="w-6 h-6" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Search & Actions Toolbar */}
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                            <div className="relative w-full sm:w-80">
+                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <Input 
                                     type="text" 
-                                    placeholder="Cari nama pegawai atau email..." 
-                                    className="pl-12 h-12 rounded-2xl bg-white/80 border-slate-200 focus:ring-indigo-500 font-medium"
+                                    placeholder="Cari nama pegawai, email..." 
+                                    className="pl-10 h-10 text-xs rounded-xl border-slate-200 dark:border-slate-800"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
-                            
-                            <AnimatePresence>
-                                {selectedUsersForBulk.length > 0 && (
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                    >
-                                        <Button 
-                                            variant="destructive"
-                                            className="h-12 rounded-2xl px-6 bg-rose-500 hover:bg-rose-600 shadow-[0_8px_20px_rgba(244,63,94,0.3)]"
-                                            onClick={() => setIsBulkResetModalOpen(true)}
-                                        >
-                                            <KeyRound className="w-4 h-4 mr-2" />
-                                            Reset Password ({selectedUsersForBulk.length})
-                                        </Button>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </CardContent>
-                </Card>
 
-                {/* User Table */}
-                <Card className="border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white/80 backdrop-blur-xl overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-slate-50/80 border-b border-slate-100/50">
-                                <TableRow className="hover:bg-transparent">
-                                    <TableHead className="w-12 pl-6 py-5">
-                                        <Checkbox 
-                                            checked={selectedUsersForBulk.length > 0 && selectedUsersForBulk.length === users.data.length}
-                                            onCheckedChange={toggleSelectAll}
-                                            className="rounded border-slate-300 data-[state=checked]:bg-indigo-600"
-                                        />
-                                    </TableHead>
-                                    <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 py-5">Nama Pegawai</TableHead>
-                                    <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 py-5">Jabatan</TableHead>
-                                    <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 py-5">Email Login</TableHead>
-                                    <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 py-5">Role Saat Ini</TableHead>
-                                    <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 py-5 text-right pr-6">Aksi</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {users.data.length > 0 ? users.data.map((user) => (
-                                    <TableRow key={user.id} className="hover:bg-slate-50/50 border-b border-slate-50/50 transition-colors">
-                                        <TableCell className="pl-6">
-                                            <Checkbox 
-                                                checked={selectedUsersForBulk.includes(user.id)}
-                                                onCheckedChange={() => toggleBulkSelect(user.id)}
-                                                className="rounded border-slate-300 data-[state=checked]:bg-indigo-600"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-4 py-1">
-                                                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-700 flex items-center justify-center font-black shadow-inner border border-white">
-                                                    {getInitials(user.name)}
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-slate-900">{user.name}</p>
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="text-sm font-semibold text-slate-600">
-                                                {user.employee?.position?.name || '-'}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center text-slate-500 text-sm font-medium">
-                                                <Mail className="w-4 h-4 mr-2 opacity-50" />
-                                                {user.email}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex flex-wrap gap-2">
-                                                {user.bypass_liveness && (
-                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-black uppercase tracking-wider">
-                                                        ⚡ Bypass Wajah
-                                                    </span>
-                                                )}
-                                                {user.bypass_geofencing && (
-                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-cyan-50 border border-cyan-200 text-cyan-700 text-[10px] font-black uppercase tracking-wider">
-                                                        📍 Bypass Geofence
-                                                    </span>
-                                                )}
-                                                {user.roles && user.roles.length > 0 ? (
-                                                    user.roles.map((role, idx) => (
-                                                        <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-wider">
-                                                            {role}
-                                                        </span>
-                                                    ))
-                                                ) : (
-                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 text-[10px] font-black uppercase tracking-wider">
-                                                        No Access
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right pr-6">
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="h-10 w-10 p-0 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 text-slate-400"
-                                                onClick={() => openEditModal(user)}
-                                            >
-                                                <Lock className="w-5 h-5" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                )) : (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="h-32 text-center text-slate-500 font-medium">
-                                            Tidak ada data pengguna ditemukan.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </Card>
-
-                {/* Pagination */}
-                {users.links && users.links.length > 3 && (
-                    <div className="flex justify-center mt-6">
-                        <div className="flex items-center gap-1 bg-white/60 p-2 rounded-2xl shadow-sm border border-white/50 backdrop-blur-sm">
-                            {users.links.map((link, idx) => {
-                                const isPrevious = link.label.includes('Previous');
-                                const isNext = link.label.includes('Next');
-                                const label = isPrevious ? 'Prev' : (isNext ? 'Next' : link.label);
-                                
-                                return link.url ? (
-                                    <button
-                                        key={idx}
-                                        onClick={() => router.get(link.url)}
-                                        className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                                            link.active 
-                                                ? 'bg-indigo-600 text-white shadow-md' 
-                                                : 'text-slate-500 hover:bg-slate-100'
-                                        }`}
-                                    >
-                                        <span dangerouslySetInnerHTML={{ __html: label }}></span>
-                                    </button>
-                                ) : (
-                                    <span key={idx} className="px-4 py-2 rounded-xl text-sm font-bold text-slate-300" dangerouslySetInnerHTML={{ __html: label }}></span>
-                                );
-                            })}
+                            {selectedUsersForBulk.length > 0 && (
+                                <Button 
+                                    onClick={() => setIsBulkResetPasswordModalOpen(true)}
+                                    className="h-10 px-4 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl flex items-center gap-2 shadow-sm"
+                                >
+                                    <KeyRound className="w-4 h-4" /> Reset Password Massal ({selectedUsersForBulk.length})
+                                </Button>
+                            )}
                         </div>
-                    </div>
+
+                        {/* Employee Table */}
+                        <Card className="border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-2xl overflow-hidden">
+                            <CardContent className="p-0">
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader className="bg-slate-50/80 dark:bg-slate-800/50">
+                                            <TableRow className="border-b border-slate-200/80 dark:border-slate-800">
+                                                <TableHead className="w-12 py-4 px-4 text-center">
+                                                    <Checkbox 
+                                                        checked={selectedUsersForBulk.length === users.data.length && users.data.length > 0}
+                                                        onCheckedChange={toggleSelectAllUsers}
+                                                    />
+                                                </TableHead>
+                                                <TableHead className="py-4 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500">Pegawai & Jabatan</TableHead>
+                                                <TableHead className="py-4 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500">Email Akun</TableHead>
+                                                <TableHead className="py-4 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500">Peran / Role Systems</TableHead>
+                                                <TableHead className="py-4 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 text-center">Pengecualian Presensi</TableHead>
+                                                <TableHead className="py-4 px-5 text-[11px] font-bold uppercase tracking-wider text-slate-500 text-right">Aksi</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                                            {users.data && users.data.length > 0 ? (
+                                                users.data.map((user) => (
+                                                    <TableRow key={user.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30">
+                                                        <TableCell className="py-4 px-4 text-center">
+                                                            <Checkbox 
+                                                                checked={selectedUsersForBulk.includes(user.id)}
+                                                                onCheckedChange={() => toggleBulkUserSelect(user.id)}
+                                                            />
+                                                        </TableCell>
+
+                                                        <TableCell className="py-4 px-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800/50 flex items-center justify-center text-indigo-600 font-bold text-xs shrink-0">
+                                                                    {user.name.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">{user.name}</h4>
+                                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                                                        {user.employee?.position?.name || 'Staf Sekolah'}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+
+                                                        <TableCell className="py-4 px-4 text-xs text-slate-600 dark:text-slate-300">
+                                                            {user.email}
+                                                        </TableCell>
+
+                                                        <TableCell className="py-4 px-4">
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {user.roles && user.roles.length > 0 ? (
+                                                                    user.roles.map((r, idx) => (
+                                                                        <span key={idx} className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/40">
+                                                                            {r}
+                                                                        </span>
+                                                                    ))
+                                                                ) : (
+                                                                    <span className="text-[11px] text-slate-400 italic">Tanpa Peran</span>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+
+                                                        <TableCell className="py-4 px-4 text-center">
+                                                            <div className="flex items-center justify-center gap-1.5">
+                                                                {user.bypass_geofencing ? (
+                                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                                                                        GPS Bypass
+                                                                    </span>
+                                                                ) : null}
+                                                                {user.bypass_liveness ? (
+                                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-600 border border-sky-200">
+                                                                        Foto Bypass
+                                                                    </span>
+                                                                ) : null}
+                                                                {!user.bypass_geofencing && !user.bypass_liveness && (
+                                                                    <span className="text-[11px] text-slate-400">-</span>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+
+                                                        <TableCell className="py-4 px-5 text-right">
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() => openEditUserModal(user)}
+                                                                className="h-8 px-3 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm"
+                                                            >
+                                                                Edit Otoritas
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="py-12 text-center text-slate-400 text-xs">
+                                                        Tidak ada akun pegawai ditemukan.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+
+                                {/* Pagination */}
+                                {users.links && users.links.length > 3 && (
+                                    <div className="p-4 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
+                                        <div className="text-xs text-slate-500">
+                                            Menampilkan {users.from || 0} - {users.to || 0} dari {users.total || 0} pegawai
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            {users.links.map((link, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    disabled={!link.url}
+                                                    onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
+                                                    dangerouslySetInnerHTML={{ __html: link.label }}
+                                                    className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
+                                                        link.active
+                                                            ? 'bg-indigo-600 text-white font-bold'
+                                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                                                    } ${!link.url ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                )}
+
+                {/* ══════════════════════════════════════════════════ */}
+                {/* TAB 2: SISWA-SISWI                                 */}
+                {/* ══════════════════════════════════════════════════ */}
+                {activeTab === 'students' && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="space-y-6">
+                        {/* KPI Cards Student */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <Card className="border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-2xl">
+                                <CardContent className="p-5 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500">Total Siswa Terdaftar</p>
+                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{studentStats.total_students || 0}</h3>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">Keseluruhan siswa-siswi</p>
+                                    </div>
+                                    <div className="p-3 bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 rounded-xl">
+                                        <GraduationCap className="w-6 h-6" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-2xl">
+                                <CardContent className="p-5 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500">Siswa Aktif Presensi</p>
+                                        <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{studentStats.active_students || 0}</h3>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">Dapat melakukan scan QR</p>
+                                    </div>
+                                    <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                                        <CheckCircle2 className="w-6 h-6" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-2xl">
+                                <CardContent className="p-5 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500">Siswa Non-Aktif / Pindah</p>
+                                        <h3 className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">{studentStats.inactive_students || 0}</h3>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">Non-aktif / Lulus / Pindah</p>
+                                    </div>
+                                    <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl">
+                                        <UserX className="w-6 h-6" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-2xl">
+                                <CardContent className="p-5 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500">QR Token Tergenerasi</p>
+                                        <h3 className="text-2xl font-black text-sky-600 dark:text-sky-400 mt-1">{studentStats.qr_token_registered || 0}</h3>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">Kredensial aktif scanner</p>
+                                    </div>
+                                    <div className="p-3 bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 rounded-xl">
+                                        <QrCode className="w-6 h-6" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Search & Class Filter Toolbar */}
+                        <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                            <div className="flex flex-wrap items-center gap-3 flex-1 w-full">
+                                <div className="relative flex-1 min-w-[200px]">
+                                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <Input 
+                                        type="text" 
+                                        placeholder="Cari nama siswa, NIS, No. WA..." 
+                                        className="pl-10 h-10 text-xs rounded-xl border-slate-200 dark:border-slate-800"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="w-full sm:w-[180px]">
+                                    <Select 
+                                        value={selectedClass} 
+                                        onValueChange={(val) => setSelectedClass(val)}
+                                    >
+                                        <SelectTrigger className="h-10 text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                                            <SelectValue placeholder="Pilih Kelas" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Semua Kelas</SelectItem>
+                                            {classes.map(c => (
+                                                <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="w-full sm:w-[150px]">
+                                    <Select 
+                                        value={selectedStudentStatus} 
+                                        onValueChange={(val) => setSelectedStudentStatus(val)}
+                                    >
+                                        <SelectTrigger className="h-10 text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                                            <SelectValue placeholder="Status Siswa" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Semua Status</SelectItem>
+                                            <SelectItem value="active">Aktif</SelectItem>
+                                            <SelectItem value="inactive">Non-Aktif</SelectItem>
+                                            <SelectItem value="graduated">Lulus</SelectItem>
+                                            <SelectItem value="moved">Pindah</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            {selectedStudentsForBulk.length > 0 && (
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <Button 
+                                        onClick={() => setIsBulkRegenerateQrModalOpen(true)}
+                                        className="h-10 px-3 text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white rounded-xl flex items-center gap-1.5 shadow-sm"
+                                    >
+                                        <RefreshCw className="w-3.5 h-3.5" /> Regenerate QR ({selectedStudentsForBulk.length})
+                                    </Button>
+
+                                    <Button 
+                                        onClick={() => setIsBulkStudentStatusModalOpen(true)}
+                                        className="h-10 px-3 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl flex items-center gap-1.5 shadow-sm"
+                                    >
+                                        Ubah Status ({selectedStudentsForBulk.length})
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Student Table */}
+                        <Card className="border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-2xl overflow-hidden">
+                            <CardContent className="p-0">
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader className="bg-slate-50/80 dark:bg-slate-800/50">
+                                            <TableRow className="border-b border-slate-200/80 dark:border-slate-800">
+                                                <TableHead className="w-12 py-4 px-4 text-center">
+                                                    <Checkbox 
+                                                        checked={selectedStudentsForBulk.length === students.data.length && students.data.length > 0}
+                                                        onCheckedChange={toggleSelectAllStudents}
+                                                    />
+                                                </TableHead>
+                                                <TableHead className="py-4 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500">Siswa & Kelas</TableHead>
+                                                <TableHead className="py-4 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500">No. WhatsApp Ortu</TableHead>
+                                                <TableHead className="py-4 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500">Token Kredensial QR</TableHead>
+                                                <TableHead className="py-4 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 text-center">Status Akses</TableHead>
+                                                <TableHead className="py-4 px-5 text-[11px] font-bold uppercase tracking-wider text-slate-500 text-right">Aksi Kredensial</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                                            {students.data && students.data.length > 0 ? (
+                                                students.data.map((student) => (
+                                                    <TableRow key={student.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30">
+                                                        <TableCell className="py-4 px-4 text-center">
+                                                            <Checkbox 
+                                                                checked={selectedStudentsForBulk.includes(student.id)}
+                                                                onCheckedChange={() => toggleBulkStudentSelect(student.id)}
+                                                            />
+                                                        </TableCell>
+
+                                                        <TableCell className="py-4 px-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-950/60 border border-purple-100 dark:border-purple-800/50 flex items-center justify-center text-purple-600 font-bold text-xs shrink-0">
+                                                                    {student.name.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">{student.name}</h4>
+                                                                    <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500">
+                                                                        <span>NIS: {student.nis}</span>
+                                                                        <span>•</span>
+                                                                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                                                            {student.school_class?.name || student.schoolClass?.name || '-'}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+
+                                                        <TableCell className="py-4 px-4">
+                                                            {student.parent_phone ? (
+                                                                <a 
+                                                                    href={`https://wa.me/${student.parent_phone.replace(/[^0-9]/g, '')}`} 
+                                                                    target="_blank" 
+                                                                    rel="noreferrer"
+                                                                    className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+                                                                >
+                                                                    <Phone className="w-3.5 h-3.5" /> {student.parent_phone}
+                                                                </a>
+                                                            ) : (
+                                                                <span className="text-[11px] text-slate-400 italic">Belum diisi</span>
+                                                            )}
+                                                        </TableCell>
+
+                                                        <TableCell className="py-4 px-4">
+                                                            <div className="flex items-center gap-2">
+                                                                <code className="text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md text-slate-700 dark:text-slate-300 truncate max-w-[150px]">
+                                                                    {student.qr_token || 'BELUM SET'}
+                                                                </code>
+                                                            </div>
+                                                        </TableCell>
+
+                                                        <TableCell className="py-4 px-4 text-center">
+                                                            {student.status === 'active' && (
+                                                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                                                                    Aktif
+                                                                </span>
+                                                            )}
+                                                            {student.status === 'inactive' && (
+                                                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                                                    Non-Aktif
+                                                                </span>
+                                                            )}
+                                                            {student.status === 'graduated' && (
+                                                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-200">
+                                                                    Lulus
+                                                                </span>
+                                                            )}
+                                                            {student.status === 'moved' && (
+                                                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200">
+                                                                    Pindah
+                                                                </span>
+                                                            )}
+                                                        </TableCell>
+
+                                                        <TableCell className="py-4 px-5 text-right">
+                                                            <div className="flex items-center justify-end gap-1.5">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => handleSingleRegenerateQr(student)}
+                                                                    title="Regenerate QR Token Baru"
+                                                                    className="h-8 px-2 text-xs border-sky-200 text-sky-600 hover:bg-sky-50 rounded-lg flex items-center gap-1 font-bold"
+                                                                >
+                                                                    <RefreshCw className="w-3.5 h-3.5" /> QR Token
+                                                                </Button>
+
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => openEditStudentModal(student)}
+                                                                    className="h-8 px-3 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm"
+                                                                >
+                                                                    Edit Akses
+                                                                </Button>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="py-12 text-center text-slate-400 text-xs">
+                                                        Tidak ada data siswa ditemukan.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+
+                                {/* Pagination */}
+                                {students.links && students.links.length > 3 && (
+                                    <div className="p-4 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
+                                        <div className="text-xs text-slate-500">
+                                            Menampilkan {students.from || 0} - {students.to || 0} dari {students.total || 0} siswa
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            {students.links.map((link, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    disabled={!link.url}
+                                                    onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
+                                                    dangerouslySetInnerHTML={{ __html: link.label }}
+                                                    className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
+                                                        link.active
+                                                            ? 'bg-indigo-600 text-white font-bold'
+                                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                                                    } ${!link.url ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </motion.div>
                 )}
             </div>
 
-            {/* Edit Authority Modal */}
-            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                <DialogContent className="max-w-none sm:max-w-none md:max-w-none w-[98vw] md:w-[95vw] h-[98vh] md:h-[95vh] max-h-[98vh] overflow-hidden bg-slate-50/95 backdrop-blur-xl border-white/50 p-0 rounded-[2rem] shadow-2xl flex flex-col gap-0">
-                    {/* Header Banner */}
-                    <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-purple-900 p-8 text-white relative flex-shrink-0">
-                        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
-                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl -ml-20 -mb-20"></div>
-                        <div className="relative z-10">
-                            <DialogTitle className="text-3xl font-black mb-2 flex items-center text-white tracking-tight">
-                                <ShieldCheck className="w-8 h-8 mr-4 text-indigo-300" /> Konfigurasi Hak Akses
-                            </DialogTitle>
-                            <DialogDescription className="text-indigo-200 text-sm font-medium flex items-center">
-                                <UserCheck className="w-4 h-4 mr-2 opacity-70" /> Kelola profil, kredensial login, dan hierarki peran untuk pengguna terpilih.
-                            </DialogDescription>
-                        </div>
-                    </div>
+            {/* ══════════════════════════════════════════════════ */}
+            {/* MODALS SECTION                                     */}
+            {/* ══════════════════════════════════════════════════ */}
 
-                    <div className="overflow-y-auto flex-1 p-8 space-y-10 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-                        <form id="editAuthorityForm" onSubmit={submitEdit} className="space-y-10">
-                            {/* SECTION 1: Profil & Akun */}
-                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-6">
-                                <div className="flex items-center mb-6">
-                                    <div className="h-10 w-1.5 bg-indigo-500 rounded-r-full -ml-8 mr-6"></div>
-                                    <h3 className="text-xl font-black text-slate-800 tracking-tight">Profil & Kredensial</h3>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-                                    {/* Display Info (ID Card Style) */}
-                                    <div className="md:col-span-5">
-                                        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden h-full flex flex-col justify-center">
-                                            <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-indigo-50 to-purple-50"></div>
-                                            <div className="relative z-10 flex flex-col items-center text-center">
-                                                <div className="h-20 w-20 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-black text-2xl shadow-xl border-4 border-white mb-4">
-                                                    {getInitials(selectedUser?.name)}
-                                                </div>
-                                                <p className="font-black text-slate-900 text-xl tracking-tight">{selectedUser?.name}</p>
-                                                <p className="text-sm text-indigo-600 font-bold mt-1.5 px-4 py-1.5 bg-indigo-50 rounded-full border border-indigo-100">{selectedUser?.employee?.position?.name || 'Belum Ada Jabatan'}</p>
-                                                
-                                                <div className={`mt-6 w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 ${selectedUser?.email_verified_at ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
-                                                    <CheckCircle className="w-4 h-4" />
-                                                    {selectedUser?.email_verified_at ? 'Akun Terverifikasi' : 'Akun Aktif'}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Form Fields */}
-                                    <div className="md:col-span-7 space-y-6">
-                                        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-6 h-full">
-                                            <div className="space-y-3">
-                                                <Label className="text-slate-700 font-bold flex items-center text-sm">
-                                                    <Mail className="w-4 h-4 mr-2 text-indigo-500" /> Email Akun Utama
-                                                </Label>
-                                                <Input 
-                                                    type="email" 
-                                                    value={data.email}
-                                                    onChange={e => setData('email', e.target.value)}
-                                                    className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"
-                                                    required
-                                                />
-                                                {errors.email && <p className="text-rose-500 text-xs font-bold mt-1">{errors.email}</p>}
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                <Label className="text-slate-700 font-bold flex items-center justify-between text-sm">
-                                                    <span className="flex items-center"><KeyRound className="w-4 h-4 mr-2 text-indigo-500" /> Ubah Password Baru</span>
-                                                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-wider bg-indigo-50 px-2 py-1 rounded-md">Opsional</span>
-                                                </Label>
-                                                <Input 
-                                                    type="password" 
-                                                    value={data.password}
-                                                    onChange={e => setData('password', e.target.value)}
-                                                    className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
-                                                    placeholder="Kosongkan jika tidak diubah"
-                                                />
-                                                {errors.password && <p className="text-rose-500 text-xs font-bold mt-1">{errors.password}</p>}
-                                                <p className="text-xs text-slate-400 font-medium">Biarkan kosong jika Anda tidak ingin mengganti password saat ini.</p>
-                                            </div>
-
-                                            <div className="pt-4 border-t border-slate-100 space-y-3">
-                                                <Label className="text-slate-700 font-bold flex items-center text-sm">
-                                                    <UserCheck className="w-4 h-4 mr-2 text-indigo-500" /> Pengecualian Verifikasi Presensi
-                                                </Label>
-                                                <div className="flex items-start space-x-3 p-4 rounded-xl bg-indigo-50/50 border border-indigo-100">
-                                                    <Checkbox 
-                                                        id="bypass_liveness"
-                                                        checked={data.bypass_liveness}
-                                                        onCheckedChange={(checked) => setData('bypass_liveness', !!checked)}
-                                                        className="mt-0.5"
-                                                    />
-                                                    <label htmlFor="bypass_liveness" className="text-xs font-bold text-slate-800 cursor-pointer select-none leading-relaxed">
-                                                        Bypass Verifikasi Wajah (Bebaskan Gerakan Tengok Kanan)
-                                                        <span className="block text-[11px] text-slate-500 font-medium mt-0.5">
-                                                            Aktifkan untuk mengizinkan akun ini mengambil foto swafoto langsung tanpa wajib melakukan gerakan tengok kanan.
-                                                        </span>
-                                                    </label>
-                                                </div>
-
-                                                <div className="flex items-start space-x-3 p-4 rounded-xl bg-cyan-50/50 border border-cyan-100">
-                                                    <Checkbox 
-                                                        id="bypass_geofencing"
-                                                        checked={data.bypass_geofencing}
-                                                        onCheckedChange={(checked) => setData('bypass_geofencing', !!checked)}
-                                                        className="mt-0.5"
-                                                    />
-                                                    <label htmlFor="bypass_geofencing" className="text-xs font-bold text-slate-800 cursor-pointer select-none leading-relaxed">
-                                                        Bypass Geofencing (Pengecualian Radius Lokasi GPS)
-                                                        <span className="block text-[11px] text-slate-500 font-medium mt-0.5">
-                                                            Aktifkan untuk mengizinkan akun ini melakukan presensi dari mana saja tanpa dibatasi radius lokasi GPS kampus.
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-
-                            {/* SECTION 2: Otoritas Peran */}
-                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-6">
-                                <div className="flex items-center mb-6">
-                                    <div className="h-10 w-1.5 bg-purple-500 rounded-r-full -ml-8 mr-6"></div>
-                                    <h3 className="text-xl font-black text-slate-800 tracking-tight">Otoritas & Akses Sistem</h3>
-                                </div>
-
-                                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/60 p-5 rounded-2xl flex items-start shadow-sm">
-                                    <div className="p-2 bg-amber-100 rounded-xl mr-4 shrink-0 mt-0.5">
-                                        <ShieldAlert className="w-5 h-5 text-amber-600" />
-                                    </div>
-                                    <div>
-                                        <h4 className="text-amber-900 font-black text-sm tracking-tight mb-1">ATURAN KRITIKAL PRESENSI</h4>
-                                        <p className="text-amber-700/80 text-sm leading-relaxed font-medium">
-                                            Semua user role diwajibkan melakukan presensi harian menggunakan <b className="text-amber-900">Live Photo</b> dan <b className="text-amber-900">Live Location</b>. <br/>
-                                            <span className="inline-block mt-1 bg-white/60 px-2 py-0.5 rounded text-amber-800 text-xs font-bold border border-amber-200">Kecuali: Role Super Admin tidak diwajibkan melakukan presensi.</span>
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                                    {roles.map((role) => {
-                                        const isSelected = data.roles.includes(role.name);
-                                        const desc = roleDescriptions[role.name] || { mgmt: 'Akses khusus module tertentu.', personal: 'Akses standar.' };
-                                        
-                                        return (
-                                            <motion.div 
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                                key={role.id}
-                                                onClick={() => toggleRole(role.name)}
-                                                className={`relative p-6 rounded-[1.5rem] border-2 transition-all cursor-pointer overflow-hidden ${
-                                                    isSelected 
-                                                    ? 'border-indigo-500 bg-white shadow-[0_8px_20px_rgba(99,102,241,0.12)]' 
-                                                    : 'border-slate-200 bg-white hover:border-indigo-300 shadow-sm'
-                                                }`}
-                                            >
-                                                {/* Selection background tint */}
-                                                {isSelected && <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-transparent pointer-events-none"></div>}
-                                                
-                                                {/* Selection indicator */}
-                                                <div className="absolute top-6 right-6 z-10">
-                                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                                        isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 bg-slate-50'
-                                                    }`}>
-                                                        {isSelected && <CheckCircle className="w-4 h-4 text-white" />}
-                                                    </div>
-                                                </div>
-
-                                                <div className="pr-10 relative z-10">
-                                                    <div className="flex items-center gap-3 mb-4">
-                                                        <div className={`p-2 rounded-xl ${isSelected ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
-                                                            <Shield className="w-5 h-5" />
-                                                        </div>
-                                                        <h4 className={`font-black text-lg tracking-tight ${isSelected ? 'text-indigo-950' : 'text-slate-800'}`}>
-                                                            {role.name}
-                                                        </h4>
-                                                    </div>
-                                                    
-                                                    <div className="space-y-3">
-                                                        <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100">
-                                                            <span className="font-black text-slate-400 text-[10px] uppercase tracking-widest block mb-1">Area Manajemen</span>
-                                                            <span className="text-slate-700 text-xs font-medium leading-relaxed block">{desc.mgmt}</span>
-                                                        </div>
-                                                        <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100">
-                                                            <span className="font-black text-slate-400 text-[10px] uppercase tracking-widest block mb-1">Area Pribadi</span>
-                                                            <span className="text-slate-700 text-xs font-medium leading-relaxed block">{desc.personal}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </motion.div>
-                                        );
-                                    })}
-                                </div>
-                                {errors.roles && <p className="text-rose-500 text-sm font-semibold mt-2 px-2 bg-rose-50 inline-block py-1 rounded-md">{errors.roles}</p>}
-                            </motion.div>
-                        </form>
-                    </div>
-
-                    <DialogFooter className="p-6 bg-white border-t border-slate-100 flex-shrink-0 flex sm:justify-between items-center gap-4 rounded-b-[2rem]">
-                        <Button 
-                            type="button" 
-                            variant="ghost" 
-                            onClick={closeEditModal}
-                            className="rounded-xl h-12 px-6 font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                        >
-                            Batal
-                        </Button>
-                        <Button 
-                            type="submit" 
-                            form="editAuthorityForm"
-                            disabled={processing}
-                            className="rounded-xl h-12 px-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black shadow-[0_8px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_25px_rgba(99,102,241,0.4)] transition-all"
-                        >
-                            <Save className="w-4 h-4 mr-2" />
-                            {processing ? 'Menyimpan...' : 'Simpan Hak Akses'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-            
-            {/* Bulk Reset Confirmation Modal */}
-            <Dialog open={isBulkResetModalOpen} onOpenChange={setIsBulkResetModalOpen}>
-                <DialogContent className="max-w-md bg-white p-0 rounded-[2rem] overflow-hidden border-0 shadow-2xl">
-                    <div className="bg-rose-500 p-6 flex flex-col items-center justify-center text-center">
-                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4">
-                            <KeyRound className="w-8 h-8 text-white" />
-                        </div>
-                        <DialogTitle className="text-xl font-black text-white">Reset Password Massal</DialogTitle>
-                    </div>
-                    <div className="p-6 text-center">
-                        <DialogDescription className="text-slate-600 font-medium text-base">
-                            Anda akan mereset password untuk <span className="font-black text-rose-600">{selectedUsersForBulk.length} pengguna</span> yang dipilih menjadi password default (<b>password</b>).<br/><br/>
-                            Apakah Anda yakin ingin melanjutkan tindakan ini?
+            {/* Modal Edit User (Pegawai) */}
+            <Dialog open={isEditUserModalOpen} onOpenChange={setIsEditUserModalOpen}>
+                <DialogContent className="max-w-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <ShieldCheck className="w-5 h-5 text-indigo-600" /> Edit Otoritas Pegawai — {selectedUser?.name}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">
+                            Atur peran (roles) dan penyesuaian izin presensi pegawai ini.
                         </DialogDescription>
-                    </div>
-                    <DialogFooter className="p-6 pt-0 flex sm:justify-center gap-3">
-                        <Button 
-                            type="button" 
-                            variant="outline" 
-                            onClick={() => setIsBulkResetModalOpen(false)}
-                            className="rounded-xl h-12 px-6 font-bold text-slate-600 hover:bg-slate-100"
-                        >
+                    </DialogHeader>
+
+                    <form onSubmit={submitUserEdit} className="space-y-4 my-2">
+                        <div className="space-y-1">
+                            <Label className="text-xs font-bold">Email Login *</Label>
+                            <Input 
+                                type="email" 
+                                value={userForm.data.email}
+                                onChange={(e) => userForm.setData('email', e.target.value)}
+                                className="h-10 text-xs rounded-xl"
+                            />
+                            {userForm.errors.email && <p className="text-[11px] text-rose-500">{userForm.errors.email}</p>}
+                        </div>
+
+                        <div className="space-y-1">
+                            <Label className="text-xs font-bold">Password Baru (Opsional)</Label>
+                            <Input 
+                                type="password" 
+                                placeholder="Kosongkan jika tidak ingin diubah"
+                                value={userForm.data.password}
+                                onChange={(e) => userForm.setData('password', e.target.value)}
+                                className="h-10 text-xs rounded-xl"
+                            />
+                        </div>
+
+                        {/* Roles Selection */}
+                        <div className="space-y-2 pt-1">
+                            <Label className="text-xs font-bold">Peran / Roles System *</Label>
+                            <div className="space-y-2 max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-800 p-3 rounded-xl">
+                                {roles.map((r) => (
+                                    <div key={r.id} className="flex items-start gap-2.5 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">
+                                        <Checkbox 
+                                            id={`role-${r.id}`}
+                                            checked={userForm.data.roles.includes(r.name)}
+                                            onCheckedChange={() => toggleUserRole(r.name)}
+                                            className="mt-0.5"
+                                        />
+                                        <div className="grid gap-0.5 leading-none">
+                                            <label htmlFor={`role-${r.id}`} className="text-xs font-bold text-slate-900 dark:text-white cursor-pointer">
+                                                {r.name}
+                                            </label>
+                                            <p className="text-[10px] text-slate-500">
+                                                {roleDescriptions[r.name] || 'Akses modul terdaftar.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Bypass Toggles */}
+                        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <Label className="text-xs font-bold text-slate-900 dark:text-white">Pengecualian Proteksi Presensi</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <label className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-50">
+                                    <Checkbox 
+                                        checked={userForm.data.bypass_geofencing}
+                                        onCheckedChange={(val) => userForm.setData('bypass_geofencing', !!val)}
+                                    />
+                                    <span className="text-xs font-semibold">Bypass Geofencing</span>
+                                </label>
+
+                                <label className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-50">
+                                    <Checkbox 
+                                        checked={userForm.data.bypass_liveness}
+                                        onCheckedChange={(val) => userForm.setData('bypass_liveness', !!val)}
+                                    />
+                                    <span className="text-xs font-semibold">Bypass Liveness</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <DialogFooter className="pt-2 gap-2">
+                            <Button type="button" variant="outline" onClick={() => setIsEditUserModalOpen(false)} className="rounded-xl text-xs">
+                                Batal
+                            </Button>
+                            <Button type="submit" disabled={userForm.processing} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm">
+                                {userForm.processing ? 'Menyimpan...' : 'Simpan Otoritas'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal Bulk Reset Password Pegawai */}
+            <Dialog open={isBulkResetPasswordModalOpen} onOpenChange={setIsBulkResetPasswordModalOpen}>
+                <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-bold text-amber-600 flex items-center gap-2">
+                            <KeyRound className="w-5 h-5" /> Reset Password Massal
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">
+                            Reset password untuk {selectedUsersForBulk.length} pegawai terpilih ke default password (<code>password</code>).
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter className="gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setIsBulkResetPasswordModalOpen(false)} className="rounded-xl text-xs">
                             Batal
                         </Button>
-                        <Button 
-                            onClick={confirmBulkReset}
-                            className="rounded-xl h-12 px-8 bg-rose-500 hover:bg-rose-600 text-white font-black shadow-lg shadow-rose-200"
-                        >
-                            <KeyRound className="w-4 h-4 mr-2" />
-                            Ya, Reset Password
+                        <Button onClick={confirmBulkResetPassword} className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl">
+                            Konfirmasi Reset
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            
-            <style dangerouslySetInnerHTML={{ __html: `
-                @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800;900&display=swap');
-                :root { --font-sans: 'Plus Jakarta Sans', sans-serif; }
-                body { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.01em; background-color: #F4F7FB; }
-            `}} />
+
+            {/* Modal Edit Student Credentials */}
+            <Dialog open={isEditStudentModalOpen} onOpenChange={setIsEditStudentModalOpen}>
+                <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <GraduationCap className="w-5 h-5 text-indigo-600" /> Edit Akses Siswa — {selectedStudent?.name}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">
+                            NIS: {selectedStudent?.nis} • Kelas: {selectedStudent?.school_class?.name || selectedStudent?.schoolClass?.name || '-'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={submitStudentEdit} className="space-y-4 my-2">
+                        <div className="space-y-1">
+                            <Label className="text-xs font-bold">Status Akses Presensi *</Label>
+                            <Select 
+                                value={studentForm.data.status}
+                                onValueChange={(val) => studentForm.setData('status', val)}
+                            >
+                                <SelectTrigger className="h-10 text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                                    <SelectValue placeholder="Pilih Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="active">Aktif (Bisa Presensi Kiosk)</SelectItem>
+                                    <SelectItem value="inactive">Non-Aktif (Di-Suspend)</SelectItem>
+                                    <SelectItem value="graduated">Lulus</SelectItem>
+                                    <SelectItem value="moved">Pindah Sekolah</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-1">
+                            <Label className="text-xs font-bold">No. WhatsApp Orang Tua</Label>
+                            <Input 
+                                type="text"
+                                placeholder="Contoh: 08123456789"
+                                value={studentForm.data.parent_phone}
+                                onChange={(e) => studentForm.setData('parent_phone', e.target.value)}
+                                className="h-10 text-xs rounded-xl"
+                            />
+                        </div>
+
+                        <div className="p-3 bg-sky-50 dark:bg-sky-950/40 rounded-xl border border-sky-200 dark:border-sky-800/40">
+                            <label className="flex items-center gap-2.5 cursor-pointer">
+                                <Checkbox 
+                                    checked={studentForm.data.regenerate_qr}
+                                    onCheckedChange={(val) => studentForm.setData('regenerate_qr', !!val)}
+                                />
+                                <div>
+                                    <span className="text-xs font-bold text-sky-800 dark:text-sky-300">Regenerate QR Token Baru</span>
+                                    <p className="text-[10px] text-sky-600 dark:text-sky-400">Buat ulang token jika kartu QR siswa hilang / rusak.</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <DialogFooter className="pt-2 gap-2">
+                            <Button type="button" variant="outline" onClick={() => setIsEditStudentModalOpen(false)} className="rounded-xl text-xs">
+                                Batal
+                            </Button>
+                            <Button type="submit" disabled={studentForm.processing} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm">
+                                {studentForm.processing ? 'Menyimpan...' : 'Simpan Kredensial'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal Bulk Regenerate QR Token Siswa */}
+            <Dialog open={isBulkRegenerateQrModalOpen} onOpenChange={setIsBulkRegenerateQrModalOpen}>
+                <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-bold text-sky-600 flex items-center gap-2">
+                            <RefreshCw className="w-5 h-5" /> Regenerate QR Token Massal
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">
+                            Regenerate QR Token untuk {selectedStudentsForBulk.length} siswa terpilih. Token lama tidak akan bisa di-scan lagi.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter className="gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setIsBulkRegenerateQrModalOpen(false)} className="rounded-xl text-xs">
+                            Batal
+                        </Button>
+                        <Button onClick={confirmBulkRegenerateQr} className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl">
+                            Konfirmasi Regenerate
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal Bulk Update Student Status */}
+            <Dialog open={isBulkStudentStatusModalOpen} onOpenChange={setIsBulkStudentStatusModalOpen}>
+                <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-bold text-indigo-600 flex items-center gap-2">
+                            <Users className="w-5 h-5" /> Ubah Status Siswa Massal
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">
+                            Ubah status keaktifan untuk {selectedStudentsForBulk.length} siswa terpilih.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="my-3 space-y-2">
+                        <Label className="text-xs font-bold">Pilih Status Baru</Label>
+                        <Select value={bulkTargetStatus} onValueChange={(val) => setBulkTargetStatus(val)}>
+                            <SelectTrigger className="h-10 text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                                <SelectValue placeholder="Pilih Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="active">Aktif</SelectItem>
+                                <SelectItem value="inactive">Non-Aktif</SelectItem>
+                                <SelectItem value="graduated">Lulus</SelectItem>
+                                <SelectItem value="moved">Pindah</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <DialogFooter className="gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setIsBulkStudentStatusModalOpen(false)} className="rounded-xl text-xs">
+                            Batal
+                        </Button>
+                        <Button onClick={confirmBulkUpdateStudentStatus} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl">
+                            Simpan Perubahan
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AuthenticatedLayout>
     );
 }

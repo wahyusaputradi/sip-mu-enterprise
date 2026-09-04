@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Student;
+use App\Models\SchoolClass;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
@@ -13,12 +15,14 @@ class UserAuthorityController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::query()
-            ->with(['employee.positions', 'roles']);
+        $activeTab = $request->input('tab', 'employees');
 
-        if ($request->has('search') && $request->search != '') {
+        // ═══ TAB 1: PEGAWAI / GURU / KARYAWAN ═══
+        $employeeQuery = User::query()->with(['employee.positions', 'roles']);
+
+        if ($request->filled('search') && $activeTab === 'employees') {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
+            $employeeQuery->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%")
                   ->orWhereHas('employee', function ($q) use ($search) {
@@ -27,10 +31,9 @@ class UserAuthorityController extends Controller
             });
         }
 
-        $users = $query->paginate(50)->withQueryString()->through(function ($user) {
+        $users = $employeeQuery->paginate(50)->withQueryString()->through(function ($user) {
             return [
                 'id' => $user->id,
-                // Mengambil nama dari Data Pegawai jika ada, jika tidak gunakan nama User bawaan
                 'name' => $user->employee ? $user->employee->name : $user->name,
                 'email' => $user->email,
                 'email_verified_at' => $user->email_verified_at,
@@ -46,7 +49,14 @@ class UserAuthorityController extends Controller
                 ] : null,
             ];
         });
-        
+
+        $employeeStats = [
+            'total_users'       => User::count(),
+            'total_super_admin' => User::role('Super Admin')->count(),
+            'total_guru'        => User::role('Guru')->count(),
+            'total_bypassed'    => User::where('bypass_liveness', true)->orWhere('bypass_geofencing', true)->count(),
+        ];
+
         $roles = Role::all()->map(function($role) {
             return [
                 'id' => $role->id,
@@ -54,10 +64,46 @@ class UserAuthorityController extends Controller
             ];
         });
 
+        // ═══ TAB 2: SISWA-SISWI ═══
+        $studentQuery = Student::with('schoolClass:id,name')->latest();
+
+        if ($request->filled('search') && $activeTab === 'students') {
+            $search = $request->search;
+            $studentQuery->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('nis', 'like', "%{$search}%")
+                  ->orWhere('parent_phone', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('class_id') && $activeTab === 'students') {
+            $studentQuery->where('school_class_id', $request->class_id);
+        }
+
+        if ($request->filled('status') && $activeTab === 'students') {
+            $studentQuery->where('status', $request->status);
+        }
+
+        $students = $studentQuery->paginate(50)->withQueryString();
+
+        $studentStats = [
+            'total_students'       => Student::count(),
+            'active_students'      => Student::where('status', 'active')->count(),
+            'inactive_students'    => Student::whereIn('status', ['inactive', 'graduated', 'moved'])->count(),
+            'qr_token_registered'  => Student::whereNotNull('qr_token')->count(),
+        ];
+
+        $classes = SchoolClass::orderBy('name')->get(['id', 'name']);
+
         return Inertia::render('UserAuthority/Index', [
-            'users' => $users,
-            'roles' => $roles,
-            'filters' => $request->only('search')
+            'users'         => $users,
+            'roles'         => $roles,
+            'employeeStats' => $employeeStats,
+            'students'      => $students,
+            'studentStats'  => $studentStats,
+            'classes'       => $classes,
+            'activeTab'     => $activeTab,
+            'filters'       => $request->only(['search', 'class_id', 'status', 'tab']),
         ]);
     }
 
@@ -87,7 +133,7 @@ class UserAuthorityController extends Controller
             $user->syncRoles($request->roles);
         }
 
-        return redirect()->back()->with('success', 'Otoritas dan Akun pengguna berhasil diperbarui.');
+        return redirect()->back()->with('success', 'Otoritas dan Akun pegawai berhasil diperbarui.');
     }
 
     public function bulkResetPassword(Request $request)
@@ -103,6 +149,69 @@ class UserAuthorityController extends Controller
             'password' => $defaultPassword
         ]);
 
-        return redirect()->back()->with('success', 'Password pengguna terpilih berhasil direset ke default (password).');
+        return redirect()->back()->with('success', 'Password pegawai terpilih berhasil direset ke default (password).');
+    }
+
+    /**
+     * Update Student Authority / Access Status & Credentials
+     */
+    public function updateStudent(Request $request, Student $student)
+    {
+        $validated = $request->validate([
+            'status'        => 'required|in:active,inactive,graduated,moved',
+            'parent_phone'  => 'nullable|string|max:30',
+            'regenerate_qr' => 'nullable|boolean',
+        ]);
+
+        $updateData = [
+            'status'       => $validated['status'],
+            'parent_phone' => $validated['parent_phone'] ?? $student->parent_phone,
+        ];
+
+        if ($request->boolean('regenerate_qr')) {
+            $updateData['qr_token'] = Student::generateQrToken($student->nis);
+        }
+
+        $student->update($updateData);
+
+        return redirect()->back()->with('success', 'Otoritas dan kredensial siswa ' . $student->name . ' berhasil diperbarui.');
+    }
+
+    /**
+     * Bulk Regenerate Student QR Tokens
+     */
+    public function bulkRegenerateQrToken(Request $request)
+    {
+        $request->validate([
+            'student_ids'   => 'required|array',
+            'student_ids.*' => 'exists:students,id',
+        ]);
+
+        $students = Student::whereIn('id', $request->student_ids)->get();
+        foreach ($students as $student) {
+            $student->update([
+                'qr_token' => Student::generateQrToken($student->nis),
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'QR Token untuk ' . count($students) . ' siswa terpilih berhasil di-regenerate.');
+    }
+
+    /**
+     * Bulk Update Student Status
+     */
+    public function bulkUpdateStudentStatus(Request $request)
+    {
+        $validated = $request->validate([
+            'student_ids'   => 'required|array',
+            'student_ids.*' => 'exists:students,id',
+            'status'        => 'required|in:active,inactive,graduated,moved',
+        ]);
+
+        Student::whereIn('id', $validated['student_ids'])->update([
+            'status' => $validated['status'],
+        ]);
+
+        return redirect()->back()->with('success', 'Status akses untuk ' . count($validated['student_ids']) . ' siswa terpilih berhasil diperbarui.');
     }
 }

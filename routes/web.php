@@ -345,6 +345,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/user-authority', [UserAuthorityController::class, 'index'])->name('user-authority.index');
         Route::put('/user-authority/{user}', [UserAuthorityController::class, 'update'])->name('user-authority.update');
         Route::post('/user-authority/bulk-reset-password', [UserAuthorityController::class, 'bulkResetPassword'])->name('user-authority.bulk-reset-password');
+        Route::put('/user-authority/students/{student}', [UserAuthorityController::class, 'updateStudent'])->name('user-authority.students.update');
+        Route::post('/user-authority/students/bulk-regenerate-qr', [UserAuthorityController::class, 'bulkRegenerateQrToken'])->name('user-authority.students.bulk-regenerate-qr');
+        Route::post('/user-authority/students/bulk-update-status', [UserAuthorityController::class, 'bulkUpdateStudentStatus'])->name('user-authority.students.bulk-update-status');
 
         // Backup & Restore System
         Route::get('/settings/backup', [\App\Http\Controllers\BackupController::class, 'index'])->name('backups.index');
