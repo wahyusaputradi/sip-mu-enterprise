@@ -253,6 +253,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // AREA MANAJEMEN — Jadwal Mengajar & Data Kelas
     // ══════════════════════════════════════════════════
     Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi'])->group(function () {
+        Route::get('/student-attendance/kiosk', [\App\Http\Controllers\StudentAttendanceController::class, 'kiosk'])->name('student-attendance.kiosk');
+        Route::post('/student-attendance/scan-qr', [\App\Http\Controllers\StudentAttendanceController::class, 'scanQr'])->name('student-attendance.scan-qr');
+        Route::post('/student-attendance/sync-offline', [\App\Http\Controllers\StudentAttendanceController::class, 'syncOffline'])->name('student-attendance.sync-offline');
+        Route::get('/student-attendance/monitoring', [\App\Http\Controllers\StudentAttendanceController::class, 'monitoring'])->name('student-attendance.monitoring');
+        Route::post('/student-attendance/update-status', [\App\Http\Controllers\StudentAttendanceController::class, 'updateStatus'])->name('student-attendance.update-status');
+
+        Route::get('/students', [\App\Http\Controllers\StudentController::class, 'index'])->name('students.index');
+        Route::post('/students', [\App\Http\Controllers\StudentController::class, 'store'])->name('students.store');
+        Route::put('/students/{student}', [\App\Http\Controllers\StudentController::class, 'update'])->name('students.update');
+        Route::delete('/students/{student}', [\App\Http\Controllers\StudentController::class, 'destroy'])->name('students.destroy');
+        Route::get('/students/cards', [\App\Http\Controllers\StudentController::class, 'cards'])->name('students.cards');
+
+        Route::get('/school-classes', [\App\Http\Controllers\SchoolClassController::class, 'index'])->name('school-classes.index');
+        Route::post('/school-classes', [\App\Http\Controllers\SchoolClassController::class, 'store'])->name('school-classes.store');
+        Route::put('/school-classes/{schoolClass}', [\App\Http\Controllers\SchoolClassController::class, 'update'])->name('school-classes.update');
+        Route::delete('/school-classes/{schoolClass}', [\App\Http\Controllers\SchoolClassController::class, 'destroy'])->name('school-classes.destroy');
+
         Route::get('/teaching-schedules', [TeachingScheduleController::class, 'index'])->name('teaching-schedules.index');
         Route::get('/teaching-schedules/export/excel', [TeachingScheduleController::class, 'export'])->name('teaching-schedules.export');
     });

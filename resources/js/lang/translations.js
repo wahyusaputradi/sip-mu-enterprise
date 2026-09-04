@@ -22,6 +22,8 @@ export const translations = {
         "menu.classes": "Data Kelas",
         "menu.leave_approval": "Persetujuan Cuti",
         "menu.campus": "Lokasi Kampus",
+        "menu.student_attendance": "Presensi Siswa",
+        "menu.students": "Data Siswa",
         "menu.user_authority": "Otoritas User",
         "menu.backup": "Backup System",
         "menu.settings": "Pengaturan",

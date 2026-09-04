@@ -1,0 +1,122 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Student;
+use App\Models\SchoolClass;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Illuminate\Validation\Rule;
+
+class StudentController extends Controller
+{
+    public function index(Request $request)
+    {
+        $search = $request->input('search');
+        $classId = $request->input('class_id');
+        $status = $request->input('status', 'active');
+
+        $query = Student::with('schoolClass')
+            ->when($search, function ($q, $search) {
+                $q->where(function ($s) use ($search) {
+                    $s->where('name', 'like', "%{$search}%")
+                      ->orWhere('nis', 'like', "%{$search}%")
+                      ->orWhere('nisn', 'like', "%{$search}%");
+                });
+            })
+            ->when($classId, function ($q, $classId) {
+                $q->where('school_class_id', $classId);
+            })
+            ->when($status !== 'all', function ($q) use ($status) {
+                $q->where('status', $status);
+            });
+
+        $students = $query->orderBy('name')->paginate(50)->withQueryString();
+        $schoolClasses = SchoolClass::orderBy('name')->get(['id', 'name', 'level', 'major']);
+
+        return Inertia::render('Students/Index', [
+            'students' => $students,
+            'schoolClasses' => $schoolClasses,
+            'filters' => [
+                'search' => $search,
+                'class_id' => $classId,
+                'status' => $status,
+            ],
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'nis' => 'required|string|max:50|unique:students,nis',
+            'nisn' => 'nullable|string|max:50|unique:students,nisn',
+            'name' => 'required|string|max:255',
+            'gender' => 'required|in:Laki-laki,Perempuan',
+            'school_class_id' => 'required|exists:school_classes,id',
+            'parent_name' => 'nullable|string|max:255',
+            'parent_phone' => 'nullable|string|max:30',
+            'status' => 'required|in:active,graduated,moved',
+        ]);
+
+        $validated['qr_token'] = Student::generateQrToken($validated['nis']);
+
+        Student::create($validated);
+
+        return back()->with('message', 'Data siswa berhasil ditambahkan.');
+    }
+
+    public function update(Request $request, Student $student)
+    {
+        $validated = $request->validate([
+            'nis' => ['required', 'string', 'max:50', Rule::unique('students', 'nis')->ignore($student->id)],
+            'nisn' => ['nullable', 'string', 'max:50', Rule::unique('students', 'nisn')->ignore($student->id)],
+            'name' => 'required|string|max:255',
+            'gender' => 'required|in:Laki-laki,Perempuan',
+            'school_class_id' => 'required|exists:school_classes,id',
+            'parent_name' => 'nullable|string|max:255',
+            'parent_phone' => 'nullable|string|max:30',
+            'status' => 'required|in:active,graduated,moved',
+        ]);
+
+        if (empty($student->qr_token) || $student->nis !== $validated['nis']) {
+            $validated['qr_token'] = Student::generateQrToken($validated['nis']);
+        }
+
+        $student->update($validated);
+
+        return back()->with('message', 'Data siswa berhasil diperbarui.');
+    }
+
+    public function destroy(Student $student)
+    {
+        $student->delete();
+        return back()->with('message', 'Data siswa berhasil dihapus.');
+    }
+
+    public function cards(Request $request)
+    {
+        $classId = $request->input('class_id');
+        $search = $request->input('search');
+
+        $query = Student::with('schoolClass')
+            ->where('status', 'active')
+            ->when($classId, function ($q, $classId) {
+                $q->where('school_class_id', $classId);
+            })
+            ->when($search, function ($q, $search) {
+                $q->where('name', 'like', "%{$search}%")->orWhere('nis', 'like', "%{$search}%");
+            });
+
+        $students = $query->orderBy('name')->get();
+        $schoolClasses = SchoolClass::orderBy('name')->get(['id', 'name']);
+
+        return Inertia::render('Students/Cards', [
+            'students' => $students,
+            'schoolClasses' => $schoolClasses,
+            'filters' => [
+                'class_id' => $classId,
+                'search' => $search,
+            ],
+        ]);
+    }
+}

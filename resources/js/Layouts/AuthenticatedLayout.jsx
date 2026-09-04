@@ -35,7 +35,8 @@ import {
     Sun,
     Moon,
     AlertCircle,
-    Image
+    Image,
+    QrCode
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -230,6 +231,8 @@ export default function AuthenticatedLayout({ header, children }) {
             { name: t('menu.monitoring'), route: 'monitoring.attendance', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: t('menu.attendance_recap'), route: 'attendance.recap', icon: <ClipboardList className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: t('menu.photos'), route: 'monitoring.photos.index', icon: <Image className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: t('menu.student_attendance'), route: 'student-attendance.monitoring', icon: <QrCode className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: t('menu.students'), route: 'students.index', icon: <GraduationCap className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: t('menu.schedules'), route: 'teaching-schedules.index', icon: <CalendarDays className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: t('menu.classes'), route: 'school-classes.index', icon: <School className="w-5 h-5" />, roles: ['Super Admin', 'Kurikulum'] },
             { name: t('menu.leave_approval'), route: 'leave-requests.approval', icon: <ClipboardCheck className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
