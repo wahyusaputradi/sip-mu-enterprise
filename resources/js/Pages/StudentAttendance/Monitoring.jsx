@@ -103,9 +103,6 @@ export default function StudentMonitoring({ auth, students, stats, schoolClasses
                     </div>
 
                     <div className="flex items-center flex-wrap gap-3">
-                        <Button onClick={() => router.visit(route('students.cards'))} variant="outline" className="rounded-xl font-bold border-slate-200 dark:border-slate-800">
-                            <Printer className="w-4 h-4 mr-2" /> Cetak Kartu QR
-                        </Button>
                         <Button onClick={() => router.visit(route('students.index'))} variant="secondary" className="rounded-xl font-bold">
                             <Users className="w-4 h-4 mr-2" /> Kelola Data Siswa
                         </Button>

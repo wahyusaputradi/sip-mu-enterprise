@@ -146,9 +146,6 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                         <Button onClick={() => setIsImportModalOpen(true)} variant="outline" className="rounded-xl font-bold border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400">
                             <Upload className="w-4 h-4 mr-2" /> Import Excel
                         </Button>
-                        <Button onClick={() => router.visit(route('students.cards'))} variant="secondary" className="rounded-xl font-bold">
-                            <Printer className="w-4 h-4 mr-2" /> Cetak Kartu QR
-                        </Button>
                         <Button onClick={openAddModal} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 dark:shadow-none">
                             <UserPlus className="w-4 h-4 mr-2" /> Tambah Siswa Baru
                         </Button>
