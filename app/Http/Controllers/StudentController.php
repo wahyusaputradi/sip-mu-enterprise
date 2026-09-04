@@ -175,7 +175,7 @@ class StudentController extends Controller
                 $q->where('name', 'like', "%{$search}%")->orWhere('nis', 'like', "%{$search}%");
             });
 
-        $students = $query->orderBy('name')->get();
+        $students = $query->orderBy('name')->paginate(50)->withQueryString();
         $schoolClasses = SchoolClass::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Students/Cards', [

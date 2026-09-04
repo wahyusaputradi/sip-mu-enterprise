@@ -12,6 +12,8 @@ export default function StudentCards({ auth, students, schoolClasses, filters })
     const [selectedClass, setSelectedClass] = useState(filters.class_id || '');
     const [search, setSearch] = useState(filters.search || '');
 
+    const studentList = students.data || (Array.isArray(students) ? students : []);
+
     const handleFilterChange = (c, s) => {
         router.get(
             route('students.cards'),
@@ -45,7 +47,7 @@ export default function StudentCards({ auth, students, schoolClasses, filters })
                             <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Data Siswa
                         </Button>
                         <Button onClick={handlePrint} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 dark:shadow-none">
-                            <Printer className="w-4 h-4 mr-2" /> Cetak Semua Kartu (PDF)
+                            <Printer className="w-4 h-4 mr-2" /> Cetak Kartu Halaman Ini (PDF)
                         </Button>
                     </div>
                 </div>
@@ -62,7 +64,7 @@ export default function StudentCards({ auth, students, schoolClasses, filters })
                             <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); handleFilterChange(v, search); }}>
                                 <SelectTrigger className="rounded-xl"><SelectValue placeholder="Pilih Kelas..." /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Semua Kelas ({students.length} Siswa)</SelectItem>
+                                    <SelectItem value="">Semua Kelas (Total {students.total || studentList.length} Siswa)</SelectItem>
                                     {schoolClasses.map(c => (
                                         <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                                     ))}
@@ -84,12 +86,12 @@ export default function StudentCards({ auth, students, schoolClasses, filters })
 
                 {/* Printable Student ID Cards Layout (Grid 2 Column per Page) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-2 print:gap-4">
-                    {students.length === 0 ? (
+                    {studentList.length === 0 ? (
                         <div className="col-span-2 text-center py-12 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 text-slate-400 font-semibold print:hidden">
                             Tidak ada siswa yang dipilih untuk dicetak.
                         </div>
                     ) : (
-                        students.map((student) => (
+                        studentList.map((student) => (
                             <div key={student.id} className="bg-gradient-to-br from-indigo-900 via-slate-900 to-purple-950 text-white rounded-3xl p-6 shadow-xl border border-indigo-500/30 relative overflow-hidden flex flex-col justify-between h-[270px] print:h-[260px] print:break-inside-avoid print:shadow-none print:border-slate-800">
                                 
                                 {/* Background Watermark Icon */}
@@ -148,6 +150,37 @@ export default function StudentCards({ auth, students, schoolClasses, filters })
                         ))
                     )}
                 </div>
+
+                {/* Pagination (Hidden on Print) */}
+                {students.links && students.links.length > 3 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-4 print:hidden">
+                        <p className="text-xs font-extrabold text-slate-500 dark:text-slate-400">
+                            Menampilkan kartu <span className="text-slate-900 dark:text-white font-black">{students.from || 0}</span> s/d <span className="text-slate-900 dark:text-white font-black">{students.to || 0}</span> dari total <span className="text-indigo-600 dark:text-indigo-400 font-black">{students.total || 0}</span> kartu siswa
+                        </p>
+                        <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800">
+                            {students.links.map((link, idx) => {
+                                const isPrevious = link.label.includes('Previous') || link.label.includes('&laquo;');
+                                const isNext = link.label.includes('Next') || link.label.includes('&raquo;');
+                                const label = isPrevious ? 'Prev' : (isNext ? 'Next' : link.label);
+
+                                return link.url ? (
+                                    <button
+                                        key={idx}
+                                        onClick={() => router.get(link.url, {}, { preserveState: true, preserveScroll: true })}
+                                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                            link.active 
+                                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                                                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                        }`}
+                                        dangerouslySetInnerHTML={{ __html: label }}
+                                    />
+                                ) : (
+                                    <span key={idx} className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-300 dark:text-slate-600" dangerouslySetInnerHTML={{ __html: label }} />
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
         </AuthenticatedLayout>
     );
