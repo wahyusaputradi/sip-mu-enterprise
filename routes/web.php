@@ -263,6 +263,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/students', [\App\Http\Controllers\StudentController::class, 'store'])->name('students.store');
         Route::put('/students/{student}', [\App\Http\Controllers\StudentController::class, 'update'])->name('students.update');
         Route::delete('/students/{student}', [\App\Http\Controllers\StudentController::class, 'destroy'])->name('students.destroy');
+        Route::post('/students/bulk-delete', [\App\Http\Controllers\StudentController::class, 'bulkDestroy'])->name('students.bulk-destroy');
+        Route::get('/students/export/excel', [\App\Http\Controllers\StudentController::class, 'export'])->name('students.export');
+        Route::get('/students/download-template', [\App\Http\Controllers\StudentController::class, 'downloadTemplate'])->name('students.download-template');
+        Route::post('/students/import/excel', [\App\Http\Controllers\StudentController::class, 'import'])->name('students.import');
         Route::get('/students/cards', [\App\Http\Controllers\StudentController::class, 'cards'])->name('students.cards');
 
         Route::get('/school-classes', [\App\Http\Controllers\SchoolClassController::class, 'index'])->name('school-classes.index');

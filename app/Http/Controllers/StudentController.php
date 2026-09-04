@@ -93,6 +93,74 @@ class StudentController extends Controller
         return back()->with('message', 'Data siswa berhasil dihapus.');
     }
 
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:students,id',
+        ]);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
+            Student::whereIn('id', $request->ids)->delete();
+        });
+
+        return back()->with('message', count($request->ids) . ' data siswa berhasil dihapus.');
+    }
+
+    public function export(Request $request)
+    {
+        $classId = $request->input('class_id');
+        $search = $request->input('search');
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\StudentsExport($classId, $search),
+            'data-siswa.xlsx'
+        );
+    }
+
+    public function downloadTemplate()
+    {
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\StudentTemplateExport,
+            'template-import-siswa.xlsx'
+        );
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv|max:5120'
+        ]);
+
+        try {
+            $import = new \App\Imports\StudentsImport;
+            \Maatwebsite\Excel\Facades\Excel::import($import, $request->file('file'));
+
+            $parts = [];
+            if ($import->successCount > 0) {
+                $parts[] = "{$import->successCount} data siswa baru ditambahkan";
+            }
+            if ($import->updatedCount > 0) {
+                $parts[] = "{$import->updatedCount} data diperbarui";
+            }
+            if ($import->skippedCount > 0) {
+                $parts[] = "{$import->skippedCount} data dilewati";
+            }
+
+            $message = !empty($parts)
+                ? 'Import selesai: ' . implode(', ', $parts) . '.'
+                : 'Import selesai, tidak ada data yang diproses. Pastikan format file sesuai template.';
+
+            if (!empty($import->errors)) {
+                $message .= ' Detail info: ' . implode(' | ', array_slice($import->errors, 0, 5));
+            }
+
+            return back()->with('message', $message);
+        } catch (\Throwable $e) {
+            return back()->withErrors(['message' => 'Gagal mengimpor file Excel: ' . $e->getMessage()]);
+        }
+    }
+
     public function cards(Request $request)
     {
         $classId = $request->input('class_id');

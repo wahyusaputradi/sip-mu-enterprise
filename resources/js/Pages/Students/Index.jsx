@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, router } from '@inertiajs/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    Users, Plus, Edit, Trash2, Search, QrCode, Filter, Printer, UserPlus, ArrowLeft
+    Users, Plus, Edit, Trash2, Search, QrCode, Filter, Printer, UserPlus, ArrowLeft,
+    FileSpreadsheet, Upload, Download, CheckSquare, Square, AlertCircle, X
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,11 +17,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export default function StudentIndex({ auth, students, schoolClasses, filters }) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
 
     const [search, setSearch] = useState(filters.search || '');
     const [classFilter, setClassFilter] = useState(filters.class_id || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || 'active');
+
+    // Bulk Delete Checkbox State
+    const [selectedIds, setSelectedIds] = useState([]);
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
         nis: '',
@@ -32,12 +38,41 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
         status: 'active',
     });
 
+    const importForm = useForm({
+        file: null,
+    });
+
     const handleFilterChange = (newSearch, newClass, newStatus) => {
         router.get(
             route('students.index'),
             { search: newSearch, class_id: newClass, status: newStatus },
             { preserveState: true, replace: true }
         );
+    };
+
+    // Checkbox selection handlers
+    const toggleSelectAll = () => {
+        if (selectedIds.length === students.data.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(students.data.map(s => s.id));
+        }
+    };
+
+    const toggleSelect = (id) => {
+        setSelectedIds(prev => 
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+    };
+
+    const handleBulkDelete = () => {
+        if (selectedIds.length === 0) return;
+        if (confirm(`Apakah Anda yakin ingin menghapus ${selectedIds.length} data siswa terpilih?`)) {
+            router.post(route('students.bulk-destroy'), { ids: selectedIds }, {
+                preserveScroll: true,
+                onSuccess: () => setSelectedIds([]),
+            });
+        }
     };
 
     const openAddModal = () => {
@@ -52,7 +87,7 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
             nisn: student.nisn || '',
             name: student.name,
             gender: student.gender || 'Laki-laki',
-            school_class_id: String(student.school_class_id),
+            school_class_id: String(student.school_class_id || ''),
             parent_name: student.parent_name || '',
             parent_phone: student.parent_phone || '',
             status: student.status || 'active',
@@ -80,6 +115,14 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
         }
     };
 
+    const handleImportSubmit = (e) => {
+        e.preventDefault();
+        importForm.post(route('students.import'), {
+            preserveScroll: true,
+            onSuccess: () => { setIsImportModalOpen(false); importForm.reset(); },
+        });
+    };
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -96,12 +139,15 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                         </h2>
                     </div>
 
-                    <div className="flex items-center space-x-3">
-                        <Button onClick={() => router.visit(route('student-attendance.monitoring'))} variant="outline" className="rounded-xl font-bold">
-                            <ArrowLeft className="w-4 h-4 mr-2" /> Ke Monitoring Presensi
+                    <div className="flex items-center flex-wrap gap-2.5">
+                        <Button onClick={() => window.location.href = route('students.export', { class_id: classFilter, search })} variant="outline" className="rounded-xl font-bold border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400">
+                            <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
+                        </Button>
+                        <Button onClick={() => setIsImportModalOpen(true)} variant="outline" className="rounded-xl font-bold border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400">
+                            <Upload className="w-4 h-4 mr-2" /> Import Excel
                         </Button>
                         <Button onClick={() => router.visit(route('students.cards'))} variant="secondary" className="rounded-xl font-bold">
-                            <Printer className="w-4 h-4 mr-2" /> Cetak Kartu Pelajar QR
+                            <Printer className="w-4 h-4 mr-2" /> Cetak Kartu QR
                         </Button>
                         <Button onClick={openAddModal} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 dark:shadow-none">
                             <UserPlus className="w-4 h-4 mr-2" /> Tambah Siswa Baru
@@ -112,7 +158,34 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
         >
             <Head title="Kelola Data Siswa" />
 
-            <div className="space-y-6 pb-12">
+            <div className="space-y-6 pb-12 relative">
+                {/* Floating Bulk Action Bar */}
+                <AnimatePresence>
+                    {selectedIds.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="bg-slate-900 text-white rounded-2xl p-4 shadow-2xl border border-slate-800 flex items-center justify-between z-30 sticky top-4"
+                        >
+                            <div className="flex items-center space-x-3">
+                                <span className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 font-black flex items-center justify-center text-sm">
+                                    {selectedIds.length}
+                                </span>
+                                <span className="font-bold text-sm text-slate-200">Data siswa terpilih</span>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                <Button onClick={() => setSelectedIds([])} variant="ghost" size="sm" className="text-slate-400 hover:text-white font-bold rounded-xl">
+                                    Batal Pilih
+                                </Button>
+                                <Button onClick={handleBulkDelete} size="sm" className="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-lg shadow-rose-600/30">
+                                    <Trash2 className="w-4 h-4 mr-2" /> Hapus {selectedIds.length} Siswa Terpilih
+                                </Button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 {/* Filter Bar */}
                 <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -164,7 +237,15 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                         <Table>
                             <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
                                 <TableRow>
-                                    <TableHead className="font-bold px-6 py-4">NIS / NISN</TableHead>
+                                    <TableHead className="w-12 text-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={students.data.length > 0 && selectedIds.length === students.data.length}
+                                            onChange={toggleSelectAll}
+                                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                        />
+                                    </TableHead>
+                                    <TableHead className="font-bold py-4">NIS / NISN</TableHead>
                                     <TableHead className="font-bold">Nama Siswa</TableHead>
                                     <TableHead className="font-bold">Kelas</TableHead>
                                     <TableHead className="font-bold">No. HP Orang Tua (WA)</TableHead>
@@ -175,14 +256,22 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                             <TableBody>
                                 {students.data.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-8 text-slate-400 font-semibold">
+                                        <TableCell colSpan={7} className="text-center py-8 text-slate-400 font-semibold">
                                             Belum ada data siswa.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     students.data.map((student) => (
-                                        <TableRow key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
-                                            <TableCell className="px-6 py-4 font-mono font-bold text-slate-700 dark:text-slate-300">
+                                        <TableRow key={student.id} className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/50 ${selectedIds.includes(student.id) ? 'bg-indigo-50/50 dark:bg-indigo-950/30' : ''}`}>
+                                            <TableCell className="text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(student.id)}
+                                                    onChange={() => toggleSelect(student.id)}
+                                                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                />
+                                            </TableCell>
+                                            <TableCell className="font-mono font-bold text-slate-700 dark:text-slate-300">
                                                 {student.nis} {student.nisn ? `(${student.nisn})` : ''}
                                             </TableCell>
                                             <TableCell className="font-extrabold text-slate-900 dark:text-white">
@@ -215,6 +304,54 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Modal Import Excel */}
+            <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+                <DialogContent className="sm:max-w-[480px] rounded-3xl p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                    <form onSubmit={handleImportSubmit}>
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-black text-slate-900 dark:text-white">Import Data Siswa dari Excel</DialogTitle>
+                            <DialogDescription className="text-xs text-slate-500">Unggah berkas Excel (.xlsx / .csv) untuk memasukkan atau memperbarui data siswa secara masal.</DialogDescription>
+                        </DialogHeader>
+
+                        <div className="py-6 space-y-4">
+                            <div className="bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-4 flex items-start space-x-3">
+                                <Download className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                                <div>
+                                    <h4 className="text-xs font-bold text-indigo-900 dark:text-indigo-200">Belum punya format Excel?</h4>
+                                    <p className="text-[11px] text-indigo-700 dark:text-indigo-300 mt-0.5">Unduh template standar terlebih dahulu agar kolom sesuai.</p>
+                                    <a
+                                        href={route('students.download-template')}
+                                        className="inline-flex items-center text-xs font-black text-indigo-600 dark:text-indigo-400 hover:underline mt-2"
+                                    >
+                                        <Download className="w-3.5 h-3.5 mr-1" /> Unduh Template Import (.xlsx)
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div>
+                                <Label className="text-xs font-bold mb-1.5 block">Pilih Berkas Excel (.xlsx / .csv)*</Label>
+                                <Input
+                                    type="file"
+                                    accept=".xlsx,.xls,.csv"
+                                    onChange={(e) => importForm.setData('file', e.target.files[0])}
+                                    required
+                                    className="rounded-xl cursor-pointer"
+                                />
+                                {importForm.errors.file && <p className="text-xs text-rose-500 mt-1">{importForm.errors.file}</p>}
+                            </div>
+                        </div>
+
+                        <DialogFooter className="gap-2">
+                            <Button type="button" variant="outline" onClick={() => setIsImportModalOpen(false)} className="rounded-xl font-bold w-full">Batal</Button>
+                            <Button type="submit" disabled={importForm.processing || !importForm.data.file} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full">
+                                <Upload className="w-4 h-4 mr-2" />
+                                {importForm.processing ? 'Memproses Import...' : 'Unggah & Import'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* Modal Add Student */}
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
