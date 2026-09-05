@@ -214,4 +214,50 @@ class UserAuthorityController extends Controller
 
         return redirect()->back()->with('success', 'Status akses untuk ' . count($validated['student_ids']) . ' siswa terpilih berhasil diperbarui.');
     }
+
+    /**
+     * Auto Sync & Generate User Accounts for Students
+     */
+    public function syncStudentAccounts(Request $request)
+    {
+        Role::firstOrCreate(['name' => 'Siswa', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'Wali Murid', 'guard_name' => 'web']);
+
+        $students = Student::all();
+        $createdCount = 0;
+        $defaultPassword = Hash::make('password');
+
+        foreach ($students as $student) {
+            if (empty($student->nis)) continue;
+
+            $user = User::where('username', $student->nis)
+                ->orWhere('email', $student->nis . '@siswa.smkmu.sch.id')
+                ->orWhere('email', $student->nis . '@siswa.sipmu.sch.id')
+                ->first();
+
+            if (!$user) {
+                $user = User::create([
+                    'name' => $student->name,
+                    'username' => $student->nis,
+                    'email' => $student->nis . '@siswa.smkmu.sch.id',
+                    'password' => $defaultPassword,
+                ]);
+                $user->assignRole('Siswa');
+                $createdCount++;
+            } else {
+                if ($user->email === $student->nis . '@siswa.sipmu.sch.id' || str_contains($user->email, '@siswa.sipmu.sch.id')) {
+                    $user->update(['email' => $student->nis . '@siswa.smkmu.sch.id']);
+                }
+                if (!$user->hasRole('Siswa')) {
+                    $user->assignRole('Siswa');
+                }
+            }
+
+            if ($student->user_id !== $user->id) {
+                $student->update(['user_id' => $user->id]);
+            }
+        }
+
+        return redirect()->back()->with('success', "Sinkronisasi akun siswa berhasil. {$createdCount} akun baru terbuat, seluruh data siswa terhubung.");
+    }
 }
