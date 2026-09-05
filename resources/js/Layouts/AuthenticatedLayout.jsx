@@ -101,6 +101,7 @@ export default function AuthenticatedLayout({ header, children }) {
         }
     });
     const roles = [...new Set(expandedRoles)];
+    const isStudent = roles.some(r => ['Siswa', 'Wali Murid'].includes(r));
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -515,7 +516,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
                                     </div>
                                     <div className="px-2">
-                                        <Dropdown.Link href={route('profile.edit')}>
+                                        <Dropdown.Link href={isStudent ? route('student-portal.profile') : route('profile.edit')}>
                                             <div className="flex items-center font-bold text-[13px] py-1.5 px-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                                 <UserIcon className="w-4 h-4 mr-3 text-slate-400" /> {t('nav.profile')}
                                             </div>
