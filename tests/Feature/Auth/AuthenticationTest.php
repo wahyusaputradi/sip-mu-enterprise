@@ -61,9 +61,40 @@ class AuthenticationTest extends TestCase
         $response = $this->post('/login', [
             'login' => $user->email,
             'password' => 'password',
+            'login_mode' => 'siswa',
         ]);
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('student-portal.dashboard', absolute: false));
+    }
+
+    public function test_strict_role_mode_prevents_mismatched_logins(): void
+    {
+        \Spatie\Permission\Models\Role::create(['name' => 'Siswa']);
+        \Spatie\Permission\Models\Role::create(['name' => 'Super Admin']);
+
+        $studentUser = User::factory()->create();
+        $studentUser->assignRole('Siswa');
+
+        $adminUser = User::factory()->create();
+        $adminUser->assignRole('Super Admin');
+
+        // 1. Siswa mencoba login lewat tab Pegawai -> Gagal
+        $response1 = $this->post('/login', [
+            'login' => $studentUser->email,
+            'password' => 'password',
+            'login_mode' => 'pegawai',
+        ]);
+        $this->assertGuest();
+        $response1->assertSessionHasErrors('login');
+
+        // 2. Admin mencoba login lewat tab Siswa -> Gagal
+        $response2 = $this->post('/login', [
+            'login' => $adminUser->email,
+            'password' => 'password',
+            'login_mode' => 'siswa',
+        ]);
+        $this->assertGuest();
+        $response2->assertSessionHasErrors('login');
     }
 }

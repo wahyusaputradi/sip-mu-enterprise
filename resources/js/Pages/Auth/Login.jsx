@@ -16,10 +16,16 @@ export default function Login({ status, canResetPassword }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         login: '',
         password: '',
+        login_mode: 'pegawai',
         remember: false,
     });
     
     const [showPassword, setShowPassword] = useState(false);
+
+    const handleSwitchMode = (mode) => {
+        setLoginMode(mode);
+        setData('login_mode', mode);
+    };
 
     useEffect(() => {
         return () => {
@@ -54,7 +60,7 @@ export default function Login({ status, canResetPassword }) {
             <div className="mb-6 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl flex items-center space-x-1 border border-slate-200/80 dark:border-slate-700/60 shadow-inner">
                 <button
                     type="button"
-                    onClick={() => setLoginMode('pegawai')}
+                    onClick={() => handleSwitchMode('pegawai')}
                     className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-2 ${
                         loginMode === 'pegawai'
                             ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-md shadow-slate-200/50 dark:shadow-none ring-1 ring-slate-200/60 dark:ring-slate-700'
@@ -66,7 +72,7 @@ export default function Login({ status, canResetPassword }) {
                 </button>
                 <button
                     type="button"
-                    onClick={() => setLoginMode('siswa')}
+                    onClick={() => handleSwitchMode('siswa')}
                     className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-2 ${
                         loginMode === 'siswa'
                             ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-md shadow-slate-200/50 dark:shadow-none ring-1 ring-slate-200/60 dark:ring-slate-700'

@@ -31,6 +31,7 @@ class LoginRequest extends FormRequest
         return [
             'login' => ['required', 'string'],
             'password' => ['required', 'string'],
+            'login_mode' => ['nullable', 'string', 'in:pegawai,siswa'],
         ];
     }
 
@@ -95,6 +96,26 @@ class LoginRequest extends FormRequest
 
             throw ValidationException::withMessages([
                 'login' => "Kombinasi email/username atau kata sandi salah. Sisa percobaan: {$remaining}.",
+            ]);
+        }
+
+        // 4. Strict Role-Mode Matching Check
+        $user = Auth::user();
+        $loginMode = $this->input('login_mode');
+
+        if ($loginMode === 'siswa' && !$user->hasRole(['Siswa', 'Wali Murid'])) {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+            throw ValidationException::withMessages([
+                'login' => 'Mode login tidak sesuai! Akun Anda terdaftar sebagai Pegawai/Guru. Silakan gunakan tab "Pegawai / Guru" untuk masuk.',
+            ]);
+        }
+
+        if ($loginMode === 'pegawai' && $user->hasRole(['Siswa', 'Wali Murid'])) {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+            throw ValidationException::withMessages([
+                'login' => 'Mode login tidak sesuai! Akun Anda terdaftar sebagai Siswa/Wali Murid. Silakan gunakan tab "Siswa / Wali Murid" untuk masuk.',
             ]);
         }
 
