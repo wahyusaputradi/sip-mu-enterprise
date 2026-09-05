@@ -8,7 +8,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-export default function StudentDashboard({ auth, student, todayAttendance, monthlyStats, recentAttendances, pendingLeavesCount }) {
+export default function StudentDashboard({ auth, student = {}, todayAttendance = null, monthlyStats = {}, recentAttendances = [], pendingLeavesCount = 0 }) {
+    const studentData = student || {};
+    const statsData = monthlyStats || {};
+    const attendancesList = Array.isArray(recentAttendances) ? recentAttendances : [];
+
     const getStatusBadge = (status) => {
         switch (status) {
             case 'present':
@@ -25,8 +29,8 @@ export default function StudentDashboard({ auth, student, todayAttendance, month
     };
 
     return (
-        <AuthenticatedLayout user={auth.user}>
-            <Head title={`Portal Siswa — ${student.name}`} />
+        <AuthenticatedLayout user={auth?.user}>
+            <Head title={`Portal Siswa — ${studentData?.name || 'Siswa'}`} />
 
             <div className="space-y-6 pb-12">
                 {/* Banner Profile */}
@@ -35,15 +39,15 @@ export default function StudentDashboard({ auth, student, todayAttendance, month
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="flex items-center space-x-4">
                             <div className="w-16 h-16 rounded-2xl bg-indigo-600 border-2 border-indigo-400/40 flex items-center justify-center text-white text-2xl font-black shadow-lg">
-                                {student.name.charAt(0)}
+                                {studentData?.name?.charAt(0) || 'S'}
                             </div>
                             <div>
                                 <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[10px] font-black uppercase tracking-widest inline-block mb-1">
                                     Portal Mandiri Siswa / Wali Murid
                                 </span>
-                                <h1 className="text-2xl md:text-3xl font-black text-white">{student.name}</h1>
+                                <h1 className="text-2xl md:text-3xl font-black text-white">{studentData?.name || 'Siswa'}</h1>
                                 <p className="text-xs text-slate-300 font-medium mt-0.5">
-                                    NIS: <span className="font-mono font-bold text-white">{student.nis}</span> | Kelas: <span className="font-bold text-indigo-300">{student.school_class?.name || '-'}</span> | Wali Kelas: <span className="font-bold text-slate-200">{student.school_class?.homeroom_teacher?.name || '-'}</span>
+                                    NIS: <span className="font-mono font-bold text-white">{studentData?.nis || '-'}</span> | Kelas: <span className="font-bold text-indigo-300">{studentData?.school_class?.name || '-'}</span> | Wali Kelas: <span className="font-bold text-slate-200">{studentData?.school_class?.homeroom_teacher?.name || '-'}</span>
                                 </p>
                             </div>
                         </div>
@@ -59,7 +63,7 @@ export default function StudentDashboard({ auth, student, todayAttendance, month
                                 href={route('student-portal.leave-requests')}
                                 className="inline-flex items-center px-4 py-2.5 rounded-xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 font-extrabold text-xs hover:bg-indigo-500/30 transition-all"
                             >
-                                <CalendarDays className="w-4 h-4 mr-2" /> Ajukan Izin ({pendingLeavesCount})
+                                <CalendarDays className="w-4 h-4 mr-2" /> Ajukan Izin ({pendingLeavesCount || 0})
                             </Link>
                         </div>
                     </div>
@@ -99,31 +103,31 @@ export default function StudentDashboard({ auth, student, todayAttendance, month
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
                         <p className="text-[10px] font-black uppercase text-slate-400">Tepat Waktu</p>
-                        <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{monthlyStats.present}</h3>
+                        <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{statsData?.present || 0}</h3>
                         <p className="text-xs text-slate-500 mt-0.5">Hari Bulan Ini</p>
                     </Card>
 
                     <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
                         <p className="text-[10px] font-black uppercase text-slate-400">Terlambat</p>
-                        <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{monthlyStats.late}</h3>
+                        <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{statsData?.late || 0}</h3>
                         <p className="text-xs text-slate-500 mt-0.5">Hari Bulan Ini</p>
                     </Card>
 
                     <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
                         <p className="text-[10px] font-black uppercase text-slate-400">Sakit / Izin</p>
-                        <h3 className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{monthlyStats.sick + monthlyStats.permit}</h3>
+                        <h3 className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{(statsData?.sick || 0) + (statsData?.permit || 0)}</h3>
                         <p className="text-xs text-slate-500 mt-0.5">Hari Bulan Ini</p>
                     </Card>
 
                     <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
                         <p className="text-[10px] font-black uppercase text-slate-400">Alpha</p>
-                        <h3 className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">{monthlyStats.alpha}</h3>
+                        <h3 className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">{statsData?.alpha || 0}</h3>
                         <p className="text-xs text-slate-500 mt-0.5">Hari Bulan Ini</p>
                     </Card>
 
                     <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
                         <p className="text-[10px] font-black uppercase text-slate-400">Tingkat Kehadiran</p>
-                        <h3 className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">{monthlyStats.percentage}%</h3>
+                        <h3 className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">{statsData?.percentage ?? 100}%</h3>
                         <p className="text-xs text-slate-500 mt-0.5">Disiplin Presensi</p>
                     </Card>
                 </div>
@@ -144,12 +148,12 @@ export default function StudentDashboard({ auth, student, todayAttendance, month
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {recentAttendances.length === 0 ? (
+                            {attendancesList.length === 0 ? (
                                 <div className="p-8 text-center text-slate-400 font-semibold">
                                     Belum ada data riwayat presensi tercatat.
                                 </div>
                             ) : (
-                                recentAttendances.map((item) => (
+                                attendancesList.map((item) => (
                                     <div key={item.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
                                         <div className="flex items-center space-x-3">
                                             <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300">

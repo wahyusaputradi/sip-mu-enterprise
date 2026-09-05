@@ -81,8 +81,14 @@ const RealtimeClock = () => {
 };
 
 export default function AuthenticatedLayout({ header, children }) {
-    const user = usePage().props.auth.user;
-    const { flash, errors } = usePage().props;
+    const rawUser = usePage().props.auth?.user || {};
+    const user = {
+        name: 'User',
+        email: '',
+        roles: [],
+        ...rawUser,
+    };
+    const { flash = {}, errors = {} } = usePage().props;
     const { t } = useLanguage();
     
     // Map new custom roles to system roles for backward compatibility with menu filtering
@@ -93,7 +99,10 @@ export default function AuthenticatedLayout({ header, children }) {
         'Guru / Karyawan Staf': ['Guru', 'Karyawan']
     };
 
-    let baseRoles = user.roles || [];
+    let rawRoles = user?.roles || [];
+    let baseRoles = Array.isArray(rawRoles) 
+        ? rawRoles 
+        : (typeof rawRoles === 'object' && rawRoles ? Object.values(rawRoles) : []);
     let expandedRoles = [...baseRoles];
     baseRoles.forEach(role => {
         if (roleMappings[role]) {
