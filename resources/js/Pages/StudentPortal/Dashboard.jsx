@@ -159,12 +159,6 @@ export default function StudentDashboard({ auth, student = {}, todayAttendance =
 
                             <div className="flex items-center gap-3 flex-wrap">
                                 <Link
-                                    href={route('student-portal.schedule')}
-                                    className="inline-flex items-center px-4 py-2.5 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 font-extrabold text-xs hover:bg-indigo-500/30 transition-all shadow-md"
-                                >
-                                    <BookOpen className="w-4 h-4 mr-2 text-indigo-300" /> Jadwal Pelajaran
-                                </Link>
-                                <Link
                                     href={route('student-portal.digital-card')}
                                     className="inline-flex items-center px-4 py-2.5 rounded-2xl bg-white text-indigo-950 font-black text-xs shadow-lg hover:bg-slate-100 transition-all"
                                 >
