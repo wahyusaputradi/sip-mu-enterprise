@@ -38,7 +38,8 @@ import {
     Image,
     QrCode,
     Printer,
-    FileSpreadsheet
+    FileSpreadsheet,
+    BookOpen
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
