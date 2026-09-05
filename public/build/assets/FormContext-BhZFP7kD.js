@@ -1,0 +1,1 @@
+import{r}from"./vendor-framer-EawfqCm1.js";import{N as t}from"./button-gMleDW7X.js";const e=r.createContext({formRef:{current:{fields:new Map}},errors:{},clearErrors:t,validationMode:"onSubmit",submitAttemptedRef:{current:!1}});function s(){return r.useContext(e)}export{s as u};
