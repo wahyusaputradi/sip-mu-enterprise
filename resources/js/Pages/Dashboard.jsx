@@ -28,7 +28,8 @@ import {
     Trophy,
     Star,
     Award,
-    LockOpen
+    LockOpen,
+    QrCode
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, PieChart, Pie, LabelList } from 'recharts';
 import { motion } from 'framer-motion';
@@ -49,7 +50,7 @@ const item = {
     show: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
 };
 
-export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, employee, todayAttendance, campusLocations, monthlyStats, adminStats, executiveStats, todayHoliday, primaryRole, roleData, managementMonthlyStats, dailyTrendStats }) {
+export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, employee, todayAttendance, campusLocations, monthlyStats, adminStats, studentStats, executiveStats, todayHoliday, primaryRole, roleData, managementMonthlyStats, dailyTrendStats, studentDailyTrendStats }) {
     const { t, language } = useLanguage();
     const dateLocale = language === 'en' ? 'en-US' : 'id-ID';
 
@@ -86,6 +87,7 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
     }, []);
 
     const [personalTab, setPersonalTab] = useState('harian');
+    const [mgmtTrendTab, setMgmtTrendTab] = useState('pegawai');
 
     const chartData = [
         { name: t('dash.present_month'), value: monthlyStats?.present || 0, color: '#6366f1' },
@@ -235,6 +237,94 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                             </motion.div>
                         ))}
                     </div>
+                )}
+
+                {/* Student Executive Overview Cards & Quick Actions */}
+                {studentStats && (
+                    <motion.div variants={item} className="space-y-4 pt-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+                            <div>
+                                <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2.5 animate-pulse"></span>
+                                    Presensi & Kesiswaan Siswa-Siswi
+                                </h3>
+                                <p className="text-xs font-semibold text-slate-500">Ringkasan kedisiplinan dan presensi siswa hari ini</p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <Link
+                                    href={route('student-attendance.kiosk')}
+                                    className="inline-flex items-center px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 transition-all hover:-translate-y-0.5"
+                                >
+                                    <QrCode className="w-3.5 h-3.5 mr-1.5" /> Kiosk Scanner
+                                </Link>
+                                <Link
+                                    href={route('student-attendance.monitoring')}
+                                    className="inline-flex items-center px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-xs transition-all hover:-translate-y-0.5"
+                                >
+                                    <Users className="w-3.5 h-3.5 mr-1.5" /> Monitoring Siswa
+                                </Link>
+                                <Link
+                                    href={route('student-attendance.recap')}
+                                    className="inline-flex items-center px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-xs transition-all hover:-translate-y-0.5"
+                                >
+                                    <FileText className="w-3.5 h-3.5 mr-1.5" /> Rekap Bulanan
+                                </Link>
+                                <Link
+                                    href={route('student-leave-requests.approval')}
+                                    className="inline-flex items-center px-3.5 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 font-bold text-xs transition-all hover:-translate-y-0.5"
+                                >
+                                    <CalendarDays className="w-3.5 h-3.5 mr-1.5" /> Approval Izin ({studentStats.pending_leaves || 0})
+                                </Link>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
+                                <div className="flex items-center justify-between mb-2">
+                                    <Users className="w-6 h-6 text-blue-500" />
+                                    <span className="text-[10px] font-black uppercase text-slate-400">Total Siswa</span>
+                                </div>
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white">{studentStats.total_students}</h3>
+                                <p className="text-xs font-bold text-slate-500 mt-1">Siswa Aktif</p>
+                            </Card>
+
+                            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
+                                <div className="flex items-center justify-between mb-2">
+                                    <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                                    <span className="text-[10px] font-black uppercase text-emerald-600">Hadir</span>
+                                </div>
+                                <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{studentStats.present_today}</h3>
+                                <p className="text-xs font-bold text-slate-500 mt-1">Hadir Tepat Waktu</p>
+                            </Card>
+
+                            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
+                                <div className="flex items-center justify-between mb-2">
+                                    <AlertCircle className="w-6 h-6 text-amber-500" />
+                                    <span className="text-[10px] font-black uppercase text-amber-600">Terlambat</span>
+                                </div>
+                                <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400">{studentStats.late_today}</h3>
+                                <p className="text-xs font-bold text-slate-500 mt-1">Terlambat Hari Ini</p>
+                            </Card>
+
+                            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
+                                <div className="flex items-center justify-between mb-2">
+                                    <Calendar className="w-6 h-6 text-purple-500" />
+                                    <span className="text-[10px] font-black uppercase text-purple-600">Sakit / Izin</span>
+                                </div>
+                                <h3 className="text-2xl font-black text-purple-600 dark:text-purple-400">{(studentStats.sick_today || 0) + (studentStats.permit_today || 0)}</h3>
+                                <p className="text-xs font-bold text-slate-500 mt-1">Dengan Keterangan</p>
+                            </Card>
+
+                            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
+                                <div className="flex items-center justify-between mb-2">
+                                    <AlertCircle className="w-6 h-6 text-rose-500" />
+                                    <span className="text-[10px] font-black uppercase text-rose-600">Alpha</span>
+                                </div>
+                                <h3 className="text-2xl font-black text-rose-600 dark:text-rose-400">{studentStats.alpha_today}</h3>
+                                <p className="text-xs font-bold text-slate-500 mt-1">Tanpa Keterangan</p>
+                            </Card>
+                        </div>
+                    </motion.div>
                 )}
 
                 {/* Executive Dashboard Overview (Super Admin, Kepsek, Kurikulum) */}
@@ -558,6 +648,24 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                                     </CardDescription>
                                 </div>
                                 <div className="flex items-center space-x-2">
+                                    {adminStats && studentStats && (
+                                        <div className="bg-slate-100 dark:bg-secondary p-1 rounded-xl flex items-center border border-slate-200/60 dark:border-border">
+                                            <button
+                                                type="button"
+                                                onClick={() => setMgmtTrendTab('pegawai')}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${mgmtTrendTab === 'pegawai' ? 'bg-white dark:bg-card text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+                                            >
+                                                Pegawai & Guru
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setMgmtTrendTab('siswa')}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${mgmtTrendTab === 'siswa' ? 'bg-white dark:bg-card text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+                                            >
+                                                Siswa-Siswi
+                                            </button>
+                                        </div>
+                                    )}
                                     {!adminStats && monthlyStats?.has_jtm && (
                                         <div className="bg-slate-100 dark:bg-secondary p-1 rounded-xl flex items-center border border-slate-200/60 dark:border-border">
                                             <button
@@ -595,26 +703,34 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                             <div className="bg-emerald-50/50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 p-3 rounded-2xl text-center">
                                                 <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Tepat Waktu</p>
-                                                <p className="text-xl font-black text-emerald-700 dark:text-emerald-400 mt-1">{managementMonthlyStats?.present || 0}</p>
+                                                <p className="text-xl font-black text-emerald-700 dark:text-emerald-400 mt-1">
+                                                    {mgmtTrendTab === 'siswa' ? (studentStats?.present_today || 0) : (managementMonthlyStats?.present || 0)}
+                                                </p>
                                             </div>
                                             <div className="bg-amber-50/50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 p-3 rounded-2xl text-center">
                                                 <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Terlambat</p>
-                                                <p className="text-xl font-black text-amber-700 dark:text-amber-400 mt-1">{managementMonthlyStats?.late || 0}</p>
+                                                <p className="text-xl font-black text-amber-700 dark:text-amber-400 mt-1">
+                                                    {mgmtTrendTab === 'siswa' ? (studentStats?.late_today || 0) : (managementMonthlyStats?.late || 0)}
+                                                </p>
                                             </div>
                                             <div className="bg-blue-50/50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 p-3 rounded-2xl text-center">
                                                 <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Sakit / Izin</p>
-                                                <p className="text-xl font-black text-blue-700 dark:text-blue-400 mt-1">{(managementMonthlyStats?.sick || 0) + (managementMonthlyStats?.permit || 0)}</p>
+                                                <p className="text-xl font-black text-blue-700 dark:text-blue-400 mt-1">
+                                                    {mgmtTrendTab === 'siswa' ? ((studentStats?.sick_today || 0) + (studentStats?.permit_today || 0)) : ((managementMonthlyStats?.sick || 0) + (managementMonthlyStats?.permit || 0))}
+                                                </p>
                                             </div>
                                             <div className="bg-rose-50/50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 p-3 rounded-2xl text-center">
                                                 <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Alpha</p>
-                                                <p className="text-xl font-black text-rose-700 dark:text-rose-400 mt-1">{managementMonthlyStats?.alpha || 0}</p>
+                                                <p className="text-xl font-black text-rose-700 dark:text-rose-400 mt-1">
+                                                    {mgmtTrendTab === 'siswa' ? (studentStats?.alpha_today || 0) : (managementMonthlyStats?.alpha || 0)}
+                                                </p>
                                             </div>
                                         </div>
 
                                         {/* Area Trend Chart */}
                                         <div className="h-[300px] w-full pt-2">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={dailyTrendStats || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                <AreaChart data={(mgmtTrendTab === 'siswa' ? studentDailyTrendStats : dailyTrendStats) || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                                     <defs>
                                                         <linearGradient id="colorPresent" x1="0" y1="0" x2="0" y2="1">
                                                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>

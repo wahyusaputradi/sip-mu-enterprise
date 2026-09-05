@@ -132,6 +132,80 @@ class AttendanceController extends Controller
             }
         }
 
+        // Student Stats for Management Dashboard
+        $studentStats = null;
+        $studentDailyTrendStats = [];
+
+        if ($user->hasAnyRole(['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Bendahara'])) {
+            $totalActiveStudents = \App\Models\Student::where('status', 'active')->count();
+
+            $todayStudentAttendances = \App\Models\StudentAttendance::whereDate('date', Carbon::today())->get();
+
+            $spCount = $todayStudentAttendances->where('check_in_status', 'present')->count();
+            $slCount = $todayStudentAttendances->where('check_in_status', 'late')->count();
+            $ssickCount = $todayStudentAttendances->where('check_in_status', 'sick')->count();
+            $spermitCount = $todayStudentAttendances->where('check_in_status', 'permit')->count();
+            $salphaCount = $todayStudentAttendances->where('check_in_status', 'alpha')->count();
+
+            $studentPendingLeaves = \App\Models\StudentLeaveRequest::where('status', 'pending')->count();
+
+            $studentStats = [
+                'total_students' => $totalActiveStudents,
+                'present_today' => $spCount,
+                'late_today' => $slCount,
+                'sick_today' => $ssickCount,
+                'permit_today' => $spermitCount,
+                'alpha_today' => $salphaCount,
+                'pending_leaves' => $studentPendingLeaves,
+            ];
+
+            // Student Daily Trend Stats for current month
+            $currentMonth = Carbon::now()->month;
+            $currentYear = Carbon::now()->year;
+            $daysInMonth = Carbon::now()->daysInMonth;
+
+            $studentDailyRaw = \App\Models\StudentAttendance::whereMonth('date', $currentMonth)
+                ->whereYear('date', $currentYear)
+                ->selectRaw('date, check_in_status, count(*) as count')
+                ->groupBy('date', 'check_in_status')
+                ->get()
+                ->groupBy(function($item) {
+                    return Carbon::parse($item->date)->format('Y-m-d');
+                });
+
+            for ($d = 1; $d <= $daysInMonth; $d++) {
+                $dt = Carbon::createFromDate($currentYear, $currentMonth, $d);
+                if ($dt->isFuture()) {
+                    break;
+                }
+
+                $dateStr = $dt->toDateString();
+                $dayRecords = $studentDailyRaw->get($dateStr, collect());
+
+                $pCount = 0;
+                $lCount = 0;
+                $spCount = 0;
+                $aCount = 0;
+
+                foreach ($dayRecords as $rec) {
+                    if ($rec->check_in_status === 'present') $pCount += $rec->count;
+                    elseif ($rec->check_in_status === 'late') $lCount += $rec->count;
+                    elseif (in_array($rec->check_in_status, ['sick', 'permit'])) $spCount += $rec->count;
+                    elseif ($rec->check_in_status === 'alpha') $aCount += $rec->count;
+                }
+
+                $studentDailyTrendStats[] = [
+                    'day' => $dt->format('d M'),
+                    'date' => $dateStr,
+                    'present' => $pCount,
+                    'late' => $lCount,
+                    'sick_permit' => $spCount,
+                    'alpha' => $aCount,
+                    'total' => $pCount + $lCount + $spCount + $aCount,
+                ];
+            }
+        }
+
         // Executive Stats - For top level management
         $executiveStats = null;
         if ($user->hasAnyRole(['Super Admin', 'Kepala Sekolah', 'Kurikulum'])) {
@@ -372,6 +446,8 @@ class AttendanceController extends Controller
             'adminStats' => $adminStats,
             'managementMonthlyStats' => $managementMonthlyStats,
             'dailyTrendStats' => $dailyTrendStats,
+            'studentStats' => $studentStats,
+            'studentDailyTrendStats' => $studentDailyTrendStats,
             'executiveStats' => $executiveStats,
             'primaryRole' => $primaryRole,
             'roleData' => $roleData,
