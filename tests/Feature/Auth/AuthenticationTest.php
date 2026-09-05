@@ -51,4 +51,19 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
         $response->assertRedirect('/');
     }
+
+    public function test_student_users_redirected_to_student_portal_after_login(): void
+    {
+        \Spatie\Permission\Models\Role::create(['name' => 'Siswa']);
+        $user = User::factory()->create();
+        $user->assignRole('Siswa');
+
+        $response = $this->post('/login', [
+            'login' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertRedirect(route('student-portal.dashboard', absolute: false));
+    }
 }

@@ -39,6 +39,11 @@ class AuthenticatedSessionController extends Controller
             ->where('id', '!=', $request->session()->getId())
             ->delete();
 
+        $user = Auth::user();
+        if ($user && $user->hasRole(['Siswa', 'Wali Murid'])) {
+            return redirect()->intended(route('student-portal.dashboard', absolute: false));
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { UserCircle, Lock, LogIn, Loader2, Eye, EyeOff, ShieldCheck, ShieldX, Timer, KeyRound } from 'lucide-react';
+import { UserCircle, Lock, LogIn, Loader2, Eye, EyeOff, ShieldCheck, ShieldX, Timer, KeyRound, Briefcase, GraduationCap, Info } from 'lucide-react';
 import { useLanguage } from '@/Context/LanguageContext';
 
 export default function Login({ status, canResetPassword }) {
     const { t } = useLanguage();
+    const [loginMode, setLoginMode] = useState('pegawai'); // 'pegawai' | 'siswa'
+
     const { data, setData, post, processing, errors, reset } = useForm({
         login: '',
         password: '',
@@ -35,7 +37,7 @@ export default function Login({ status, canResetPassword }) {
             <Head title="Sign In - SIP MU Enterprise" />
 
             {/* Header Form */}
-            <div className="mb-8">
+            <div className="mb-6">
                 <div className="inline-flex items-center space-x-2 px-3 py-1 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-bold border border-indigo-100 dark:border-indigo-800/50 mb-3">
                     <KeyRound className="w-3.5 h-3.5" />
                     <span>{t('login.auth_badge')}</span>
@@ -46,6 +48,34 @@ export default function Login({ status, canResetPassword }) {
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                     {t('login.subtitle')}
                 </p>
+            </div>
+
+            {/* Segmented Dual-Mode Role Selector */}
+            <div className="mb-6 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl flex items-center space-x-1 border border-slate-200/80 dark:border-slate-700/60 shadow-inner">
+                <button
+                    type="button"
+                    onClick={() => setLoginMode('pegawai')}
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-2 ${
+                        loginMode === 'pegawai'
+                            ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-md shadow-slate-200/50 dark:shadow-none ring-1 ring-slate-200/60 dark:ring-slate-700'
+                            : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                    }`}
+                >
+                    <Briefcase className="w-4 h-4 shrink-0" />
+                    <span>{t('login.tab_employee')}</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setLoginMode('siswa')}
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-2 ${
+                        loginMode === 'siswa'
+                            ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-md shadow-slate-200/50 dark:shadow-none ring-1 ring-slate-200/60 dark:ring-slate-700'
+                            : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                    }`}
+                >
+                    <GraduationCap className="w-4 h-4 shrink-0" />
+                    <span>{t('login.tab_student')}</span>
+                </button>
             </div>
 
             {/* Status Message (e.g. Password Reset Successful) */}
@@ -81,7 +111,22 @@ export default function Login({ status, canResetPassword }) {
             )}
 
             <form onSubmit={submit} className="space-y-5">
-                {/* Username / Email Input */}
+                {/* Contextual Helper Tip for Siswa Mode */}
+                <AnimatePresence mode="wait">
+                    {loginMode === 'siswa' && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -5 }}
+                            className="p-3 bg-indigo-50/80 dark:bg-indigo-950/40 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 text-xs font-semibold text-indigo-700 dark:text-indigo-300 flex items-start space-x-2.5 shadow-sm"
+                        >
+                            <Info className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+                            <span className="leading-relaxed">{t('login.student_tip')}</span>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Username / Email / NIS Input */}
                 <motion.div 
                     initial={{ x: 15, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
@@ -89,10 +134,14 @@ export default function Login({ status, canResetPassword }) {
                     className="space-y-2"
                 >
                     <Label htmlFor="login" className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                        {t('login.label_login')}
+                        {loginMode === 'siswa' ? t('login.label_student_login') : t('login.label_login')}
                     </Label>
                     <div className="relative group">
-                        <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors" />
+                        {loginMode === 'siswa' ? (
+                            <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors" />
+                        ) : (
+                            <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors" />
+                        )}
                         <Input
                             id="login"
                             type="text"
@@ -101,7 +150,7 @@ export default function Login({ status, canResetPassword }) {
                             autoComplete="username"
                             autoFocus
                             onChange={(e) => setData('login', e.target.value)}
-                            placeholder={t('login.placeholder_login')}
+                            placeholder={loginMode === 'siswa' ? t('login.placeholder_student_login') : t('login.placeholder_login')}
                         />
                     </div>
                 </motion.div>
