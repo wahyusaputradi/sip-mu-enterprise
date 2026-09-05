@@ -14,7 +14,7 @@ import {
     Download
 } from 'lucide-react';
 
-export default function Recap({ auth, matrix, daysInMonth, schoolClasses, filters }) {
+export default function Recap({ auth, matrix, grandTotals = { present: 0, late: 0, sick: 0, permit: 0, alpha: 0 }, daysInMonth, schoolClasses, filters }) {
     const [month, setMonth] = useState(filters.month || new Date().getMonth() + 1);
     const [year, setYear] = useState(filters.year || new Date().getFullYear());
     const [classId, setClassId] = useState(filters.class_id || '');
@@ -56,16 +56,6 @@ export default function Recap({ auth, matrix, daysInMonth, schoolClasses, filter
         }).toString();
         window.open(route('student-attendance.export-monthly-excel') + '?' + queryParams, '_blank');
     };
-
-    // Calculate overall totals
-    const grandTotals = matrix.reduce((acc, curr) => {
-        acc.present += curr.stats.present;
-        acc.late += curr.stats.late;
-        acc.sick += curr.stats.sick;
-        acc.permit += curr.stats.permit;
-        acc.alpha += curr.stats.alpha;
-        return acc;
-    }, { present: 0, late: 0, sick: 0, permit: 0, alpha: 0 });
 
     const getStatusPill = (status) => {
         switch (status) {
@@ -198,7 +188,7 @@ export default function Recap({ auth, matrix, daysInMonth, schoolClasses, filter
                         </div>
                         <div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Siswa</p>
-                            <p className="text-lg font-black text-slate-800 dark:text-slate-100">{matrix.length}</p>
+                            <p className="text-lg font-black text-slate-800 dark:text-slate-100">{matrix.total || 0}</p>
                         </div>
                     </div>
 
@@ -281,10 +271,12 @@ export default function Recap({ auth, matrix, daysInMonth, schoolClasses, filter
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-                                {matrix.length > 0 ? (
-                                    matrix.map((row, index) => (
+                                {matrix.data && matrix.data.length > 0 ? (
+                                    matrix.data.map((row, index) => (
                                         <tr key={row.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                                            <td className="py-2.5 px-3 text-center text-slate-400 sticky left-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 font-bold">{index + 1}</td>
+                                            <td className="py-2.5 px-3 text-center text-slate-400 sticky left-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 font-bold">
+                                                {(matrix.current_page - 1) * 50 + index + 1}
+                                            </td>
                                             <td className="py-2.5 px-4 font-mono font-bold text-slate-600 dark:text-slate-300 sticky left-12 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700">{row.nis}</td>
                                             <td className="py-2.5 px-4 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap sticky left-[168px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700">{row.name}</td>
                                             <td className="py-2.5 px-3 text-slate-500 border-r border-slate-200 dark:border-slate-700 whitespace-nowrap font-bold text-[11px]">{row.class_name}</td>
@@ -313,6 +305,37 @@ export default function Recap({ auth, matrix, daysInMonth, schoolClasses, filter
                         </table>
                     </div>
                 </div>
+
+                {/* Pagination */}
+                {matrix.links && matrix.links.length > 3 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-2">
+                        <p className="text-xs font-extrabold text-slate-500 dark:text-slate-400">
+                            Menampilkan <span className="text-slate-900 dark:text-white font-black">{matrix.from || 0}</span> s/d <span className="text-slate-900 dark:text-white font-black">{matrix.to || 0}</span> dari total <span className="text-indigo-600 dark:text-indigo-400 font-black">{matrix.total || 0}</span> data siswa
+                        </p>
+                        <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800">
+                            {matrix.links.map((link, idx) => {
+                                const isPrevious = link.label.includes('Previous') || link.label.includes('&laquo;');
+                                const isNext = link.label.includes('Next') || link.label.includes('&raquo;');
+                                const label = isPrevious ? 'Prev' : (isNext ? 'Next' : link.label);
+
+                                return link.url ? (
+                                    <button
+                                        key={idx}
+                                        onClick={() => router.get(link.url, {}, { preserveState: true, preserveScroll: true })}
+                                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                            link.active 
+                                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                                                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                        }`}
+                                        dangerouslySetInnerHTML={{ __html: label }}
+                                    />
+                                ) : (
+                                    <span key={idx} className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-300 dark:text-slate-600" dangerouslySetInnerHTML={{ __html: label }} />
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
         </AuthenticatedLayout>
     );

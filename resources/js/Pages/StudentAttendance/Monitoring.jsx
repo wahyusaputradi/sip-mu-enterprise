@@ -224,14 +224,14 @@ export default function StudentMonitoring({ auth, students, stats, schoolClasses
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {students.length === 0 ? (
+                                    {students.data.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={6} className="text-center py-8 text-slate-400 font-semibold">
                                                 Tidak ada data presensi siswa yang cocok dengan filter.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        students.map((student) => (
+                                        students.data.map((student) => (
                                             <TableRow key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                                                 <TableCell className="px-6 py-4">
                                                     <div>
@@ -269,6 +269,37 @@ export default function StudentMonitoring({ auth, students, stats, schoolClasses
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Pagination */}
+                {students.links && students.links.length > 3 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-2">
+                        <p className="text-xs font-extrabold text-slate-500 dark:text-slate-400">
+                            Menampilkan <span className="text-slate-900 dark:text-white font-black">{students.from || 0}</span> s/d <span className="text-slate-900 dark:text-white font-black">{students.to || 0}</span> dari total <span className="text-indigo-600 dark:text-indigo-400 font-black">{students.total || 0}</span> data siswa
+                        </p>
+                        <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800">
+                            {students.links.map((link, idx) => {
+                                const isPrevious = link.label.includes('Previous') || link.label.includes('&laquo;');
+                                const isNext = link.label.includes('Next') || link.label.includes('&raquo;');
+                                const label = isPrevious ? 'Prev' : (isNext ? 'Next' : link.label);
+
+                                return link.url ? (
+                                    <button
+                                        key={idx}
+                                        onClick={() => router.get(link.url, {}, { preserveState: true, preserveScroll: true })}
+                                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                            link.active 
+                                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                                                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                        }`}
+                                        dangerouslySetInnerHTML={{ __html: label }}
+                                    />
+                                ) : (
+                                    <span key={idx} className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-300 dark:text-slate-600" dangerouslySetInnerHTML={{ __html: label }} />
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Modal Manual Status Update */}

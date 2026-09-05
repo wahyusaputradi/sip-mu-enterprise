@@ -231,11 +231,13 @@ class StudentAttendanceController extends Controller
         }])
         ->where('status', 'active')
         ->when($classId, fn($q, $c) => $q->where('school_class_id', $c))
-        ->when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%")->orWhere('nis', 'like', "%{$s}%"));
+        ->when($search, fn($q, $s) => $q->where(function($sq) use ($s) {
+            $sq->where('name', 'like', "%{$s}%")->orWhere('nis', 'like', "%{$s}%");
+        }));
 
-        $students = $query->orderBy('name')->get();
+        $allStudents = $query->orderBy('name')->get();
 
-        $recap = $students->map(function ($s) {
+        $allRecap = $allStudents->map(function ($s) {
             $att = $s->attendances->first();
             return [
                 'id' => $s->id,
@@ -252,23 +254,37 @@ class StudentAttendanceController extends Controller
             ];
         });
 
+        $stats = [
+            'total' => $allRecap->count(),
+            'present' => $allRecap->where('status', 'present')->count(),
+            'late' => $allRecap->where('status', 'late')->count(),
+            'sick' => $allRecap->where('status', 'sick')->count(),
+            'permit' => $allRecap->where('status', 'permit')->count(),
+            'alpha' => $allRecap->where('status', 'alpha')->count(),
+        ];
+
         if ($statusFilter !== 'all') {
-            $recap = $recap->filter(fn($r) => $r['status'] === $statusFilter)->values();
+            $allRecap = $allRecap->filter(fn($r) => $r['status'] === $statusFilter)->values();
         }
 
-        $stats = [
-            'total' => $students->count(),
-            'present' => $recap->where('status', 'present')->count(),
-            'late' => $recap->where('status', 'late')->count(),
-            'sick' => $recap->where('status', 'sick')->count(),
-            'permit' => $recap->where('status', 'permit')->count(),
-            'alpha' => $recap->where('status', 'alpha')->count(),
-        ];
+        // Paginate 50 items per page
+        $page = (int) $request->input('page', 1);
+        $perPage = 50;
+        $totalItems = $allRecap->count();
+        $slicedData = $allRecap->slice(($page - 1) * $perPage, $perPage)->values();
+
+        $paginatedStudents = new \Illuminate\Pagination\LengthAwarePaginator(
+            $slicedData,
+            $totalItems,
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         $schoolClasses = SchoolClass::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('StudentAttendance/Monitoring', [
-            'students' => $recap,
+            'students' => $paginatedStudents,
             'stats' => $stats,
             'schoolClasses' => $schoolClasses,
             'filters' => [
@@ -325,11 +341,34 @@ class StudentAttendanceController extends Controller
         }])
         ->where('status', 'active')
         ->when($classId, fn($q, $c) => $q->where('school_class_id', $c))
-        ->when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%")->orWhere('nis', 'like', "%{$s}%"));
+        ->when($search, fn($q, $s) => $q->where(function($sq) use ($s) {
+            $sq->where('name', 'like', "%{$s}%")->orWhere('nis', 'like', "%{$s}%");
+        }));
 
-        $students = $studentsQuery->orderBy('name')->get();
+        // Compute grand totals across all matching students
+        $allStudentsForStats = (clone $studentsQuery)->get();
+        $grandTotals = [
+            'total' => $allStudentsForStats->count(),
+            'present' => 0,
+            'late' => 0,
+            'sick' => 0,
+            'permit' => 0,
+            'alpha' => 0,
+        ];
+        foreach ($allStudentsForStats as $st) {
+            foreach ($st->attendances as $att) {
+                if ($att->check_in_status === 'present') $grandTotals['present']++;
+                elseif ($att->check_in_status === 'late') $grandTotals['late']++;
+                elseif ($att->check_in_status === 'sick') $grandTotals['sick']++;
+                elseif ($att->check_in_status === 'permit') $grandTotals['permit']++;
+                elseif ($att->check_in_status === 'alpha') $grandTotals['alpha']++;
+            }
+        }
 
-        $matrix = $students->map(function ($student) use ($daysInMonth) {
+        // Paginate 50 students per page
+        $paginatedStudents = $studentsQuery->orderBy('name')->paginate(50)->withQueryString();
+
+        $paginatedStudents->getCollection()->transform(function ($student) use ($daysInMonth) {
             $attMap = $student->attendances->keyBy(function ($item) {
                 return (int) Carbon::parse($item->date)->format('j');
             });
@@ -372,7 +411,8 @@ class StudentAttendanceController extends Controller
         $schoolClasses = SchoolClass::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('StudentAttendance/Recap', [
-            'matrix' => $matrix,
+            'matrix' => $paginatedStudents,
+            'grandTotals' => $grandTotals,
             'daysInMonth' => $daysInMonth,
             'schoolClasses' => $schoolClasses,
             'filters' => [
