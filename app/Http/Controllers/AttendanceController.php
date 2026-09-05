@@ -16,6 +16,11 @@ class AttendanceController extends Controller
     public function dashboard()
     {
         $user = Auth::user();
+
+        if ($user->hasAnyRole(['Siswa', 'Wali Murid'])) {
+            return redirect()->route('student-portal.dashboard');
+        }
+
         $employee = $user->employee;
         $roles = $user->getRoleNames();
         $primaryRole = $roles->first() ?? 'Karyawan';

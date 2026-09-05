@@ -37,6 +37,11 @@ class PresensiController extends Controller
     public function index()
     {
         $user = Auth::user();
+
+        if ($user->hasAnyRole(['Siswa', 'Wali Murid'])) {
+            return redirect()->route('student-portal.dashboard');
+        }
+
         $employee = $user->employee;
 
         if (!$employee) {
