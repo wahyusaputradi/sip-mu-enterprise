@@ -85,4 +85,13 @@ class StudentPortalTest extends TestCase
         $response = $this->actingAs($user)->get(route('student-portal.digital-card'));
         $response->assertStatus(200);
     }
+
+    public function test_admin_cannot_access_student_portal()
+    {
+        $adminUser = User::factory()->create();
+        $adminUser->assignRole('Super Admin');
+
+        $response = $this->actingAs($adminUser)->get(route('student-portal.dashboard'));
+        $response->assertStatus(403);
+    }
 }

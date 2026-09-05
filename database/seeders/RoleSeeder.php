@@ -22,6 +22,8 @@ class RoleSeeder extends Seeder
             'Petugas Piket',
             'Guru',
             'Karyawan',
+            'Siswa',
+            'Wali Murid',
         ];
 
         foreach ($roles as $roleName) {
