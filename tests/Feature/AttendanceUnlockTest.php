@@ -39,8 +39,9 @@ class AttendanceUnlockTest extends TestCase
     public function test_unlock_attendance_validation_and_creation()
     {
         $admin = $this->createAdminUser();
+        $targetUser = User::factory()->create();
         $employee = Employee::create([
-            'user_id' => $admin->id,
+            'user_id' => $targetUser->id,
             'nik' => '12345678',
             'name' => 'Test Employee',
             'gender' => 'Laki-laki',
@@ -87,6 +88,9 @@ class AttendanceUnlockTest extends TestCase
         SystemSetting::updateOrCreate(['key' => 'jam_masuk'], ['value' => '07:00']);
         SystemSetting::updateOrCreate(['key' => 'batas_waktu_maksimal_terlambat'], ['value' => '10']);
 
+        // Mock current time to be past deadline (e.g. 07:30)
+        Carbon::setTestNow(Carbon::today()->setHour(7)->setMinute(30));
+
         // Create an unlock with is_lateness_violation = false (exempt from lateness)
         $admin = $this->createAdminUser();
         $unlock = AttendanceUnlock::create([
@@ -99,9 +103,6 @@ class AttendanceUnlockTest extends TestCase
             'expires_at' => Carbon::now()->addMinutes(30),
             'used' => false,
         ]);
-
-        // Mock current time to be past deadline (e.g. 07:30)
-        Carbon::setTestNow(Carbon::today()->setHour(7)->setMinute(30));
 
         $response = $this->actingAs($user)
             ->post(route('attendance.check-in'), [
@@ -159,6 +160,11 @@ class AttendanceUnlockTest extends TestCase
         // Configure system settings
         SystemSetting::updateOrCreate(['key' => 'batas_waktu_maksimal_terlambat'], ['value' => '10']);
 
+        // Mock current time to be past deadline of 1st slot.
+        // Hour slot 1 is 07:00 - 07:40, deadline at 07:10 (since limit is 10 min).
+        // Let's mock time to 07:15.
+        Carbon::setTestNow(Carbon::today()->setHour(7)->setMinute(15));
+
         // Create unlock for teaching attendance
         $admin = $this->createAdminUser();
         $unlock = AttendanceUnlock::create([
@@ -172,11 +178,6 @@ class AttendanceUnlockTest extends TestCase
             'expires_at' => Carbon::now()->addMinutes(30),
             'used' => false,
         ]);
-
-        // Mock current time to be past deadline of 1st slot.
-        // Hour slot 1 is 07:00 - 07:40, deadline at 07:10 (since limit is 10 min).
-        // Let's mock time to 07:15.
-        Carbon::setTestNow(Carbon::today()->setHour(7)->setMinute(15));
 
         $response = $this->actingAs($user)
             ->post(route('attendance.guru'), [
@@ -205,8 +206,9 @@ class AttendanceUnlockTest extends TestCase
     public function test_can_re_unlock_when_previous_unlock_has_expired()
     {
         $admin = $this->createAdminUser();
+        $targetUser = User::factory()->create();
         $employee = Employee::create([
-            'user_id' => $admin->id,
+            'user_id' => $targetUser->id,
             'nik' => '12345678',
             'name' => 'Test Employee',
             'gender' => 'Laki-laki',
@@ -244,8 +246,9 @@ class AttendanceUnlockTest extends TestCase
     public function test_cannot_re_unlock_when_previous_unlock_is_still_active()
     {
         $admin = $this->createAdminUser();
+        $targetUser = User::factory()->create();
         $employee = Employee::create([
-            'user_id' => $admin->id,
+            'user_id' => $targetUser->id,
             'nik' => '12345678',
             'name' => 'Test Employee',
             'gender' => 'Laki-laki',
@@ -280,3 +283,4 @@ class AttendanceUnlockTest extends TestCase
         $this->assertEquals(1, AttendanceUnlock::where('employee_id', $employee->id)->count());
     }
 }
+

@@ -294,22 +294,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi'])->group(function () {
-
-        Route::get('/school-classes', [\App\Http\Controllers\SchoolClassController::class, 'index'])->name('school-classes.index');
-        Route::post('/school-classes', [\App\Http\Controllers\SchoolClassController::class, 'store'])->name('school-classes.store');
-        Route::put('/school-classes/{schoolClass}', [\App\Http\Controllers\SchoolClassController::class, 'update'])->name('school-classes.update');
-        Route::delete('/school-classes/{schoolClass}', [\App\Http\Controllers\SchoolClassController::class, 'destroy'])->name('school-classes.destroy');
-
+        Route::get('/school-classes', [TeachingScheduleController::class, 'classIndex'])->name('school-classes.index');
         Route::get('/teaching-schedules', [TeachingScheduleController::class, 'index'])->name('teaching-schedules.index');
         Route::get('/teaching-schedules/export/excel', [TeachingScheduleController::class, 'export'])->name('teaching-schedules.export');
     });
 
-    // Write Operations Jadwal (Excludes Kepala Sekolah)
+    // Write Operations Jadwal & Kelas (Excludes Kepala Sekolah & Absensi)
     Route::middleware(['role:Super Admin|Kurikulum'])->group(function () {
         Route::post('/teaching-schedules', [TeachingScheduleController::class, 'store'])->name('teaching-schedules.store');
         Route::put('/teaching-schedules/{teachingSchedule}', [TeachingScheduleController::class, 'update'])->name('teaching-schedules.update');
         Route::delete('/teaching-schedules/{teachingSchedule}', [TeachingScheduleController::class, 'destroy'])->name('teaching-schedules.destroy');
         Route::post('/teaching-schedules/import/excel', [TeachingScheduleController::class, 'import'])->name('teaching-schedules.import');
+
+        Route::get('/school-classes/template', [TeachingScheduleController::class, 'classTemplate'])->name('school-classes.template');
+        Route::get('/school-classes/export', [TeachingScheduleController::class, 'classExport'])->name('school-classes.export');
+        Route::post('/school-classes/import', [TeachingScheduleController::class, 'classImport'])->name('school-classes.import');
+        Route::post('/school-classes/bulk-destroy', [TeachingScheduleController::class, 'classBulkDestroy'])->name('school-classes.bulk-destroy');
+        Route::post('/school-classes', [TeachingScheduleController::class, 'classStore'])->name('school-classes.store');
+        Route::put('/school-classes/{schoolClass}', [TeachingScheduleController::class, 'classUpdate'])->name('school-classes.update');
+        Route::delete('/school-classes/{schoolClass}', [TeachingScheduleController::class, 'classDestroy'])->name('school-classes.destroy');
     });
 
     // Halaman Lihat Persetujuan Cuti/Izin (Super Admin, Kepala Sekolah, Kurikulum, Absensi)
@@ -322,17 +325,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/leave-requests/{leaveRequest}/approve', [LeaveRequestController::class, 'approve'])->name('leave-requests.approve');
         Route::post('/leave-requests/{leaveRequest}/reject', [LeaveRequestController::class, 'reject'])->name('leave-requests.reject');
         Route::delete('/leave-requests/admin/{leaveRequest}', [LeaveRequestController::class, 'destroyByAdmin'])->name('leave-requests.destroy-admin');
-    });
-
-    Route::middleware(['role:Super Admin|Kurikulum'])->group(function () {
-        Route::get('/school-classes/template', [TeachingScheduleController::class, 'classTemplate'])->name('school-classes.template');
-        Route::get('/school-classes/export', [TeachingScheduleController::class, 'classExport'])->name('school-classes.export');
-        Route::post('/school-classes/import', [TeachingScheduleController::class, 'classImport'])->name('school-classes.import');
-        Route::post('/school-classes/bulk-destroy', [TeachingScheduleController::class, 'classBulkDestroy'])->name('school-classes.bulk-destroy');
-        Route::get('/school-classes', [TeachingScheduleController::class, 'classIndex'])->name('school-classes.index');
-        Route::post('/school-classes', [TeachingScheduleController::class, 'classStore'])->name('school-classes.store');
-        Route::put('/school-classes/{schoolClass}', [TeachingScheduleController::class, 'classUpdate'])->name('school-classes.update');
-        Route::delete('/school-classes/{schoolClass}', [TeachingScheduleController::class, 'classDestroy'])->name('school-classes.destroy');
     });
 
 
