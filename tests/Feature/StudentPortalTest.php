@@ -86,6 +86,14 @@ class StudentPortalTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_student_can_view_schedule_page()
+    {
+        [$user, $student] = $this->createStudentUser();
+
+        $response = $this->actingAs($user)->get(route('student-portal.schedule'));
+        $response->assertStatus(200);
+    }
+
     public function test_admin_cannot_access_student_portal()
     {
         $adminUser = User::factory()->create();

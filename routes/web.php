@@ -287,6 +287,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/profile', [\App\Http\Controllers\StudentPortalController::class, 'profile'])->name('profile');
         Route::post('/profile', [\App\Http\Controllers\StudentPortalController::class, 'updateProfile'])->name('profile.update');
         Route::get('/history', [\App\Http\Controllers\StudentPortalController::class, 'history'])->name('history');
+        Route::get('/schedule', [\App\Http\Controllers\StudentPortalController::class, 'schedule'])->name('schedule');
         Route::get('/leave-requests', [\App\Http\Controllers\StudentPortalController::class, 'leaveRequests'])->name('leave-requests');
         Route::post('/leave-requests', [\App\Http\Controllers\StudentPortalController::class, 'storeLeaveRequest'])->name('leave-requests.store');
         Route::get('/digital-card', [\App\Http\Controllers\StudentPortalController::class, 'digitalCard'])->name('digital-card');

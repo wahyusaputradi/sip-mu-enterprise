@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Student;
 use App\Models\StudentAttendance;
 use App\Models\StudentLeaveRequest;
+use App\Models\TeachingSchedule;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
@@ -359,6 +360,45 @@ class StudentPortalController extends Controller
         $student->update($validated);
 
         return back()->with('message', 'Data profil & biodata orang tua berhasil diperbarui.');
+    }
+
+    /**
+     * Display Student Class Schedule Page
+     */
+    public function schedule()
+    {
+        $student = $this->getStudent();
+
+        if (!$student) {
+            return Inertia::render('StudentPortal/NoProfile', [
+                'message' => 'Akun pengguna Anda belum terhubung dengan data profil siswa.',
+            ]);
+        }
+
+        $schedules = TeachingSchedule::with('employee')
+            ->where('school_class_id', $student->school_class_id)
+            ->orderBy('day_of_week')
+            ->orderBy('hour_number')
+            ->get()
+            ->map(fn($s) => [
+                'id' => $s->id,
+                'day_of_week' => (int) $s->day_of_week,
+                'hour_number' => (int) $s->hour_number,
+                'subject' => $s->subject,
+                'teacher_name' => $s->employee?->name ?? 'Guru Pengampu Belum Set',
+            ]);
+
+        $todayDow = Carbon::now()->dayOfWeekIso;
+        $todaySchedules = $schedules->where('day_of_week', $todayDow)->values();
+
+        return Inertia::render('StudentPortal/Schedule', [
+            'student' => $student,
+            'schedules' => $schedules,
+            'todaySchedules' => $todaySchedules,
+            'hourSlots' => TeachingSchedule::hourSlots(),
+            'dayLabels' => TeachingSchedule::dayLabels(),
+            'todayDow' => $todayDow,
+        ]);
     }
 }
 
