@@ -4,9 +4,10 @@ import { Head } from '@inertiajs/react';
 import { QrCode, Download, ShieldCheck, Printer } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function DigitalCard({ auth, student }) {
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(student.qr_token || student.nis)}`;
+    const qrTokenValue = student.qr_token || student.nis;
 
     return (
         <AuthenticatedLayout user={auth.user}>
@@ -28,22 +29,36 @@ export default function DigitalCard({ auth, student }) {
 
                     {/* School Header */}
                     <div className="flex items-center justify-between pb-6 border-b border-indigo-500/20">
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300">SMK Manbaul Ulum Cirebon</p>
-                            <h3 className="text-sm font-black text-white">Kartu Presensi Siswa Digital</h3>
+                        <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-black text-indigo-300 border border-white/20">
+                                MU
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300">SMK Manbaul Ulum Cirebon</p>
+                                <h3 className="text-sm font-black text-white">Kartu Presensi Siswa Digital</h3>
+                            </div>
                         </div>
-                        <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
                             <ShieldCheck className="w-5 h-5" />
                         </div>
                     </div>
 
-                    {/* Student Info & QR Code */}
+                    {/* Student Info & Encrypted QR Code with School Logo */}
                     <div className="py-8 flex flex-col items-center text-center space-y-6">
-                        <div className="bg-white p-4 rounded-3xl shadow-xl ring-8 ring-white/10">
-                            <img
-                                src={qrUrl}
-                                alt={`QR Code ${student.name}`}
-                                className="w-48 h-48 object-contain"
+                        <div className="bg-white p-5 rounded-3xl shadow-xl ring-8 ring-white/10 shrink-0">
+                            <QRCodeSVG
+                                value={qrTokenValue}
+                                size={190}
+                                level="H"
+                                includeMargin={false}
+                                imageSettings={{
+                                    src: "/images/logo.png",
+                                    x: undefined,
+                                    y: undefined,
+                                    height: 42,
+                                    width: 42,
+                                    excavate: true,
+                                }}
                             />
                         </div>
 
