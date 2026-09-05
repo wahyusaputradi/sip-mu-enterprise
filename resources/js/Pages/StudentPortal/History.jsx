@@ -100,7 +100,7 @@ export default function StudentHistory({ auth, student, calendarData, monthlySta
         { label: 'Izin', value: monthlyStats?.permit || 0, gradient: 'from-blue-600 to-indigo-700', icon: <FileText className="w-10 h-10" /> },
         { label: 'Sakit', value: monthlyStats?.sick || 0, gradient: 'from-purple-600 to-violet-700', icon: <AlertCircle className="w-10 h-10" /> },
         { label: 'Alpha', value: monthlyStats?.alpha || 0, gradient: 'from-rose-600 to-pink-700', icon: <XCircle className="w-10 h-10" /> },
-        { label: 'Kedisiplinan', value: `${monthlyStats?.percentage || 100}%`, gradient: 'from-indigo-600 via-purple-600 to-cyan-600', icon: <Sparkles className="w-10 h-10" /> },
+        { label: 'Tingkat Kehadiran', value: `${monthlyStats?.percentage ?? 100}%`, gradient: 'from-indigo-600 via-purple-600 to-cyan-600', icon: <Sparkles className="w-10 h-10" /> },
     ];
 
     return (

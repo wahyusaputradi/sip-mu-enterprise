@@ -32,6 +32,82 @@ class StudentPortalController extends Controller
     }
 
     /**
+     * Helper to compute monthly attendance stats, calendar data, and percentage for a student
+     */
+    protected function calculateMonthlyStats($studentId, $month, $year)
+    {
+        $today = Carbon::today();
+        $daysInMonth = Carbon::createFromDate($year, $month, 1)->daysInMonth;
+
+        $attendances = StudentAttendance::where('student_id', $studentId)
+            ->whereMonth('date', $month)
+            ->whereYear('date', $year)
+            ->get()
+            ->keyBy(fn($item) => Carbon::parse($item->date)->format('Y-m-d'));
+
+        $calendarData = [];
+        $presentCount = 0;
+        $lateCount = 0;
+        $sickCount = 0;
+        $permitCount = 0;
+        $alphaCount = 0;
+
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $dt = Carbon::createFromDate($year, $month, $d)->startOfDay();
+            $dateStr = $dt->toDateString();
+            $isWeekend = $dt->isWeekend();
+            $isPastDay = $dt->lt($today);
+
+            $record = $attendances->get($dateStr);
+
+            if ($record) {
+                $status = $record->check_in_status;
+            } else {
+                if ($isPastDay && !$isWeekend) {
+                    $status = 'alpha';
+                } else {
+                    $status = null;
+                }
+            }
+
+            if ($status === 'present') $presentCount++;
+            elseif ($status === 'late') $lateCount++;
+            elseif ($status === 'sick') $sickCount++;
+            elseif ($status === 'permit') $permitCount++;
+            elseif ($status === 'alpha' && !$isWeekend) $alphaCount++;
+
+            $calendarData[] = [
+                'day' => $d,
+                'date' => $dateStr,
+                'day_name' => $dt->translatedFormat('l'),
+                'is_weekend' => $isWeekend,
+                'check_in_time' => $record?->check_in_time ? substr($record->check_in_time, 0, 5) : null,
+                'check_out_time' => $record?->check_out_time ? substr($record->check_out_time, 0, 5) : null,
+                'status' => $status,
+                'notes' => $record?->notes,
+            ];
+        }
+
+        $totalRecorded = $presentCount + $lateCount + $sickCount + $permitCount + $alphaCount;
+        $disciplinePercentage = $totalRecorded > 0
+            ? (int) round((($presentCount + $lateCount) / $totalRecorded) * 100)
+            : 100;
+
+        return [
+            'calendarData' => $calendarData,
+            'monthlyStats' => [
+                'present' => $presentCount,
+                'late' => $lateCount,
+                'sick' => $sickCount,
+                'permit' => $permitCount,
+                'alpha' => $alphaCount,
+                'total' => $totalRecorded,
+                'percentage' => $disciplinePercentage,
+            ],
+        ];
+    }
+
+    /**
      * Student Portal Dashboard
      */
     public function dashboard()
@@ -53,22 +129,8 @@ class StudentPortalController extends Controller
             ->whereDate('date', $today)
             ->first();
 
-        // Monthly stats
-        $monthlyRecords = StudentAttendance::where('student_id', $student->id)
-            ->whereMonth('date', $currentMonth)
-            ->whereYear('date', $currentYear)
-            ->get();
-
-        $presentCount = $monthlyRecords->where('check_in_status', 'present')->count();
-        $lateCount = $monthlyRecords->where('check_in_status', 'late')->count();
-        $sickCount = $monthlyRecords->where('check_in_status', 'sick')->count();
-        $permitCount = $monthlyRecords->where('check_in_status', 'permit')->count();
-        $alphaCount = $monthlyRecords->where('check_in_status', 'alpha')->count();
-        $totalRecorded = $presentCount + $lateCount + $sickCount + $permitCount + $alphaCount;
-
-        $disciplinePercentage = $totalRecorded > 0 
-            ? Math_round((($presentCount + $lateCount) / $totalRecorded) * 100) 
-            : 100;
+        // Monthly stats calculation
+        $statsCalculated = $this->calculateMonthlyStats($student->id, $currentMonth, $currentYear);
 
         // Recent 7 attendance records
         $recentAttendances = StudentAttendance::where('student_id', $student->id)
@@ -99,15 +161,7 @@ class StudentPortalController extends Controller
                 'status' => $todayAttendance->check_in_status,
                 'notes' => $todayAttendance->notes,
             ] : null,
-            'monthlyStats' => [
-                'present' => $presentCount,
-                'late' => $lateCount,
-                'sick' => $sickCount,
-                'permit' => $permitCount,
-                'alpha' => $alphaCount,
-                'total' => $totalRecorded,
-                'percentage' => $disciplinePercentage,
-            ],
+            'monthlyStats' => $statsCalculated['monthlyStats'],
             'recentAttendances' => $recentAttendances,
             'pendingLeavesCount' => $pendingLeaves,
         ]);
@@ -127,64 +181,12 @@ class StudentPortalController extends Controller
         $month = (int) $request->input('month', Carbon::now()->month);
         $year = (int) $request->input('year', Carbon::now()->year);
 
-        $daysInMonth = Carbon::createFromDate($year, $month, 1)->daysInMonth;
-
-        $attendances = StudentAttendance::where('student_id', $student->id)
-            ->whereMonth('date', $month)
-            ->whereYear('date', $year)
-            ->orderBy('date', 'asc')
-            ->get()
-            ->keyBy(fn($item) => Carbon::parse($item->date)->format('Y-m-d'));
-
-        $calendarData = [];
-        for ($d = 1; $d <= $daysInMonth; $d++) {
-            $dt = Carbon::createFromDate($year, $month, $d);
-            $dateStr = $dt->toDateString();
-            $record = $attendances->get($dateStr);
-
-            $calendarData[] = [
-                'day' => $d,
-                'date' => $dateStr,
-                'day_name' => $dt->translatedFormat('l'),
-                'is_weekend' => $dt->isWeekend(),
-                'check_in_time' => $record?->check_in_time ? substr($record->check_in_time, 0, 5) : null,
-                'check_out_time' => $record?->check_out_time ? substr($record->check_out_time, 0, 5) : null,
-                'status' => $record?->check_in_status ?? ($dt->isPast() && !$dt->isWeekend() ? 'alpha' : null),
-                'notes' => $record?->notes,
-            ];
-        }
-
-        $presentCount = $attendances->where('check_in_status', 'present')->count();
-        $lateCount = $attendances->where('check_in_status', 'late')->count();
-        $sickCount = $attendances->where('check_in_status', 'sick')->count();
-        $permitCount = $attendances->where('check_in_status', 'permit')->count();
-        $alphaCount = 0;
-
-        foreach ($calendarData as $cd) {
-            if ($cd['status'] === 'alpha' && !$cd['is_weekend']) {
-                $alphaCount++;
-            }
-        }
-
-        $totalRecorded = $presentCount + $lateCount + $sickCount + $permitCount + $alphaCount;
-        $disciplinePercentage = $totalRecorded > 0
-            ? Math_round((($presentCount + $lateCount) / $totalRecorded) * 100)
-            : 100;
-
-        $monthlyStats = [
-            'present' => $presentCount,
-            'late' => $lateCount,
-            'sick' => $sickCount,
-            'permit' => $permitCount,
-            'alpha' => $alphaCount,
-            'total' => $totalRecorded,
-            'percentage' => $disciplinePercentage,
-        ];
+        $statsCalculated = $this->calculateMonthlyStats($student->id, $month, $year);
 
         return Inertia::render('StudentPortal/History', [
             'student' => $student,
-            'calendarData' => $calendarData,
-            'monthlyStats' => $monthlyStats,
+            'calendarData' => $statsCalculated['calendarData'],
+            'monthlyStats' => $statsCalculated['monthlyStats'],
             'filters' => [
                 'month' => $month,
                 'year' => $year,
