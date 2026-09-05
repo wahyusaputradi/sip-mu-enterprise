@@ -154,9 +154,37 @@ class StudentPortalController extends Controller
             ];
         }
 
+        $presentCount = $attendances->where('check_in_status', 'present')->count();
+        $lateCount = $attendances->where('check_in_status', 'late')->count();
+        $sickCount = $attendances->where('check_in_status', 'sick')->count();
+        $permitCount = $attendances->where('check_in_status', 'permit')->count();
+        $alphaCount = 0;
+
+        foreach ($calendarData as $cd) {
+            if ($cd['status'] === 'alpha' && !$cd['is_weekend']) {
+                $alphaCount++;
+            }
+        }
+
+        $totalRecorded = $presentCount + $lateCount + $sickCount + $permitCount + $alphaCount;
+        $disciplinePercentage = $totalRecorded > 0
+            ? Math_round((($presentCount + $lateCount) / $totalRecorded) * 100)
+            : 100;
+
+        $monthlyStats = [
+            'present' => $presentCount,
+            'late' => $lateCount,
+            'sick' => $sickCount,
+            'permit' => $permitCount,
+            'alpha' => $alphaCount,
+            'total' => $totalRecorded,
+            'percentage' => $disciplinePercentage,
+        ];
+
         return Inertia::render('StudentPortal/History', [
             'student' => $student,
             'calendarData' => $calendarData,
+            'monthlyStats' => $monthlyStats,
             'filters' => [
                 'month' => $month,
                 'year' => $year,
