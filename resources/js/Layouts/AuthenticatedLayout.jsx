@@ -244,6 +244,13 @@ export default function AuthenticatedLayout({ header, children }) {
             { name: t('menu.student_kiosk'), route: 'student-attendance.kiosk', icon: <QrCode className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: t('menu.student_cards'), route: 'students.cards', icon: <Printer className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
         ]},
+        // ═══ PORTAL MANDIRI SISWA ═══
+        { group: 'Portal Mandiri Siswa', items: [
+            { name: 'Dashboard Portal Siswa', route: 'student-portal.dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['Siswa', 'Super Admin', 'Guru'] },
+            { name: 'Kalender Presensi Siswa', route: 'student-portal.history', icon: <CalendarDays className="w-5 h-5" />, roles: ['Siswa', 'Super Admin', 'Guru'] },
+            { name: 'Pengajuan Izin Online', route: 'student-portal.leave-requests', icon: <ClipboardCheck className="w-5 h-5" />, roles: ['Siswa', 'Super Admin', 'Guru'] },
+            { name: 'Kartu Digital QR', route: 'student-portal.digital-card', icon: <QrCode className="w-5 h-5" />, roles: ['Siswa', 'Super Admin', 'Guru'] },
+        ]},
         // ═══ KONFIGURASI & MASTER DATA ═══
         { group: t('group.config'), items: [
             { name: t('menu.employees'), route: 'employees.index', icon: <Users className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Bendahara'] },

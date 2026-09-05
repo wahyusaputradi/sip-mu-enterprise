@@ -57,6 +57,11 @@ class User extends Authenticatable
         return $this->hasOne(Employee::class);
     }
 
+    public function student()
+    {
+        return $this->hasOne(Student::class);
+    }
+
     public function approvedLeaves()
     {
         return $this->hasMany(LeaveRequest::class, 'approved_by');

@@ -11,6 +11,7 @@ class Student extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'nis',
         'nisn',
         'name',
@@ -22,6 +23,11 @@ class Student extends Model
         'status',
         'photo',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public static function generateQrToken($nis)
     {

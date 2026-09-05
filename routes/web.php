@@ -281,6 +281,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/student-leave-requests/{id}', [\App\Http\Controllers\StudentLeaveRequestController::class, 'destroy'])->name('student-leave-requests.destroy');
     });
 
+    // Portal Mandiri Siswa & Wali Murid
+    Route::middleware(['auth'])->prefix('student-portal')->name('student-portal.')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\StudentPortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/history', [\App\Http\Controllers\StudentPortalController::class, 'history'])->name('history');
+        Route::get('/leave-requests', [\App\Http\Controllers\StudentPortalController::class, 'leaveRequests'])->name('leave-requests');
+        Route::post('/leave-requests', [\App\Http\Controllers\StudentPortalController::class, 'storeLeaveRequest'])->name('leave-requests.store');
+        Route::get('/digital-card', [\App\Http\Controllers\StudentPortalController::class, 'digitalCard'])->name('digital-card');
+    });
+
     Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi'])->group(function () {
 
         Route::get('/school-classes', [\App\Http\Controllers\SchoolClassController::class, 'index'])->name('school-classes.index');
