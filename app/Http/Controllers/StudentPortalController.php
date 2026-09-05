@@ -250,6 +250,86 @@ class StudentPortalController extends Controller
             'student' => $student,
         ]);
     }
+
+    /**
+     * Display Student Profile Page
+     */
+    public function profile()
+    {
+        $student = $this->getStudent();
+
+        if (!$student) {
+            return Inertia::render('StudentPortal/NoProfile', [
+                'message' => 'Akun pengguna Anda belum terhubung dengan data profil siswa.',
+            ]);
+        }
+
+        return Inertia::render('StudentPortal/Profile', [
+            'student' => $student,
+        ]);
+    }
+
+    /**
+     * Update Student Profile & Parent Biodata
+     */
+    public function updateProfile(Request $request)
+    {
+        $student = $this->getStudent();
+
+        if (!$student) {
+            return back()->withErrors(['message' => 'Profil siswa tidak ditemukan.']);
+        }
+
+        $validated = $request->validate([
+            // Data Siswa
+            'name' => 'required|string|max:255',
+            'gender' => 'required|in:Laki-laki,Perempuan',
+            'pob' => 'nullable|string|max:100',
+            'dob' => 'nullable|date',
+            'nik' => 'nullable|string|max:20|regex:/^[0-9]*$/',
+            'address' => 'nullable|string|max:500',
+            'rt' => 'nullable|string|max:10|regex:/^[0-9]*$/',
+            'rw' => 'nullable|string|max:10|regex:/^[0-9]*$/',
+            'village' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
+            'regency' => 'nullable|string|max:100',
+            'kip_number' => 'nullable|string|max:50|regex:/^[0-9]*$/',
+            'previous_school' => 'nullable|string|max:150',
+            'family_card_number' => 'nullable|string|max:20|regex:/^[0-9]*$/',
+            'student_phone' => 'nullable|string|max:30|regex:/^[0-9]*$/',
+
+            // Data Ayah
+            'father_name' => 'nullable|string|max:150',
+            'father_pob' => 'nullable|string|max:100',
+            'father_dob' => 'nullable|date',
+            'father_nik' => 'nullable|string|max:20|regex:/^[0-9]*$/',
+            'father_phone' => 'nullable|string|max:30|regex:/^[0-9]*$/',
+            'father_job' => 'nullable|string|max:100',
+
+            // Data Ibu
+            'mother_name' => 'nullable|string|max:150',
+            'mother_pob' => 'nullable|string|max:100',
+            'mother_dob' => 'nullable|date',
+            'mother_nik' => 'nullable|string|max:20|regex:/^[0-9]*$/',
+            'mother_phone' => 'nullable|string|max:30|regex:/^[0-9]*$/',
+            'mother_job' => 'nullable|string|max:100',
+        ], [
+            'nik.regex' => 'Nomor NIK Siswa hanya boleh diisi angka.',
+            'rt.regex' => 'RT hanya boleh diisi angka.',
+            'rw.regex' => 'RW hanya boleh diisi angka.',
+            'kip_number.regex' => 'Nomor KIP hanya boleh diisi angka.',
+            'family_card_number.regex' => 'Nomor Kartu Keluarga hanya boleh diisi angka.',
+            'student_phone.regex' => 'Nomor HP Siswa hanya boleh diisi angka.',
+            'father_nik.regex' => 'Nomor NIK Ayah hanya boleh diisi angka.',
+            'father_phone.regex' => 'Nomor HP Ayah hanya boleh diisi angka.',
+            'mother_nik.regex' => 'Nomor NIK Ibu hanya boleh diisi angka.',
+            'mother_phone.regex' => 'Nomor HP Ibu hanya boleh diisi angka.',
+        ]);
+
+        $student->update($validated);
+
+        return back()->with('message', 'Data profil & biodata orang tua berhasil diperbarui.');
+    }
 }
 
 function Math_round($val) {

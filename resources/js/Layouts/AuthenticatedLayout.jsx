@@ -247,6 +247,7 @@ export default function AuthenticatedLayout({ header, children }) {
         // ═══ PORTAL MANDIRI SISWA ═══
         { group: 'Portal Mandiri Siswa', items: [
             { name: 'Dashboard Portal Siswa', route: 'student-portal.dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['Siswa', 'Wali Murid'] },
+            { name: 'Data Profil Siswa', route: 'student-portal.profile', icon: <UserIcon className="w-5 h-5" />, roles: ['Siswa', 'Wali Murid'] },
             { name: 'Kalender Presensi Siswa', route: 'student-portal.history', icon: <CalendarDays className="w-5 h-5" />, roles: ['Siswa', 'Wali Murid'] },
             { name: 'Pengajuan Izin Online', route: 'student-portal.leave-requests', icon: <ClipboardCheck className="w-5 h-5" />, roles: ['Siswa', 'Wali Murid'] },
             { name: 'Kartu Digital QR', route: 'student-portal.digital-card', icon: <QrCode className="w-5 h-5" />, roles: ['Siswa', 'Wali Murid'] },

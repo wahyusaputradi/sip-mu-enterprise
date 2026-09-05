@@ -284,6 +284,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Portal Mandiri Siswa & Wali Murid
     Route::middleware(['auth', 'role:Siswa|Wali Murid'])->prefix('student-portal')->name('student-portal.')->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\StudentPortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/profile', [\App\Http\Controllers\StudentPortalController::class, 'profile'])->name('profile');
+        Route::post('/profile', [\App\Http\Controllers\StudentPortalController::class, 'updateProfile'])->name('profile.update');
         Route::get('/history', [\App\Http\Controllers\StudentPortalController::class, 'history'])->name('history');
         Route::get('/leave-requests', [\App\Http\Controllers\StudentPortalController::class, 'leaveRequests'])->name('leave-requests');
         Route::post('/leave-requests', [\App\Http\Controllers\StudentPortalController::class, 'storeLeaveRequest'])->name('leave-requests.store');

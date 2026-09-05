@@ -22,6 +22,34 @@ class Student extends Model
         'qr_token',
         'status',
         'photo',
+        // Biodata Siswa
+        'pob',
+        'dob',
+        'nik',
+        'address',
+        'rt',
+        'rw',
+        'village',
+        'district',
+        'regency',
+        'kip_number',
+        'previous_school',
+        'family_card_number',
+        'student_phone',
+        // Biodata Ayah
+        'father_name',
+        'father_pob',
+        'father_dob',
+        'father_nik',
+        'father_phone',
+        'father_job',
+        // Biodata Ibu
+        'mother_name',
+        'mother_pob',
+        'mother_dob',
+        'mother_nik',
+        'mother_phone',
+        'mother_job',
     ];
 
     public function user()
