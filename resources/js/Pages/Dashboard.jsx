@@ -270,7 +270,7 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
                                     <FileText className="w-3.5 h-3.5 mr-1.5" /> Rekap Bulanan
                                 </Link>
                                 <Link
-                                    href={route('student-leave-requests.approval')}
+                                    href={route('student-leave-requests.index')}
                                     className="inline-flex items-center px-3.5 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 font-bold text-xs transition-all hover:-translate-y-0.5"
                                 >
                                     <CalendarDays className="w-3.5 h-3.5 mr-1.5" /> Approval Izin ({studentStats.pending_leaves || 0})
