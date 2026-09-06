@@ -283,8 +283,8 @@ export default function AuthenticatedLayout({ header, children }) {
             const hasRequiredRole = item.roles.some(role => roles.includes(role));
             if (!hasRequiredRole) return false;
 
-            // If access is allowed via 'Guru' role, only allow if user is an active Homeroom Teacher or has management/kesiswaan role
-            if (item.roles.includes('Guru') && roles.includes('Guru')) {
+            // Restrict Student Management items for Guru role to active Homeroom Teachers only
+            if (group.group === t('group.students') && item.roles.includes('Guru') && roles.includes('Guru')) {
                 const isManagementOrKesiswaan = roles.some(r => ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Kesiswaan'].includes(r));
                 if (!isManagementOrKesiswaan && !isHomeroomTeacher) {
                     return false;
