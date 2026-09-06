@@ -246,7 +246,7 @@ export default function AuthenticatedLayout({ header, children }) {
             { name: t('menu.leave_approval'), route: 'leave-requests.approval', icon: <ClipboardCheck className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
         ]},
         // ═══ PRESENSI & KESISWAAN (SMK) ═══
-        { group: t('group.students'), items: [
+        { isStudentGroup: true, group: t('group.students'), items: [
             { name: t('menu.students'), route: 'students.index', icon: <GraduationCap className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Guru', 'Kesiswaan'] },
             { name: t('menu.school_classes'), route: 'school-classes.index', icon: <School className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Kesiswaan'] },
             { name: t('menu.student_monitoring'), route: 'student-attendance.monitoring', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Guru', 'Kesiswaan'] },
@@ -284,7 +284,7 @@ export default function AuthenticatedLayout({ header, children }) {
             if (!hasRequiredRole) return false;
 
             // Restrict Student Management items for Guru role to active Homeroom Teachers only
-            if (group.group === t('group.students') && item.roles.includes('Guru') && roles.includes('Guru')) {
+            if ((group.isStudentGroup || group.group === t('group.students')) && item.roles.includes('Guru') && roles.includes('Guru')) {
                 const isManagementOrKesiswaan = roles.some(r => ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Kesiswaan'].includes(r));
                 if (!isManagementOrKesiswaan && !isHomeroomTeacher) {
                     return false;

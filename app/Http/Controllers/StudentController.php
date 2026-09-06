@@ -28,7 +28,11 @@ class StudentController extends Controller
             return [];
         }
 
-        return SchoolClass::where('homeroom_teacher_id', $employee->id)->pluck('id')->toArray();
+        $classIds = SchoolClass::where('homeroom_teacher_id', $employee->id)->pluck('id')->toArray();
+        if (empty($classIds) && !empty($employee->homeroom_class)) {
+            $classIds = SchoolClass::where('name', $employee->homeroom_class)->pluck('id')->toArray();
+        }
+        return $classIds;
     }
 
     private function validateHomeroomTeacherAccess(): void

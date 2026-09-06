@@ -44,7 +44,11 @@ class HandleInertiaRequests extends Middleware
         $employee = $user?->employee;
         $isHomeroomTeacher = false;
         if ($employee) {
-            $isHomeroomTeacher = (bool) ($employee->is_homeroom_teacher && \App\Models\SchoolClass::where('homeroom_teacher_id', $employee->id)->exists());
+            $isHomeroomTeacher = (bool) (
+                $employee->is_homeroom_teacher ||
+                !empty($employee->homeroom_class) ||
+                \App\Models\SchoolClass::where('homeroom_teacher_id', $employee->id)->exists()
+            );
         }
 
         return [
