@@ -252,7 +252,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ══════════════════════════════════════════════════
     // AREA MANAJEMEN — Jadwal Mengajar & Data Kelas
     // ══════════════════════════════════════════════════
-    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi'])->group(function () {
+    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi|Guru|Kesiswaan'])->group(function () {
         Route::get('/student-attendance/kiosk', [\App\Http\Controllers\StudentAttendanceController::class, 'kiosk'])->name('student-attendance.kiosk');
         Route::post('/student-attendance/scan-qr', [\App\Http\Controllers\StudentAttendanceController::class, 'scanQr'])->name('student-attendance.scan-qr');
         Route::post('/student-attendance/sync-offline', [\App\Http\Controllers\StudentAttendanceController::class, 'syncOffline'])->name('student-attendance.sync-offline');
@@ -272,8 +272,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/students/cards', [\App\Http\Controllers\StudentController::class, 'cards'])->name('students.cards');
     });
 
-    // Persetujuan Izin/Sakit Siswa (Accessible by Admins and Homeroom Teachers/Guru)
-    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi|Guru'])->group(function () {
+    // Persetujuan Izin/Sakit Siswa (Accessible by Admins, Homeroom Teachers/Guru, and Kesiswaan)
+    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi|Guru|Kesiswaan'])->group(function () {
         Route::get('/student-leave-requests', [\App\Http\Controllers\StudentLeaveRequestController::class, 'index'])->name('student-leave-requests.index');
         Route::post('/student-leave-requests', [\App\Http\Controllers\StudentLeaveRequestController::class, 'store'])->name('student-leave-requests.store');
         Route::post('/student-leave-requests/{id}/approve', [\App\Http\Controllers\StudentLeaveRequestController::class, 'approve'])->name('student-leave-requests.approve');
@@ -293,7 +293,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/digital-card', [\App\Http\Controllers\StudentPortalController::class, 'digitalCard'])->name('digital-card');
     });
 
-    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi'])->group(function () {
+    Route::middleware(['role:Super Admin|Kepala Sekolah|Kurikulum|Absensi|Kesiswaan'])->group(function () {
         Route::get('/school-classes', [TeachingScheduleController::class, 'classIndex'])->name('school-classes.index');
         Route::get('/teaching-schedules', [TeachingScheduleController::class, 'index'])->name('teaching-schedules.index');
         Route::get('/teaching-schedules/export/excel', [TeachingScheduleController::class, 'export'])->name('teaching-schedules.export');

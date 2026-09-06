@@ -247,13 +247,13 @@ export default function AuthenticatedLayout({ header, children }) {
         ]},
         // ═══ PRESENSI & KESISWAAN (SMK) ═══
         { group: t('group.students'), items: [
-            { name: t('menu.students'), route: 'students.index', icon: <GraduationCap className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
-            { name: t('menu.school_classes'), route: 'school-classes.index', icon: <School className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
-            { name: t('menu.student_monitoring'), route: 'student-attendance.monitoring', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
-            { name: t('menu.student_leave_approval'), route: 'student-leave-requests.index', icon: <ClipboardCheck className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Guru'] },
-            { name: t('menu.student_recap'), route: 'student-attendance.recap', icon: <FileSpreadsheet className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: t('menu.students'), route: 'students.index', icon: <GraduationCap className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Guru', 'Kesiswaan'] },
+            { name: t('menu.school_classes'), route: 'school-classes.index', icon: <School className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Kesiswaan'] },
+            { name: t('menu.student_monitoring'), route: 'student-attendance.monitoring', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Guru', 'Kesiswaan'] },
+            { name: t('menu.student_leave_approval'), route: 'student-leave-requests.index', icon: <ClipboardCheck className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Guru', 'Kesiswaan'] },
+            { name: t('menu.student_recap'), route: 'student-attendance.recap', icon: <FileSpreadsheet className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Guru', 'Kesiswaan'] },
             { name: t('menu.student_kiosk'), route: 'student-attendance.kiosk', icon: <QrCode className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
-            { name: t('menu.student_cards'), route: 'students.cards', icon: <Printer className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: t('menu.student_cards'), route: 'students.cards', icon: <Printer className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Guru', 'Kesiswaan'] },
         ]},
         // ═══ PORTAL MANDIRI SISWA ═══
         { group: 'Portal Mandiri Siswa', items: [

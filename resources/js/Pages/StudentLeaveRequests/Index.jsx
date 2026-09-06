@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function Index({ leaveRequests, classes = [], students = [], stats = {}, filters = {}, isGlobalAdmin = false }) {
+export default function Index({ leaveRequests, classes = [], students = [], stats = {}, filters = {}, isGlobalAdmin = false, isReadOnly = false }) {
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [selectedClass, setSelectedClass] = useState(filters.class_id || 'all');
     const [selectedStatus, setSelectedStatus] = useState(filters.status || 'all');
@@ -405,41 +405,45 @@ export default function Index({ leaveRequests, classes = [], students = [], stat
 
                                                     {/* Actions */}
                                                     <TableCell className="py-4 px-5 text-right">
-                                                        <div className="flex items-center justify-end gap-1.5">
-                                                            {item.status !== 'approved' && (
+                                                        {isReadOnly ? (
+                                                            <span className="text-xs text-slate-400 font-semibold italic">Read-Only</span>
+                                                        ) : (
+                                                            <div className="flex items-center justify-end gap-1.5">
+                                                                {item.status !== 'approved' && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={() => handleApprove(item.id)}
+                                                                        title="Setujui Pengajuan"
+                                                                        className="h-8 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm flex items-center gap-1 font-bold"
+                                                                    >
+                                                                        <Check className="w-3.5 h-3.5" /> Setujui
+                                                                    </Button>
+                                                                )}
+                                                                {item.status !== 'rejected' && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={() => {
+                                                                            setRejectingItem(item);
+                                                                            setRejectionReason('');
+                                                                        }}
+                                                                        title="Tolak Pengajuan"
+                                                                        className="h-8 px-2.5 text-xs border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 rounded-lg flex items-center gap-1 font-bold"
+                                                                    >
+                                                                        <X className="w-3.5 h-3.5" /> Tolak
+                                                                    </Button>
+                                                                )}
                                                                 <Button
                                                                     size="sm"
-                                                                    onClick={() => handleApprove(item.id)}
-                                                                    title="Setujui Pengajuan"
-                                                                    className="h-8 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm flex items-center gap-1 font-bold"
+                                                                    variant="ghost"
+                                                                    onClick={() => handleDelete(item.id)}
+                                                                    title="Hapus Data"
+                                                                    className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg"
                                                                 >
-                                                                    <Check className="w-3.5 h-3.5" /> Setujui
+                                                                    <Trash2 className="w-3.5 h-3.5" />
                                                                 </Button>
-                                                            )}
-                                                            {item.status !== 'rejected' && (
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    onClick={() => {
-                                                                        setRejectingItem(item);
-                                                                        setRejectionReason('');
-                                                                    }}
-                                                                    title="Tolak Pengajuan"
-                                                                    className="h-8 px-2.5 text-xs border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 rounded-lg flex items-center gap-1 font-bold"
-                                                                >
-                                                                    <X className="w-3.5 h-3.5" /> Tolak
-                                                                </Button>
-                                                            )}
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() => handleDelete(item.id)}
-                                                                title="Hapus Data"
-                                                                className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </Button>
-                                                        </div>
+                                                            </div>
+                                                        )}
                                                     </TableCell>
                                                 </TableRow>
                                             );

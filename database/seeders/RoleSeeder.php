@@ -17,6 +17,7 @@ class RoleSeeder extends Seeder
             'Super Admin',
             'Bendahara',
             'Absensi',
+            'Kesiswaan',
             'Kepala Sekolah',
             'Kurikulum',
             'Petugas Piket',

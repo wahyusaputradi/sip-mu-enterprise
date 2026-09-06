@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 
-export default function StudentCards({ auth, students, schoolClasses, filters }) {
+export default function StudentCards({ auth, students, schoolClasses, filters, isReadOnly = false, isHomeroomTeacher = false }) {
     const [selectedClass, setSelectedClass] = useState(filters.class_id || '');
     const [search, setSearch] = useState(filters.search || '');
 
@@ -32,10 +32,15 @@ export default function StudentCards({ auth, students, schoolClasses, filters })
             header={
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 print:hidden">
                     <div>
-                        <div className="flex items-center space-x-2 mb-1">
+                        <div className="flex items-center space-x-2 mb-1 flex-wrap gap-1">
                             <span className="px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-[10px] font-black uppercase tracking-widest flex items-center shadow-sm">
                                 <Printer className="w-3 h-3 mr-1.5" /> Batch Print Kartu Pelajar
                             </span>
+                            {isHomeroomTeacher && (
+                                <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[10px] font-black uppercase tracking-widest flex items-center shadow-sm">
+                                    Wali Kelas (Scope Terbatas)
+                                </span>
+                            )}
                         </div>
                         <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                             Cetak Kartu Pelajar <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Ber-QR Code</span>

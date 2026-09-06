@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export default function SchoolClassesIndex({ auth, classes, teachers }) {
+export default function SchoolClassesIndex({ auth, classes, teachers, isReadOnly = false }) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState(null);
@@ -80,9 +80,11 @@ export default function SchoolClassesIndex({ auth, classes, teachers }) {
                         <Button onClick={() => router.visit(route('students.index'))} variant="outline" className="rounded-xl font-bold">
                             <ArrowLeft className="w-4 h-4 mr-2" /> Ke Data Siswa
                         </Button>
-                        <Button onClick={openAddModal} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 dark:shadow-none">
-                            <Plus className="w-4 h-4 mr-2" /> Tambah Kelas Baru
-                        </Button>
+                        {!isReadOnly && (
+                            <Button onClick={openAddModal} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 dark:shadow-none">
+                                <Plus className="w-4 h-4 mr-2" /> Tambah Kelas Baru
+                            </Button>
+                        )}
                     </div>
                 </div>
             }
@@ -129,12 +131,18 @@ export default function SchoolClassesIndex({ auth, classes, teachers }) {
                                                 {c.students_count || 0} Siswa
                                             </TableCell>
                                             <TableCell className="text-right px-6 space-x-2">
-                                                <Button onClick={() => openEditModal(c)} size="sm" variant="outline" className="rounded-xl font-bold">
-                                                    <Edit className="w-4 h-4 mr-1" /> Edit
-                                                </Button>
-                                                <Button onClick={() => handleDelete(c.id)} size="sm" variant="destructive" className="rounded-xl font-bold">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
+                                                {isReadOnly ? (
+                                                    <span className="text-xs text-slate-400 font-semibold italic">Read-Only</span>
+                                                ) : (
+                                                    <>
+                                                        <Button onClick={() => openEditModal(c)} size="sm" variant="outline" className="rounded-xl font-bold">
+                                                            <Edit className="w-4 h-4 mr-1" /> Edit
+                                                        </Button>
+                                                        <Button onClick={() => handleDelete(c.id)} size="sm" variant="destructive" className="rounded-xl font-bold">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))

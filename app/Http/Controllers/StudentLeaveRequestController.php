@@ -29,6 +29,12 @@ class StudentLeaveRequestController extends Controller
         return false;
     }
 
+    private function isReadOnlyUser(): bool
+    {
+        $user = Auth::user();
+        return $user && $user->hasRole('Kesiswaan');
+    }
+
     private function getTeacherClassIds(): array
     {
         $user = Auth::user();
@@ -44,10 +50,12 @@ class StudentLeaveRequestController extends Controller
     public function index(Request $request)
     {
         $isGlobalAdmin = $this->isGlobalAdmin();
+        $isKesiswaan = $this->isReadOnlyUser();
+        $isFullAccessView = $isGlobalAdmin || $isKesiswaan;
         $teacherClassIds = $this->getTeacherClassIds();
 
-        // If not global admin and not homeroom teacher for any class
-        if (!$isGlobalAdmin && empty($teacherClassIds)) {
+        // If not global view and not homeroom teacher for any class
+        if (!$isFullAccessView && empty($teacherClassIds)) {
             $classes = collect([]);
             $leaveRequests = collect([]);
             $students = collect([]);
@@ -71,18 +79,19 @@ class StudentLeaveRequestController extends Controller
                 'stats' => $stats,
                 'filters' => $request->only(['class_id', 'status', 'search']),
                 'isGlobalAdmin' => $isGlobalAdmin,
+                'isReadOnly' => $isKesiswaan,
             ]);
         }
 
         // Available classes dropdown options
-        if ($isGlobalAdmin) {
+        if ($isFullAccessView) {
             $classes = SchoolClass::orderBy('name')->get(['id', 'name']);
         } else {
             $classes = SchoolClass::whereIn('id', $teacherClassIds)->orderBy('name')->get(['id', 'name']);
         }
 
         // Students dropdown options for create modal
-        if ($isGlobalAdmin) {
+        if ($isFullAccessView) {
             $students = Student::where('status', 'active')
                 ->with('schoolClass:id,name')
                 ->orderBy('name')
@@ -103,7 +112,7 @@ class StudentLeaveRequestController extends Controller
             'approver:id,name'
         ])->latest();
 
-        if (!$isGlobalAdmin) {
+        if (!$isFullAccessView) {
             $query->whereIn('class_id', $teacherClassIds);
         }
 
@@ -142,11 +151,16 @@ class StudentLeaveRequestController extends Controller
             'stats'         => $stats,
             'filters'       => $request->only(['class_id', 'status', 'search']),
             'isGlobalAdmin' => $isGlobalAdmin,
+            'isReadOnly'    => $isKesiswaan,
         ]);
     }
 
     public function store(Request $request)
     {
+        if ($this->isReadOnlyUser()) {
+            return redirect()->back()->with('error', 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         $validated = $request->validate([
             'student_id' => 'required|exists:students,id',
             'type'       => 'required|in:sick,permit',
@@ -188,6 +202,10 @@ class StudentLeaveRequestController extends Controller
 
     public function approve(Request $request, $id)
     {
+        if ($this->isReadOnlyUser()) {
+            return redirect()->back()->with('error', 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         $leaveRequest = StudentLeaveRequest::with('student.schoolClass')->findOrFail($id);
         $isGlobalAdmin = $this->isGlobalAdmin();
         $teacherClassIds = $this->getTeacherClassIds();
@@ -235,6 +253,10 @@ class StudentLeaveRequestController extends Controller
 
     public function reject(Request $request, $id)
     {
+        if ($this->isReadOnlyUser()) {
+            return redirect()->back()->with('error', 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         $validated = $request->validate([
             'rejection_reason' => 'nullable|string|max:500',
         ]);
@@ -281,6 +303,10 @@ class StudentLeaveRequestController extends Controller
 
     public function destroy($id)
     {
+        if ($this->isReadOnlyUser()) {
+            return redirect()->back()->with('error', 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         $leaveRequest = StudentLeaveRequest::findOrFail($id);
         $isGlobalAdmin = $this->isGlobalAdmin();
         $teacherClassIds = $this->getTeacherClassIds();

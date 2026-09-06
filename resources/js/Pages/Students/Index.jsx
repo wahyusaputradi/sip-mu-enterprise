@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export default function StudentIndex({ auth = {}, students = {}, schoolClasses = [], filters = {} }) {
+export default function StudentIndex({ auth = {}, students = {}, schoolClasses = [], filters = {}, isReadOnly = false, isHomeroomTeacher = false }) {
     const studentList = Array.isArray(students?.data) ? students.data : [];
     const classesList = Array.isArray(schoolClasses) ? schoolClasses : [];
     const filterData = filters || {};
@@ -214,10 +214,20 @@ export default function StudentIndex({ auth = {}, students = {}, schoolClasses =
             header={
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div>
-                        <div className="flex items-center space-x-2 mb-1">
+                        <div className="flex items-center space-x-2 mb-1 flex-wrap gap-1">
                             <span className="px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-[10px] font-black uppercase tracking-widest flex items-center shadow-sm">
                                 <Users className="w-3 h-3 mr-1.5" /> Master Data Siswa
                             </span>
+                            {isReadOnly && (
+                                <span className="px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase tracking-widest flex items-center shadow-sm">
+                                    <ShieldCheck className="w-3 h-3 mr-1.5" /> Read-Only (Kesiswaan)
+                                </span>
+                            )}
+                            {isHomeroomTeacher && (
+                                <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[10px] font-black uppercase tracking-widest flex items-center shadow-sm">
+                                    <GraduationCap className="w-3 h-3 mr-1.5" /> Wali Kelas (Scope Terbatas)
+                                </span>
+                            )}
                         </div>
                         <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                             Kelola Data <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Siswa-Siswi</span>
@@ -228,12 +238,16 @@ export default function StudentIndex({ auth = {}, students = {}, schoolClasses =
                         <Button onClick={() => window.location.href = route('students.export', { class_id: classFilter, search })} variant="outline" className="rounded-xl font-bold border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400">
                             <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
                         </Button>
-                        <Button onClick={() => setIsImportModalOpen(true)} variant="outline" className="rounded-xl font-bold border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400">
-                            <Upload className="w-4 h-4 mr-2" /> Import Excel
-                        </Button>
-                        <Button onClick={openAddModal} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 dark:shadow-none">
-                            <UserPlus className="w-4 h-4 mr-2" /> Tambah Siswa Baru
-                        </Button>
+                        {!isReadOnly && (
+                            <>
+                                <Button onClick={() => setIsImportModalOpen(true)} variant="outline" className="rounded-xl font-bold border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400">
+                                    <Upload className="w-4 h-4 mr-2" /> Import Excel
+                                </Button>
+                                <Button onClick={openAddModal} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 dark:shadow-none">
+                                    <UserPlus className="w-4 h-4 mr-2" /> Tambah Siswa Baru
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
             }
@@ -371,12 +385,18 @@ export default function StudentIndex({ auth = {}, students = {}, schoolClasses =
                                                 </span>
                                             </TableCell>
                                             <TableCell className="text-right px-6 space-x-2">
-                                                <Button onClick={() => openEditModal(student)} size="sm" variant="outline" className="rounded-xl font-bold">
-                                                    <Edit className="w-4 h-4 mr-1" /> Edit
-                                                </Button>
-                                                <Button onClick={() => handleDelete(student.id)} size="sm" variant="destructive" className="rounded-xl font-bold">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
+                                                {isReadOnly ? (
+                                                    <span className="text-xs text-slate-400 font-semibold italic">Read-Only</span>
+                                                ) : (
+                                                    <>
+                                                        <Button onClick={() => openEditModal(student)} size="sm" variant="outline" className="rounded-xl font-bold">
+                                                            <Edit className="w-4 h-4 mr-1" /> Edit
+                                                        </Button>
+                                                        <Button onClick={() => handleDelete(student.id)} size="sm" variant="destructive" className="rounded-xl font-bold">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))

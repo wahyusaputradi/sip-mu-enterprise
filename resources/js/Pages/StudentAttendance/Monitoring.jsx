@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export default function StudentMonitoring({ auth, students, stats, schoolClasses, filters }) {
+export default function StudentMonitoring({ auth, students, stats, schoolClasses, filters, isReadOnly = false, isHomeroomTeacher = false }) {
     const [filterDate, setFilterDate] = useState(filters.date || new Date().toISOString().split('T')[0]);
     const [filterClass, setFilterClass] = useState(filters.class_id || '');
     const [filterSearch, setFilterSearch] = useState(filters.search || '');
@@ -252,14 +252,18 @@ export default function StudentMonitoring({ auth, students, stats, schoolClasses
                                                     {getStatusBadge(student.status)}
                                                 </TableCell>
                                                 <TableCell className="text-right px-6">
-                                                    <Button
-                                                        onClick={() => openEditModal(student)}
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        className="rounded-xl font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60"
-                                                    >
-                                                        <Edit3 className="w-4 h-4 mr-1.5" /> Ubah Status
-                                                    </Button>
+                                                    {isReadOnly ? (
+                                                        <span className="text-xs text-slate-400 font-semibold italic">Read-Only</span>
+                                                    ) : (
+                                                        <Button
+                                                            onClick={() => openEditModal(student)}
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="rounded-xl font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60"
+                                                        >
+                                                            <Edit3 className="w-4 h-4 mr-1.5" /> Ubah Status
+                                                        </Button>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))

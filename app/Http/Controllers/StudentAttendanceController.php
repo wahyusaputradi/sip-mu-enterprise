@@ -14,6 +14,27 @@ use Illuminate\Support\Facades\Auth;
 
 class StudentAttendanceController extends Controller
 {
+    private function isReadOnlyUser(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('Kesiswaan');
+    }
+
+    private function getTeacherClassIds(): array
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('Guru')) {
+            return [];
+        }
+
+        $employee = $user->employee;
+        if (!$employee) {
+            return [];
+        }
+
+        return SchoolClass::where('homeroom_teacher_id', $employee->id)->pluck('id')->toArray();
+    }
+
     /**
      * Kiosk Terminal Scanner Page (Standalone / Gate Scanner Mode)
      */
@@ -60,34 +81,29 @@ class StudentAttendanceController extends Controller
         if (!$student) {
             return response()->json([
                 'success' => false,
-                'message' => 'Kartu QR / NIS tidak terdaftar atau akun siswa non-aktif.',
+                'message' => 'Kartu QR tidak dikenali / siswa tidak aktif.',
             ], 404);
         }
 
-        $today = Carbon::today();
         $now = Carbon::now();
-        $timeStr = $now->format('H:i:s');
+        $dateStr = $now->toDateString();
+        $timeStr = $now->toTimeString();
 
         $jamMasukStr = SystemSetting::where('key', 'student_jam_masuk')->value('value') ?? '07:00';
-        $toleransiMenit = (int)(SystemSetting::where('key', 'student_batas_terlambat_menit')->value('value') ?? '15');
+        $toleransi = (int)(SystemSetting::where('key', 'student_batas_terlambat_menit')->value('value') ?? 15);
         $jamPulangStr = SystemSetting::where('key', 'student_jam_pulang')->value('value') ?? '15:00';
 
-        $jamMasuk = Carbon::createFromTimeString($jamMasukStr);
-        $jamBatasTerlambat = (clone $jamMasuk)->addMinutes($toleransiMenit);
-        $jamPulang = Carbon::createFromTimeString($jamPulangStr);
+        $jamBatasTerlambat = Carbon::parse($jamMasukStr)->addMinutes($toleransi);
+        $jamPulang = Carbon::parse($jamPulangStr);
 
         $attendance = StudentAttendance::firstOrNew([
             'student_id' => $student->id,
-            'date' => $today->toDateString(),
+            'date' => $dateStr,
         ]);
 
-        // Determine Mode: Morning Check-in vs Afternoon Check-out
-        $isAfternoon = $now->hour >= 12;
-
-        if (!$isAfternoon || !$attendance->check_in_time) {
+        if (!$attendance->check_in_time) {
             // ── CHECK-IN MODE ──
-            if ($attendance->check_in_time) {
-                // Prevent duplicate scan within 60 seconds
+            if ($attendance->updated_at) {
                 $lastCheckIn = Carbon::parse($attendance->updated_at);
                 if ($now->diffInSeconds($lastCheckIn) < 60) {
                     return response()->json([
@@ -114,7 +130,6 @@ class StudentAttendanceController extends Controller
             $attendance->scanned_by_user_id = Auth::id();
             $attendance->save();
 
-            // WhatsApp Dispatch (Async-friendly)
             WhatsAppNotificationService::sendAttendanceNotification($student, 'check_in', $now->format('H:i'), $checkInStatus);
 
             return response()->json([
@@ -226,10 +241,15 @@ class StudentAttendanceController extends Controller
         $search = $request->input('search');
         $statusFilter = $request->input('status', 'all');
 
+        $user = auth()->user();
+        $isGuru = $user && $user->hasRole('Guru');
+        $teacherClassIds = $this->getTeacherClassIds();
+
         $query = Student::with(['schoolClass', 'attendances' => function ($q) use ($date) {
             $q->whereDate('date', $date);
         }])
         ->where('status', 'active')
+        ->when($isGuru && !empty($teacherClassIds), fn($q) => $q->whereIn('school_class_id', $teacherClassIds))
         ->when($classId, fn($q, $c) => $q->where('school_class_id', $c))
         ->when($search, fn($q, $s) => $q->where(function($sq) use ($s) {
             $sq->where('name', 'like', "%{$s}%")->orWhere('nis', 'like', "%{$s}%");
@@ -281,7 +301,11 @@ class StudentAttendanceController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        $schoolClasses = SchoolClass::orderBy('name')->get(['id', 'name']);
+        $classesQuery = SchoolClass::orderBy('name');
+        if ($isGuru && !empty($teacherClassIds)) {
+            $classesQuery->whereIn('id', $teacherClassIds);
+        }
+        $schoolClasses = $classesQuery->get(['id', 'name']);
 
         return Inertia::render('StudentAttendance/Monitoring', [
             'students' => $paginatedStudents,
@@ -293,6 +317,8 @@ class StudentAttendanceController extends Controller
                 'search' => $search,
                 'status' => $statusFilter,
             ],
+            'isReadOnly' => $this->isReadOnlyUser(),
+            'isHomeroomTeacher' => $isGuru && !empty($teacherClassIds),
         ]);
     }
 
@@ -301,12 +327,25 @@ class StudentAttendanceController extends Controller
      */
     public function updateStatus(Request $request)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         $validated = $request->validate([
             'student_id' => 'required|exists:students,id',
             'date' => 'required|date',
             'status' => 'required|in:present,late,sick,permit,alpha',
             'notes' => 'nullable|string|max:500',
         ]);
+
+        $user = auth()->user();
+        $teacherClassIds = $this->getTeacherClassIds();
+        if ($user && $user->hasRole('Guru')) {
+            $student = Student::find($validated['student_id']);
+            if (!$student || empty($teacherClassIds) || !in_array($student->school_class_id, $teacherClassIds)) {
+                abort(403, 'Anda hanya dapat memperbarui status presensi siswa di kelas yang Anda ampu.');
+            }
+        }
 
         $attendance = StudentAttendance::firstOrNew([
             'student_id' => $validated['student_id'],
@@ -334,12 +373,17 @@ class StudentAttendanceController extends Controller
         $classId = $request->input('class_id');
         $search = $request->input('search');
 
+        $user = auth()->user();
+        $isGuru = $user && $user->hasRole('Guru');
+        $teacherClassIds = $this->getTeacherClassIds();
+
         $daysInMonth = Carbon::createFromDate($year, $month, 1)->daysInMonth;
 
         $studentsQuery = Student::with(['schoolClass', 'attendances' => function ($q) use ($year, $month) {
             $q->whereYear('date', $year)->whereMonth('date', $month);
         }])
         ->where('status', 'active')
+        ->when($isGuru && !empty($teacherClassIds), fn($q) => $q->whereIn('school_class_id', $teacherClassIds))
         ->when($classId, fn($q, $c) => $q->where('school_class_id', $c))
         ->when($search, fn($q, $s) => $q->where(function($sq) use ($s) {
             $sq->where('name', 'like', "%{$s}%")->orWhere('nis', 'like', "%{$s}%");
@@ -408,12 +452,15 @@ class StudentAttendanceController extends Controller
             ];
         });
 
-        $schoolClasses = SchoolClass::orderBy('name')->get(['id', 'name']);
+        $classesQuery = SchoolClass::orderBy('name');
+        if ($isGuru && !empty($teacherClassIds)) {
+            $classesQuery->whereIn('id', $teacherClassIds);
+        }
+        $schoolClasses = $classesQuery->get(['id', 'name']);
 
         return Inertia::render('StudentAttendance/Recap', [
             'matrix' => $paginatedStudents,
             'grandTotals' => $grandTotals,
-            'daysInMonth' => $daysInMonth,
             'schoolClasses' => $schoolClasses,
             'filters' => [
                 'month' => $month,
@@ -421,6 +468,8 @@ class StudentAttendanceController extends Controller
                 'class_id' => $classId,
                 'search' => $search,
             ],
+            'isReadOnly' => $this->isReadOnlyUser(),
+            'isHomeroomTeacher' => $isGuru && !empty($teacherClassIds),
         ]);
     }
 
@@ -432,6 +481,14 @@ class StudentAttendanceController extends Controller
         $month = (int) $request->input('month', Carbon::now()->month);
         $year = (int) $request->input('year', Carbon::now()->year);
         $classId = $request->input('class_id');
+
+        $user = auth()->user();
+        $teacherClassIds = $this->getTeacherClassIds();
+        if ($user && $user->hasRole('Guru') && !empty($teacherClassIds)) {
+            if (!$classId || !in_array($classId, $teacherClassIds)) {
+                $classId = $teacherClassIds[0];
+            }
+        }
 
         $monthName = Carbon::create()->month($month)->translatedFormat('F');
         $fileName = "Rekap_Presensi_Siswa_{$monthName}_{$year}.xlsx";

@@ -9,6 +9,12 @@ use Inertia\Inertia;
 
 class SchoolClassController extends Controller
 {
+    private function isReadOnlyUser(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('Kesiswaan');
+    }
+
     public function index()
     {
         $classes = SchoolClass::with('homeroomTeacher')
@@ -21,11 +27,16 @@ class SchoolClassController extends Controller
         return Inertia::render('SchoolClasses/Index', [
             'classes' => $classes,
             'teachers' => $teachers,
+            'isReadOnly' => $this->isReadOnlyUser(),
         ]);
     }
 
     public function store(Request $request)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:100|unique:school_classes,name',
             'level' => 'nullable|string|max:20',
@@ -40,6 +51,10 @@ class SchoolClassController extends Controller
 
     public function update(Request $request, SchoolClass $schoolClass)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:100|unique:school_classes,name,' . $schoolClass->id,
             'level' => 'nullable|string|max:20',
@@ -54,6 +69,10 @@ class SchoolClassController extends Controller
 
     public function destroy(SchoolClass $schoolClass)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         if ($schoolClass->students()->count() > 0) {
             return back()->withErrors(['message' => 'Tidak dapat menghapus kelas yang masih memiliki data siswa.']);
         }

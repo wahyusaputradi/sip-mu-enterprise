@@ -10,13 +10,41 @@ use Illuminate\Validation\Rule;
 
 class StudentController extends Controller
 {
+    private function isReadOnlyUser(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('Kesiswaan');
+    }
+
+    private function getTeacherClassIds(): array
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('Guru')) {
+            return [];
+        }
+
+        $employee = $user->employee;
+        if (!$employee) {
+            return [];
+        }
+
+        return SchoolClass::where('homeroom_teacher_id', $employee->id)->pluck('id')->toArray();
+    }
+
     public function index(Request $request)
     {
         $search = $request->input('search');
         $classId = $request->input('class_id');
         $status = $request->input('status', 'active');
 
+        $user = auth()->user();
+        $isGuru = $user && $user->hasRole('Guru');
+        $teacherClassIds = $this->getTeacherClassIds();
+
         $query = Student::with('schoolClass')
+            ->when($isGuru && !empty($teacherClassIds), function ($q) use ($teacherClassIds) {
+                $q->whereIn('school_class_id', $teacherClassIds);
+            })
             ->when($search, function ($q, $search) {
                 $q->where(function ($s) use ($search) {
                     $s->where('name', 'like', "%{$search}%")
@@ -32,7 +60,12 @@ class StudentController extends Controller
             });
 
         $students = $query->orderBy('name')->paginate(50)->withQueryString();
-        $schoolClasses = SchoolClass::orderBy('name')->get(['id', 'name', 'level', 'major']);
+
+        $classesQuery = SchoolClass::orderBy('name');
+        if ($isGuru && !empty($teacherClassIds)) {
+            $classesQuery->whereIn('id', $teacherClassIds);
+        }
+        $schoolClasses = $classesQuery->get(['id', 'name', 'level', 'major']);
 
         return Inertia::render('Students/Index', [
             'students' => $students,
@@ -42,11 +75,25 @@ class StudentController extends Controller
                 'class_id' => $classId,
                 'status' => $status,
             ],
+            'isReadOnly' => $this->isReadOnlyUser(),
+            'isHomeroomTeacher' => $isGuru && !empty($teacherClassIds),
         ]);
     }
 
     public function store(Request $request)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
+        $user = auth()->user();
+        $teacherClassIds = $this->getTeacherClassIds();
+        if ($user->hasRole('Guru')) {
+            if (empty($teacherClassIds) || !in_array($request->school_class_id, $teacherClassIds)) {
+                abort(403, 'Anda hanya dapat menambahkan siswa untuk kelas yang Anda ampu.');
+            }
+        }
+
         $validated = $request->validate([
             // Data Siswa Utama
             'nis' => 'required|string|max:50|unique:students,nis',
@@ -99,6 +146,18 @@ class StudentController extends Controller
 
     public function update(Request $request, Student $student)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
+        $user = auth()->user();
+        $teacherClassIds = $this->getTeacherClassIds();
+        if ($user->hasRole('Guru')) {
+            if (empty($teacherClassIds) || !in_array($student->school_class_id, $teacherClassIds)) {
+                abort(403, 'Anda hanya dapat mengedit siswa di kelas yang Anda ampu.');
+            }
+        }
+
         $validated = $request->validate([
             // Data Siswa Utama
             'nis' => ['required', 'string', 'max:50', Rule::unique('students', 'nis')->ignore($student->id)],
@@ -153,19 +212,42 @@ class StudentController extends Controller
 
     public function destroy(Student $student)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
+        $user = auth()->user();
+        $teacherClassIds = $this->getTeacherClassIds();
+        if ($user->hasRole('Guru')) {
+            if (empty($teacherClassIds) || !in_array($student->school_class_id, $teacherClassIds)) {
+                abort(403, 'Anda hanya dapat menghapus siswa di kelas yang Anda ampu.');
+            }
+        }
+
         $student->delete();
         return back()->with('message', 'Data siswa berhasil dihapus.');
     }
 
     public function bulkDestroy(Request $request)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         $request->validate([
             'ids' => 'required|array',
             'ids.*' => 'integer|exists:students,id',
         ]);
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
-            Student::whereIn('id', $request->ids)->delete();
+        $user = auth()->user();
+        $teacherClassIds = $this->getTeacherClassIds();
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $user, $teacherClassIds) {
+            $query = Student::whereIn('id', $request->ids);
+            if ($user->hasRole('Guru')) {
+                $query->whereIn('school_class_id', $teacherClassIds);
+            }
+            $query->delete();
         });
 
         return back()->with('message', count($request->ids) . ' data siswa berhasil dihapus.');
@@ -175,6 +257,14 @@ class StudentController extends Controller
     {
         $classId = $request->input('class_id');
         $search = $request->input('search');
+
+        $user = auth()->user();
+        $teacherClassIds = $this->getTeacherClassIds();
+        if ($user && $user->hasRole('Guru') && !empty($teacherClassIds)) {
+            if (!$classId || !in_array($classId, $teacherClassIds)) {
+                $classId = $teacherClassIds[0];
+            }
+        }
 
         return \Maatwebsite\Excel\Facades\Excel::download(
             new \App\Exports\StudentsExport($classId, $search),
@@ -192,6 +282,10 @@ class StudentController extends Controller
 
     public function import(Request $request)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         $request->validate([
             'file' => 'required|mimes:xlsx,xls,csv|max:5120'
         ]);
@@ -230,8 +324,15 @@ class StudentController extends Controller
         $classId = $request->input('class_id');
         $search = $request->input('search');
 
+        $user = auth()->user();
+        $isGuru = $user && $user->hasRole('Guru');
+        $teacherClassIds = $this->getTeacherClassIds();
+
         $query = Student::with('schoolClass')
             ->where('status', 'active')
+            ->when($isGuru && !empty($teacherClassIds), function ($q) use ($teacherClassIds) {
+                $q->whereIn('school_class_id', $teacherClassIds);
+            })
             ->when($classId, function ($q, $classId) {
                 $q->where('school_class_id', $classId);
             })
@@ -240,7 +341,12 @@ class StudentController extends Controller
             });
 
         $students = $query->orderBy('name')->paginate(50)->withQueryString();
-        $schoolClasses = SchoolClass::orderBy('name')->get(['id', 'name']);
+
+        $classesQuery = SchoolClass::orderBy('name');
+        if ($isGuru && !empty($teacherClassIds)) {
+            $classesQuery->whereIn('id', $teacherClassIds);
+        }
+        $schoolClasses = $classesQuery->get(['id', 'name']);
 
         return Inertia::render('Students/Cards', [
             'students' => $students,
@@ -249,6 +355,8 @@ class StudentController extends Controller
                 'class_id' => $classId,
                 'search' => $search,
             ],
+            'isReadOnly' => $this->isReadOnlyUser(),
+            'isHomeroomTeacher' => $isGuru && !empty($teacherClassIds),
         ]);
     }
 }
