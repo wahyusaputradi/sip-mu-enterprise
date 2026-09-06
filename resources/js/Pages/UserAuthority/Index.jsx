@@ -54,7 +54,9 @@ export default function UserAuthorityIndex({
 
     // Modals Student
     const [selectedStudent, setSelectedStudent] = useState(null);
+    const [studentToRegenerateQr, setStudentToRegenerateQr] = useState(null);
     const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false);
+    const [isSingleRegenerateQrModalOpen, setIsSingleRegenerateQrModalOpen] = useState(false);
     const [isBulkRegenerateQrModalOpen, setIsBulkRegenerateQrModalOpen] = useState(false);
     const [isBulkStudentStatusModalOpen, setIsBulkStudentStatusModalOpen] = useState(false);
     const [isBulkResetStudentPasswordModalOpen, setIsBulkResetStudentPasswordModalOpen] = useState(false);
@@ -184,14 +186,24 @@ export default function UserAuthorityIndex({
         });
     };
 
-    const handleSingleRegenerateQr = (student) => {
-        if (confirm(`Apakah Anda yakin ingin me-regenerate QR Token baru untuk ${student.name}? Token lama tidak akan bisa digunakan lagi.`)) {
-            router.put(route('user-authority.students.update', student.id), {
-                status: student.status,
-                parent_phone: student.parent_phone,
-                regenerate_qr: true,
-            }, { preserveScroll: true });
-        }
+    const openSingleRegenerateQrModal = (student) => {
+        setStudentToRegenerateQr(student);
+        setIsSingleRegenerateQrModalOpen(true);
+    };
+
+    const confirmSingleRegenerateQr = () => {
+        if (!studentToRegenerateQr) return;
+        router.put(route('user-authority.students.update', studentToRegenerateQr.id), {
+            status: studentToRegenerateQr.status,
+            parent_phone: studentToRegenerateQr.parent_phone,
+            regenerate_qr: true,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsSingleRegenerateQrModalOpen(false);
+                setStudentToRegenerateQr(null);
+            }
+        });
     };
 
     const toggleBulkStudentSelect = (studentId) => {
@@ -757,7 +769,7 @@ export default function UserAuthorityIndex({
                                                                 <Button
                                                                     size="sm"
                                                                     variant="outline"
-                                                                    onClick={() => handleSingleRegenerateQr(student)}
+                                                                    onClick={() => openSingleRegenerateQrModal(student)}
                                                                     title="Regenerate QR Token Baru"
                                                                     className="h-8 px-2 text-xs border-sky-200 text-sky-600 hover:bg-sky-50 rounded-lg flex items-center gap-1 font-bold"
                                                                 >
@@ -1000,6 +1012,29 @@ export default function UserAuthorityIndex({
                             </Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal Single Regenerate QR Token Siswa */}
+            <Dialog open={isSingleRegenerateQrModalOpen} onOpenChange={setIsSingleRegenerateQrModalOpen}>
+                <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-bold text-sky-600 flex items-center gap-2">
+                            <RefreshCw className="w-5 h-5" /> Regenerate QR Token Siswa
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500 leading-relaxed">
+                            Apakah Anda yakin ingin me-regenerate QR Token baru untuk siswa <strong className="text-slate-900 dark:text-white">{studentToRegenerateQr?.name}</strong> (NIS: {studentToRegenerateQr?.nis})? Token lama tidak akan bisa digunakan lagi untuk presensi.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter className="gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setIsSingleRegenerateQrModalOpen(false)} className="rounded-xl text-xs">
+                            Batal
+                        </Button>
+                        <Button onClick={confirmSingleRegenerateQr} className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl">
+                            Konfirmasi Regenerate
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
