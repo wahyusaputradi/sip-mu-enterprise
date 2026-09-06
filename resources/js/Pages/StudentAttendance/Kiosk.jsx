@@ -21,6 +21,7 @@ export default function Kiosk({ settings, todayStats }) {
 
     const inputRef = useRef(null);
     const cameraScannerRef = useRef(null);
+    const isProcessingRef = useRef(false);
 
     // Audio Chime Synthesizer using Web Audio API
     const playSound = (type) => {
@@ -76,6 +77,8 @@ export default function Kiosk({ settings, todayStats }) {
         let timer;
         const handleKeyDown = (e) => {
             if (useCamera) return;
+            if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+            
             if (e.key === 'Enter') {
                 if (inputBuffer.trim()) {
                     handleScanProcess(inputBuffer.trim());
@@ -97,7 +100,8 @@ export default function Kiosk({ settings, todayStats }) {
 
     // Handle Scan Submission (Online vs Offline Buffer)
     const handleScanProcess = async (token) => {
-        if (loading) return;
+        if (loading || isProcessingRef.current) return;
+        isProcessingRef.current = true;
         setLoading(true);
         setErrorMsg(null);
 
@@ -114,6 +118,7 @@ export default function Kiosk({ settings, todayStats }) {
                 message: 'Tersimpan di Buffer Offline. Akan dikirim otomatis saat terhubung internet.',
             });
             setLoading(false);
+            setTimeout(() => { isProcessingRef.current = false; }, 1500);
             return;
         }
 
@@ -124,13 +129,15 @@ export default function Kiosk({ settings, todayStats }) {
                 if (res.data.status === 'late') playSound('late');
                 else playSound('success');
 
-                // Update Stats
-                setStats((prev) => ({
-                    ...prev,
-                    checked_in: res.data.mode === 'check_in' ? prev.checked_in + 1 : prev.checked_in,
-                    late: res.data.status === 'late' ? prev.late + 1 : prev.late,
-                    checked_out: res.data.mode === 'check_out' ? prev.checked_out + 1 : prev.checked_out,
-                }));
+                // Update Stats (only if not already_scanned)
+                if (!res.data.already_scanned) {
+                    setStats((prev) => ({
+                        ...prev,
+                        checked_in: res.data.mode === 'check_in' ? prev.checked_in + 1 : prev.checked_in,
+                        late: res.data.status === 'late' ? prev.late + 1 : prev.late,
+                        checked_out: res.data.mode === 'check_out' ? prev.checked_out + 1 : prev.checked_out,
+                    }));
+                }
             }
         } catch (err) {
             playSound('error');
@@ -138,6 +145,7 @@ export default function Kiosk({ settings, todayStats }) {
             setErrorMsg(msg);
         } finally {
             setLoading(false);
+            setTimeout(() => { isProcessingRef.current = false; }, 1500);
         }
     };
 

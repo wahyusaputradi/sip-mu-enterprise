@@ -123,26 +123,6 @@ class StudentAttendanceController extends Controller
 
         if (!$attendance->check_in_time) {
             // ── CHECK-IN MODE ──
-            if ($attendance->updated_at) {
-                $lastCheckIn = Carbon::parse($attendance->updated_at);
-                if ($now->diffInSeconds($lastCheckIn) < 60) {
-                    return response()->json([
-                        'success' => true,
-                        'already_scanned' => true,
-                        'mode' => 'check_in',
-                        'student' => [
-                            'name' => $student->name,
-                            'nis' => $student->nis,
-                            'class_name' => $student->schoolClass?->name ?? '-',
-                            'photo' => $student->photo,
-                        ],
-                        'time' => Carbon::parse($attendance->check_in_time)->format('H:i'),
-                        'status' => $attendance->check_in_status,
-                        'message' => "Siswa {$student->name} sudah melakukan presensi masuk hari ini.",
-                    ]);
-                }
-            }
-
             $checkInStatus = $now->gt($jamBatasTerlambat) ? 'late' : 'present';
 
             $attendance->check_in_time = $timeStr;
@@ -169,7 +149,27 @@ class StudentAttendanceController extends Controller
                     : "PRESENSI MASUK: {$student->name} (TEPAT WAKTU)",
             ]);
         } else {
-            // ── CHECK-OUT MODE ──
+            // ── CHECK-OUT MODE / PREVENT ACCIDENTAL RE-SCAN ──
+            $checkInDateTime = Carbon::parse($dateStr . ' ' . $attendance->check_in_time);
+            
+            // Jeda minimal 15 menit antara presensi masuk & pulang untuk mencegah double-scan tidak sengaja
+            if ($now->diffInMinutes($checkInDateTime) < 15) {
+                return response()->json([
+                    'success' => true,
+                    'already_scanned' => true,
+                    'mode' => 'check_in',
+                    'student' => [
+                        'name' => $student->name,
+                        'nis' => $student->nis,
+                        'class_name' => $student->schoolClass?->name ?? '-',
+                        'photo' => $student->photo,
+                    ],
+                    'time' => Carbon::parse($attendance->check_in_time)->format('H:i'),
+                    'status' => $attendance->check_in_status,
+                    'message' => "Siswa {$student->name} telah presensi masuk pada jam " . Carbon::parse($attendance->check_in_time)->format('H:i') . " WIB.",
+                ]);
+            }
+
             if ($attendance->check_out_time) {
                 return response()->json([
                     'success' => true,
