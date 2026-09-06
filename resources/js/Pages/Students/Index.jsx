@@ -4,7 +4,8 @@ import { Head, useForm, router } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Users, Plus, Edit, Trash2, Search, QrCode, Filter, Printer, UserPlus, ArrowLeft,
-    FileSpreadsheet, Upload, Download, CheckSquare, Square, AlertCircle, X
+    FileSpreadsheet, Upload, Download, CheckSquare, Square, AlertCircle, X,
+    User, GraduationCap, Building2, Calendar, MapPin, Phone, CreditCard, FileText, ShieldCheck
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,19 +25,64 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
     const [classFilter, setClassFilter] = useState(filters.class_id || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || 'active');
 
-    // Bulk Delete Checkbox State
-    const [selectedIds, setSelectedIds] = useState([]);
+    const [editActiveTab, setEditActiveTab] = useState('siswa');
+
+    const regencyOptions = [
+        'Kabupaten Cirebon',
+        'Kota Cirebon',
+        'Kabupaten Indramayu',
+        'Kabupaten Majalengka',
+        'Kabupaten Kuningan',
+        'Lainnya'
+    ];
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
+        // Data Siswa Utama
         nis: '',
         nisn: '',
         name: '',
         gender: 'Laki-laki',
         school_class_id: '',
+        status: 'active',
+
+        // Data Biodata Siswa
+        pob: '',
+        dob: '',
+        nik: '',
+        address: '',
+        rt: '',
+        rw: '',
+        village: '',
+        district: '',
+        regency: 'Kabupaten Cirebon',
+        kip_number: '',
+        previous_school: '',
+        family_card_number: '',
+        student_phone: '',
         parent_name: '',
         parent_phone: '',
-        status: 'active',
+
+        // Data Ayah
+        father_name: '',
+        father_pob: '',
+        father_dob: '',
+        father_nik: '',
+        father_phone: '',
+        father_job: '',
+
+        // Data Ibu
+        mother_name: '',
+        mother_pob: '',
+        mother_dob: '',
+        mother_nik: '',
+        mother_phone: '',
+        mother_job: '',
     });
+
+    const handleNumericInput = (field, value, maxLen = 30) => {
+        const clean = value.replace(/[^0-9]/g, '').slice(0, maxLen);
+        setData(field, clean);
+    };
 
     const importForm = useForm({
         file: null,
@@ -77,20 +123,54 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
 
     const openAddModal = () => {
         reset();
+        setEditActiveTab('siswa');
         setIsAddModalOpen(true);
     };
 
     const openEditModal = (student) => {
         setSelectedStudent(student);
+        setEditActiveTab('siswa');
         setData({
-            nis: student.nis,
+            // Data Siswa Utama
+            nis: student.nis || '',
             nisn: student.nisn || '',
-            name: student.name,
+            name: student.name || '',
             gender: student.gender || 'Laki-laki',
             school_class_id: String(student.school_class_id || ''),
+            status: student.status || 'active',
+
+            // Data Biodata Siswa
+            pob: student.pob || '',
+            dob: student.dob || '',
+            nik: student.nik || '',
+            address: student.address || '',
+            rt: student.rt || '',
+            rw: student.rw || '',
+            village: student.village || '',
+            district: student.district || '',
+            regency: student.regency || 'Kabupaten Cirebon',
+            kip_number: student.kip_number || '',
+            previous_school: student.previous_school || '',
+            family_card_number: student.family_card_number || '',
+            student_phone: student.student_phone || '',
             parent_name: student.parent_name || '',
             parent_phone: student.parent_phone || '',
-            status: student.status || 'active',
+
+            // Data Ayah
+            father_name: student.father_name || '',
+            father_pob: student.father_pob || '',
+            father_dob: student.father_dob || '',
+            father_nik: student.father_nik || '',
+            father_phone: student.father_phone || '',
+            father_job: student.father_job || '',
+
+            // Data Ibu
+            mother_name: student.mother_name || '',
+            mother_pob: student.mother_pob || '',
+            mother_dob: student.mother_dob || '',
+            mother_nik: student.mother_nik || '',
+            mother_phone: student.mother_phone || '',
+            mother_job: student.mother_job || '',
         });
         setIsEditModalOpen(true);
     };
@@ -453,83 +533,309 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                 </DialogContent>
             </Dialog>
 
-            {/* Modal Edit Student */}
+            {/* Modal Edit Student - 3 Tabbed Interface */}
             <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                <DialogContent className="sm:max-w-[480px] rounded-3xl p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto rounded-3xl p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
                     <form onSubmit={handleUpdate}>
                         <DialogHeader>
-                            <DialogTitle className="text-xl font-black text-slate-900 dark:text-white">Edit Data Siswa</DialogTitle>
-                            <DialogDescription className="text-xs text-slate-500">Perbarui identitas siswa {selectedStudent?.name}.</DialogDescription>
+                            <DialogTitle className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                <Edit className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                <span>Edit Data Siswa & Biodata Orang Tua</span>
+                            </DialogTitle>
+                            <DialogDescription className="text-xs text-slate-500">
+                                Perbarui informasi profil siswa <strong className="text-slate-800 dark:text-slate-200">{selectedStudent?.name}</strong>.
+                            </DialogDescription>
                         </DialogHeader>
 
-                        <div className="py-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <Label className="text-xs font-bold mb-1 block">NIS (Wajib)*</Label>
-                                    <Input value={data.nis} onChange={e => setData('nis', e.target.value)} required className="rounded-xl" />
-                                </div>
-                                <div>
-                                    <Label className="text-xs font-bold mb-1 block">NISN</Label>
-                                    <Input value={data.nisn} onChange={e => setData('nisn', e.target.value)} className="rounded-xl" />
-                                </div>
-                            </div>
+                        {/* Navigation Tabs */}
+                        <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 pt-4 pb-1">
+                            <button
+                                type="button"
+                                onClick={() => setEditActiveTab('siswa')}
+                                className={`flex items-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all ${
+                                    editActiveTab === 'siswa'
+                                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                                }`}
+                            >
+                                <User className="w-4 h-4" />
+                                <span>1. Data Siswa</span>
+                            </button>
 
-                            <div>
-                                <Label className="text-xs font-bold mb-1 block">Nama Lengkap Siswa*</Label>
-                                <Input value={data.name} onChange={e => setData('name', e.target.value)} required className="rounded-xl" />
-                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setEditActiveTab('ayah')}
+                                className={`flex items-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all ${
+                                    editActiveTab === 'ayah'
+                                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                                }`}
+                            >
+                                <User className="w-4 h-4 text-blue-400" />
+                                <span>2. Data Ayah</span>
+                            </button>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <Label className="text-xs font-bold mb-1 block">Jenis Kelamin</Label>
-                                    <Select value={data.gender} onValueChange={v => setData('gender', v)}>
-                                        <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Laki-laki">Laki-laki</SelectItem>
-                                            <SelectItem value="Perempuan">Perempuan</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div>
-                                    <Label className="text-xs font-bold mb-1 block">Kelas / Rombel*</Label>
-                                    <Select value={data.school_class_id} onValueChange={v => setData('school_class_id', v)}>
-                                        <SelectTrigger className="rounded-xl"><SelectValue placeholder="Pilih Kelas" /></SelectTrigger>
-                                        <SelectContent>
-                                            {schoolClasses.map(c => (
-                                                <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <Label className="text-xs font-bold mb-1 block">Nama Orang Tua/Wali</Label>
-                                    <Input value={data.parent_name} onChange={e => setData('parent_name', e.target.value)} className="rounded-xl" />
-                                </div>
-                                <div>
-                                    <Label className="text-xs font-bold mb-1 block">No. HP Orang Tua (WA)</Label>
-                                    <Input value={data.parent_phone} onChange={e => setData('parent_phone', e.target.value)} className="rounded-xl" />
-                                </div>
-                            </div>
-
-                            <div>
-                                <Label className="text-xs font-bold mb-1 block">Status Siswa</Label>
-                                <Select value={data.status} onValueChange={v => setData('status', v)}>
-                                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="active">Aktif</SelectItem>
-                                        <SelectItem value="graduated">Lulus</SelectItem>
-                                        <SelectItem value="moved">Pindah</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setEditActiveTab('ibu')}
+                                className={`flex items-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all ${
+                                    editActiveTab === 'ibu'
+                                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                                }`}
+                            >
+                                <User className="w-4 h-4 text-pink-400" />
+                                <span>3. Data Ibu</span>
+                            </button>
                         </div>
 
-                        <DialogFooter className="gap-3 pt-4">
+                        {/* TAB 1: DATA PRIBADI SISWA */}
+                        {editActiveTab === 'siswa' && (
+                            <div className="py-5 space-y-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">NIS (Wajib)*</Label>
+                                        <Input value={data.nis} onChange={e => setData('nis', e.target.value)} required className="rounded-xl" />
+                                        {errors.nis && <p className="text-xs text-rose-500 mt-1">{errors.nis}</p>}
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">NISN</Label>
+                                        <Input value={data.nisn} onChange={e => setData('nisn', e.target.value)} placeholder="0051234567" className="rounded-xl" />
+                                        {errors.nisn && <p className="text-xs text-rose-500 mt-1">{errors.nisn}</p>}
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Kelas / Rombel*</Label>
+                                        <Select value={data.school_class_id} onValueChange={v => setData('school_class_id', v)}>
+                                            <SelectTrigger className="rounded-xl"><SelectValue placeholder="Pilih Kelas" /></SelectTrigger>
+                                            <SelectContent>
+                                                {schoolClasses.map(c => (
+                                                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.school_class_id && <p className="text-xs text-rose-500 mt-1">{errors.school_class_id}</p>}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div className="sm:col-span-2">
+                                        <Label className="text-xs font-bold mb-1 block">Nama Lengkap Siswa*</Label>
+                                        <Input value={data.name} onChange={e => setData('name', e.target.value)} required className="rounded-xl" />
+                                        {errors.name && <p className="text-xs text-rose-500 mt-1">{errors.name}</p>}
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Jenis Kelamin</Label>
+                                        <Select value={data.gender} onValueChange={v => setData('gender', v)}>
+                                            <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Laki-laki">Laki-laki</SelectItem>
+                                                <SelectItem value="Perempuan">Perempuan</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Tempat Lahir Siswa</Label>
+                                        <Input value={data.pob} onChange={e => setData('pob', e.target.value)} placeholder="Contoh: Cirebon" className="rounded-xl" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Tanggal Lahir Siswa</Label>
+                                        <Input type="date" value={data.dob} onChange={e => setData('dob', e.target.value)} className="rounded-xl" />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">NIK Siswa (16 Digit)</Label>
+                                        <Input value={data.nik} onChange={e => handleNumericInput('nik', e.target.value, 16)} placeholder="320912..." className="rounded-xl font-mono" />
+                                        {errors.nik && <p className="text-xs text-rose-500 mt-1">{errors.nik}</p>}
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">No. Kartu Keluarga (KK)</Label>
+                                        <Input value={data.family_card_number} onChange={e => handleNumericInput('family_card_number', e.target.value, 16)} placeholder="320912..." className="rounded-xl font-mono" />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">No. KIP (Jika Ada)</Label>
+                                        <Input value={data.kip_number} onChange={e => handleNumericInput('kip_number', e.target.value, 30)} placeholder="Contoh: KIP12345" className="rounded-xl font-mono" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">No. HP/WA Siswa</Label>
+                                        <Input value={data.student_phone} onChange={e => handleNumericInput('student_phone', e.target.value, 15)} placeholder="08xxxxxxxxxx" className="rounded-xl font-mono" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Asal Sekolah</Label>
+                                        <Input value={data.previous_school} onChange={e => setData('previous_school', e.target.value)} placeholder="SMP / MTs Asal" className="rounded-xl" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label className="text-xs font-bold mb-1 block">Alamat Tempat Tinggal (Jalan / Dusun / Blok)</Label>
+                                    <Input value={data.address} onChange={e => setData('address', e.target.value)} placeholder="Contoh: Jl. Sunan Gunung Jati No. 12, Blok Manis" className="rounded-xl" />
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">RT</Label>
+                                        <Input value={data.rt} onChange={e => handleNumericInput('rt', e.target.value, 5)} placeholder="001" className="rounded-xl font-mono" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">RW</Label>
+                                        <Input value={data.rw} onChange={e => handleNumericInput('rw', e.target.value, 5)} placeholder="002" className="rounded-xl font-mono" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Desa / Kelurahan</Label>
+                                        <Input value={data.village} onChange={e => setData('village', e.target.value)} placeholder="Desa" className="rounded-xl" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Kecamatan</Label>
+                                        <Input value={data.district} onChange={e => setData('district', e.target.value)} placeholder="Kecamatan" className="rounded-xl" />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Kabupaten / Kota</Label>
+                                        <Select value={data.regency} onValueChange={v => setData('regency', v)}>
+                                            <SelectTrigger className="rounded-xl"><SelectValue placeholder="Pilih Kabupaten/Kota" /></SelectTrigger>
+                                            <SelectContent>
+                                                {regencyOptions.map(r => (
+                                                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Status Siswa</Label>
+                                        <Select value={data.status} onValueChange={v => setData('status', v)}>
+                                            <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="active">Aktif</SelectItem>
+                                                <SelectItem value="graduated">Lulus</SelectItem>
+                                                <SelectItem value="moved">Pindah</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Nama Wali (Opsional)</Label>
+                                        <Input value={data.parent_name} onChange={e => setData('parent_name', e.target.value)} placeholder="Nama Wali Utama" className="rounded-xl" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">No. HP Wali (WA Utama)</Label>
+                                        <Input value={data.parent_phone} onChange={e => handleNumericInput('parent_phone', e.target.value, 15)} placeholder="08xxxxxxxxxx" className="rounded-xl font-mono" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 2: DATA AYAH KANDUNG */}
+                        {editActiveTab === 'ayah' && (
+                            <div className="py-5 space-y-4">
+                                <div className="bg-blue-50/80 dark:bg-blue-950/40 p-4 rounded-2xl border border-blue-200/60 dark:border-blue-900/60 mb-2">
+                                    <h4 className="text-xs font-black text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                                        <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                        <span>Informasi Identitas Ayah Kandung</span>
+                                    </h4>
+                                    <p className="text-[11px] text-blue-700 dark:text-blue-300 mt-0.5">
+                                        Data ini tersinkronisasi langsung dengan halaman profil siswa dan wali murid.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <Label className="text-xs font-bold mb-1 block">Nama Lengkap Ayah</Label>
+                                    <Input value={data.father_name} onChange={e => setData('father_name', e.target.value)} placeholder="Ketik nama lengkap ayah..." className="rounded-xl" />
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Tempat Lahir Ayah</Label>
+                                        <Input value={data.father_pob} onChange={e => setData('father_pob', e.target.value)} placeholder="Contoh: Cirebon" className="rounded-xl" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Tanggal Lahir Ayah</Label>
+                                        <Input type="date" value={data.father_dob} onChange={e => setData('father_dob', e.target.value)} className="rounded-xl" />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">NIK Ayah (16 Digit)</Label>
+                                        <Input value={data.father_nik} onChange={e => handleNumericInput('father_nik', e.target.value, 16)} placeholder="320912..." className="rounded-xl font-mono" />
+                                        {errors.father_nik && <p className="text-xs text-rose-500 mt-1">{errors.father_nik}</p>}
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">No. HP/WA Ayah</Label>
+                                        <Input value={data.father_phone} onChange={e => handleNumericInput('father_phone', e.target.value, 15)} placeholder="08xxxxxxxxxx" className="rounded-xl font-mono" />
+                                        {errors.father_phone && <p className="text-xs text-rose-500 mt-1">{errors.father_phone}</p>}
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Pekerjaan Ayah</Label>
+                                        <Input value={data.father_job} onChange={e => setData('father_job', e.target.value)} placeholder="Contoh: Wiraswasta" className="rounded-xl" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 3: DATA IBU KANDUNG */}
+                        {editActiveTab === 'ibu' && (
+                            <div className="py-5 space-y-4">
+                                <div className="bg-pink-50/80 dark:bg-pink-950/40 p-4 rounded-2xl border border-pink-200/60 dark:border-pink-900/60 mb-2">
+                                    <h4 className="text-xs font-black text-pink-900 dark:text-pink-200 flex items-center gap-1.5">
+                                        <User className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+                                        <span>Informasi Identitas Ibu Kandung</span>
+                                    </h4>
+                                    <p className="text-[11px] text-pink-700 dark:text-pink-300 mt-0.5">
+                                        Data ini tersinkronisasi langsung dengan halaman profil siswa dan wali murid.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <Label className="text-xs font-bold mb-1 block">Nama Lengkap Ibu</Label>
+                                    <Input value={data.mother_name} onChange={e => setData('mother_name', e.target.value)} placeholder="Ketik nama lengkap ibu..." className="rounded-xl" />
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Tempat Lahir Ibu</Label>
+                                        <Input value={data.mother_pob} onChange={e => setData('mother_pob', e.target.value)} placeholder="Contoh: Cirebon" className="rounded-xl" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Tanggal Lahir Ibu</Label>
+                                        <Input type="date" value={data.mother_dob} onChange={e => setData('mother_dob', e.target.value)} className="rounded-xl" />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">NIK Ibu (16 Digit)</Label>
+                                        <Input value={data.mother_nik} onChange={e => handleNumericInput('mother_nik', e.target.value, 16)} placeholder="320912..." className="rounded-xl font-mono" />
+                                        {errors.mother_nik && <p className="text-xs text-rose-500 mt-1">{errors.mother_nik}</p>}
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">No. HP/WA Ibu</Label>
+                                        <Input value={data.mother_phone} onChange={e => handleNumericInput('mother_phone', e.target.value, 15)} placeholder="08xxxxxxxxxx" className="rounded-xl font-mono" />
+                                        {errors.mother_phone && <p className="text-xs text-rose-500 mt-1">{errors.mother_phone}</p>}
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-bold mb-1 block">Pekerjaan Ibu</Label>
+                                        <Input value={data.mother_job} onChange={e => setData('mother_job', e.target.value)} placeholder="Contoh: Ibu Rumah Tangga" className="rounded-xl" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <DialogFooter className="gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                             <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="rounded-xl font-bold w-full sm:w-auto h-11 px-6">Batal</Button>
-                            <Button type="submit" disabled={processing} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto h-11 px-6 shadow-lg shadow-indigo-600/20">Perbarui Data</Button>
+                            <Button type="submit" disabled={processing} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto h-11 px-6 shadow-lg shadow-indigo-600/20">
+                                {processing ? 'Memperbarui...' : 'Perbarui Data Siswa'}
+                            </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>

@@ -48,14 +48,46 @@ class StudentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            // Data Siswa Utama
             'nis' => 'required|string|max:50|unique:students,nis',
             'nisn' => 'nullable|string|max:50|unique:students,nisn',
             'name' => 'required|string|max:255',
             'gender' => 'required|in:Laki-laki,Perempuan',
             'school_class_id' => 'required|exists:school_classes,id',
-            'parent_name' => 'nullable|string|max:255',
-            'parent_phone' => 'nullable|string|max:30',
             'status' => 'required|in:active,graduated,moved',
+
+            // Data Biodata Siswa
+            'pob' => 'nullable|string|max:100',
+            'dob' => 'nullable|date',
+            'nik' => 'nullable|string|max:20|regex:/^[0-9]*$/',
+            'address' => 'nullable|string|max:500',
+            'rt' => 'nullable|string|max:10|regex:/^[0-9]*$/',
+            'rw' => 'nullable|string|max:10|regex:/^[0-9]*$/',
+            'village' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
+            'regency' => 'nullable|string|max:100',
+            'kip_number' => 'nullable|string|max:50|regex:/^[0-9]*$/',
+            'previous_school' => 'nullable|string|max:150',
+            'family_card_number' => 'nullable|string|max:20|regex:/^[0-9]*$/',
+            'student_phone' => 'nullable|string|max:30|regex:/^[0-9]*$/',
+            'parent_name' => 'nullable|string|max:255',
+            'parent_phone' => 'nullable|string|max:30|regex:/^[0-9]*$/',
+
+            // Data Ayah
+            'father_name' => 'nullable|string|max:150',
+            'father_pob' => 'nullable|string|max:100',
+            'father_dob' => 'nullable|date',
+            'father_nik' => 'nullable|string|max:20|regex:/^[0-9]*$/',
+            'father_phone' => 'nullable|string|max:30|regex:/^[0-9]*$/',
+            'father_job' => 'nullable|string|max:100',
+
+            // Data Ibu
+            'mother_name' => 'nullable|string|max:150',
+            'mother_pob' => 'nullable|string|max:100',
+            'mother_dob' => 'nullable|date',
+            'mother_nik' => 'nullable|string|max:20|regex:/^[0-9]*$/',
+            'mother_phone' => 'nullable|string|max:30|regex:/^[0-9]*$/',
+            'mother_job' => 'nullable|string|max:100',
         ]);
 
         $validated['qr_token'] = Student::generateQrToken($validated['nis']);
@@ -68,14 +100,46 @@ class StudentController extends Controller
     public function update(Request $request, Student $student)
     {
         $validated = $request->validate([
+            // Data Siswa Utama
             'nis' => ['required', 'string', 'max:50', Rule::unique('students', 'nis')->ignore($student->id)],
             'nisn' => ['nullable', 'string', 'max:50', Rule::unique('students', 'nisn')->ignore($student->id)],
             'name' => 'required|string|max:255',
             'gender' => 'required|in:Laki-laki,Perempuan',
             'school_class_id' => 'required|exists:school_classes,id',
-            'parent_name' => 'nullable|string|max:255',
-            'parent_phone' => 'nullable|string|max:30',
             'status' => 'required|in:active,graduated,moved',
+
+            // Data Biodata Siswa
+            'pob' => 'nullable|string|max:100',
+            'dob' => 'nullable|date',
+            'nik' => 'nullable|string|max:20|regex:/^[0-9]*$/',
+            'address' => 'nullable|string|max:500',
+            'rt' => 'nullable|string|max:10|regex:/^[0-9]*$/',
+            'rw' => 'nullable|string|max:10|regex:/^[0-9]*$/',
+            'village' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
+            'regency' => 'nullable|string|max:100',
+            'kip_number' => 'nullable|string|max:50|regex:/^[0-9]*$/',
+            'previous_school' => 'nullable|string|max:150',
+            'family_card_number' => 'nullable|string|max:20|regex:/^[0-9]*$/',
+            'student_phone' => 'nullable|string|max:30|regex:/^[0-9]*$/',
+            'parent_name' => 'nullable|string|max:255',
+            'parent_phone' => 'nullable|string|max:30|regex:/^[0-9]*$/',
+
+            // Data Ayah
+            'father_name' => 'nullable|string|max:150',
+            'father_pob' => 'nullable|string|max:100',
+            'father_dob' => 'nullable|date',
+            'father_nik' => 'nullable|string|max:20|regex:/^[0-9]*$/',
+            'father_phone' => 'nullable|string|max:30|regex:/^[0-9]*$/',
+            'father_job' => 'nullable|string|max:100',
+
+            // Data Ibu
+            'mother_name' => 'nullable|string|max:150',
+            'mother_pob' => 'nullable|string|max:100',
+            'mother_dob' => 'nullable|date',
+            'mother_nik' => 'nullable|string|max:20|regex:/^[0-9]*$/',
+            'mother_phone' => 'nullable|string|max:30|regex:/^[0-9]*$/',
+            'mother_job' => 'nullable|string|max:100',
         ]);
 
         if (empty($student->qr_token) || $student->nis !== $validated['nis']) {
