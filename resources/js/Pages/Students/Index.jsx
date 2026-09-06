@@ -15,15 +15,20 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export default function StudentIndex({ auth, students, schoolClasses, filters }) {
+export default function StudentIndex({ auth = {}, students = {}, schoolClasses = [], filters = {} }) {
+    const studentList = Array.isArray(students?.data) ? students.data : [];
+    const classesList = Array.isArray(schoolClasses) ? schoolClasses : [];
+    const filterData = filters || {};
+
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
+    const [selectedIds, setSelectedIds] = useState([]);
 
-    const [search, setSearch] = useState(filters.search || '');
-    const [classFilter, setClassFilter] = useState(filters.class_id || '');
-    const [statusFilter, setStatusFilter] = useState(filters.status || 'active');
+    const [search, setSearch] = useState(filterData.search || '');
+    const [classFilter, setClassFilter] = useState(filterData.class_id || '');
+    const [statusFilter, setStatusFilter] = useState(filterData.status || 'active');
 
     const [editActiveTab, setEditActiveTab] = useState('siswa');
 
@@ -98,10 +103,10 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
 
     // Checkbox selection handlers
     const toggleSelectAll = () => {
-        if (selectedIds.length === students.data.length) {
+        if (selectedIds.length === studentList.length) {
             setSelectedIds([]);
         } else {
-            setSelectedIds(students.data.map(s => s.id));
+            setSelectedIds(studentList.map(s => s.id));
         }
     };
 
@@ -286,7 +291,7 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                                 <SelectTrigger className="rounded-xl"><SelectValue placeholder="Semua Kelas" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="">Semua Kelas</SelectItem>
-                                    {schoolClasses.map((c) => (
+                                    {classesList.map((c) => (
                                         <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -317,7 +322,7 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                                     <TableHead className="w-12 text-center">
                                         <input
                                             type="checkbox"
-                                            checked={students.data.length > 0 && selectedIds.length === students.data.length}
+                                            checked={studentList.length > 0 && selectedIds.length === studentList.length}
                                             onChange={toggleSelectAll}
                                             className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                                         />
@@ -331,14 +336,14 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {students.data.length === 0 ? (
+                                {studentList.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={7} className="text-center py-8 text-slate-400 font-semibold">
                                             Belum ada data siswa.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    students.data.map((student) => (
+                                    studentList.map((student) => (
                                         <TableRow key={student.id} className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/50 ${selectedIds.includes(student.id) ? 'bg-indigo-50/50 dark:bg-indigo-950/30' : ''}`}>
                                             <TableCell className="text-center">
                                                 <input
@@ -382,13 +387,13 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                 </Card>
 
                 {/* Pagination */}
-                {students.links && students.links.length > 3 && (
+                {students?.links && students.links.length > 3 && (
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-2">
                         <p className="text-xs font-extrabold text-slate-500 dark:text-slate-400">
                             Menampilkan <span className="text-slate-900 dark:text-white font-black">{students.from || 0}</span> s/d <span className="text-slate-900 dark:text-white font-black">{students.to || 0}</span> dari total <span className="text-indigo-600 dark:text-indigo-400 font-black">{students.total || 0}</span> data siswa
                         </p>
                         <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800">
-                            {students.links.map((link, idx) => {
+                            {(students.links || []).map((link, idx) => {
                                 const isPrevious = link.label.includes('Previous') || link.label.includes('&laquo;');
                                 const isNext = link.label.includes('Next') || link.label.includes('&raquo;');
                                 const label = isPrevious ? 'Prev' : (isNext ? 'Next' : link.label);
@@ -505,7 +510,7 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                                     <Select value={data.school_class_id} onValueChange={v => setData('school_class_id', v)}>
                                         <SelectTrigger className="rounded-xl"><SelectValue placeholder="Pilih Kelas" /></SelectTrigger>
                                         <SelectContent>
-                                            {schoolClasses.map(c => (
+                                            {classesList.map(c => (
                                                 <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                                             ))}
                                         </SelectContent>
@@ -608,7 +613,7 @@ export default function StudentIndex({ auth, students, schoolClasses, filters })
                                         <Select value={data.school_class_id} onValueChange={v => setData('school_class_id', v)}>
                                             <SelectTrigger className="rounded-xl"><SelectValue placeholder="Pilih Kelas" /></SelectTrigger>
                                             <SelectContent>
-                                                {schoolClasses.map(c => (
+                                                {classesList.map(c => (
                                                     <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
