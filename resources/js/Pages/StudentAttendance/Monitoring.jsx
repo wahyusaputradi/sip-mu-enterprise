@@ -4,7 +4,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import { 
     Users, Clock, CheckCircle2, AlertTriangle, ShieldAlert, Thermometer, UserX, 
-    QrCode, Calendar as CalendarIcon, Filter, Search, Edit3, Printer, FileSpreadsheet, PlusCircle
+    QrCode, Calendar as CalendarIcon, Filter, Search, Edit3, Printer, FileSpreadsheet, PlusCircle, Unlock, Lock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,6 +21,7 @@ export default function StudentMonitoring({ auth, students, stats, schoolClasses
     const [filterStatus, setFilterStatus] = useState(filters.status || 'all');
 
     const [editModalOpen, setEditModalOpen] = useState(false);
+    const [unblockModalOpen, setUnblockModalOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
 
     const { data, setData, post, processing, errors } = useForm({
@@ -28,6 +29,11 @@ export default function StudentMonitoring({ auth, students, stats, schoolClasses
         date: filterDate,
         status: 'present',
         notes: '',
+    });
+
+    const unblockForm = useForm({
+        student_id: '',
+        reason: 'Siswa hadir terlambat dengan izin/penjelasan resmi.',
     });
 
     const handleFilterChange = (newDate, newClass, newStatus, newSearch) => {
@@ -54,11 +60,28 @@ export default function StudentMonitoring({ auth, students, stats, schoolClasses
         setEditModalOpen(true);
     };
 
+    const openUnblockModal = (student) => {
+        setSelectedStudent(student);
+        unblockForm.setData({
+            student_id: student.id,
+            reason: 'Siswa hadir terlambat dengan izin/penjelasan resmi.',
+        });
+        setUnblockModalOpen(true);
+    };
+
     const submitManualStatus = (e) => {
         e.preventDefault();
         post(route('student-attendance.update-status'), {
             preserveScroll: true,
             onSuccess: () => setEditModalOpen(false),
+        });
+    };
+
+    const submitUnblock = (e) => {
+        e.preventDefault();
+        unblockForm.post(route('student-attendance.unblock'), {
+            preserveScroll: true,
+            onSuccess: () => setUnblockModalOpen(false),
         });
     };
 
@@ -255,14 +278,24 @@ export default function StudentMonitoring({ auth, students, stats, schoolClasses
                                                     {isReadOnly ? (
                                                         <span className="text-xs text-slate-400 font-semibold italic">Read-Only</span>
                                                     ) : (
-                                                        <Button
-                                                            onClick={() => openEditModal(student)}
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            className="rounded-xl font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60"
-                                                        >
-                                                            <Edit3 className="w-4 h-4 mr-1.5" /> Ubah Status
-                                                        </Button>
+                                                        <div className="flex items-center justify-end space-x-2">
+                                                            <Button
+                                                                onClick={() => openUnblockModal(student)}
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="rounded-xl font-bold text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-xs"
+                                                            >
+                                                                <Unlock className="w-3.5 h-3.5 mr-1" /> Buka Blokir
+                                                            </Button>
+                                                            <Button
+                                                                onClick={() => openEditModal(student)}
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                className="rounded-xl font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-xs"
+                                                            >
+                                                                <Edit3 className="w-3.5 h-3.5 mr-1" /> Ubah Status
+                                                            </Button>
+                                                        </div>
                                                     )}
                                                 </TableCell>
                                             </TableRow>
@@ -347,6 +380,48 @@ export default function StudentMonitoring({ auth, students, stats, schoolClasses
                         <DialogFooter className="gap-3 pt-4">
                             <Button type="button" variant="outline" onClick={() => setEditModalOpen(false)} className="rounded-xl font-bold w-full sm:w-auto h-11 px-6">Batal</Button>
                             <Button type="submit" disabled={processing} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto h-11 px-6 shadow-lg shadow-indigo-600/20">Simpan Status</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal Unblock & Presensi Manual */}
+            <Dialog open={unblockModalOpen} onOpenChange={setUnblockModalOpen}>
+                <DialogContent className="sm:max-w-[450px] rounded-3xl p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                    <form onSubmit={submitUnblock}>
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-black text-amber-700 dark:text-amber-400 flex items-center">
+                                <Unlock className="w-5 h-5 mr-2" /> Buka Akses Blokir Presensi
+                            </DialogTitle>
+                            <DialogDescription className="text-xs text-slate-500 font-semibold pt-1">
+                                Pembukaan blokir keterlambatan presensi masuk untuk <strong className="text-slate-900 dark:text-white">{selectedStudent?.name}</strong> ({selectedStudent?.class_name}).
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="py-6 space-y-4">
+                            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-2xl border border-amber-200/80 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 font-semibold flex items-start space-x-2">
+                                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                                <span>Tindakan ini akan mengizinkan siswa mencatat presensi masuk sebagai <strong>Hadir Terlambat</strong> meskipun waktu gerbang presensi telah ditutup.</span>
+                            </div>
+
+                            <div>
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">Alasan Pembukaan Akses Blokir *</Label>
+                                <Input
+                                    type="text"
+                                    required
+                                    placeholder="Contoh: Ban bocor di jalan / Ada surat izin orang tua"
+                                    value={unblockForm.data.reason}
+                                    onChange={(e) => unblockForm.setData('reason', e.target.value)}
+                                    className="rounded-xl h-11"
+                                />
+                            </div>
+                        </div>
+
+                        <DialogFooter className="gap-3 pt-4">
+                            <Button type="button" variant="outline" onClick={() => setUnblockModalOpen(false)} className="rounded-xl font-bold w-full sm:w-auto h-11 px-6">Batal</Button>
+                            <Button type="submit" disabled={unblockForm.processing} className="rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white w-full sm:w-auto h-11 px-6 shadow-lg shadow-amber-600/20">
+                                Buka Blokir & Absenkan
+                            </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>

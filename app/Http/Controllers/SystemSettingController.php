@@ -36,8 +36,10 @@ class SystemSettingController extends Controller
             'liveness_detection_enabled' => 'required|boolean',
             'recap_cutoff_type' => 'required|in:calendar_month,custom_date',
             'recap_cutoff_day' => 'required_if:recap_cutoff_type,custom_date|nullable|integer|min:1|max:28',
+            'student_jam_masuk_buka' => 'required|date_format:H:i',
             'student_jam_masuk' => 'required|date_format:H:i',
             'student_jam_pulang' => 'required|date_format:H:i',
+            'student_jam_pulang_tutup' => 'required|date_format:H:i',
             'student_batas_terlambat_menit' => 'required|integer|min:0',
         ]);
         

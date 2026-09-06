@@ -17,11 +17,15 @@ class StudentAttendance extends Model
         'check_in_status',
         'check_out_status',
         'scanned_by_user_id',
+        'is_unlocked',
+        'unlocked_by_user_id',
+        'unlocked_reason',
         'notes',
     ];
 
     protected $casts = [
         'date' => 'date',
+        'is_unlocked' => 'boolean',
     ];
 
     public function student()

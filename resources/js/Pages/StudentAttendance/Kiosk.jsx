@@ -141,8 +141,18 @@ export default function Kiosk({ settings, todayStats }) {
             }
         } catch (err) {
             playSound('error');
-            const msg = err.response?.data?.message || 'Kartu QR / NIS tidak valid.';
-            setErrorMsg(msg);
+            const data = err.response?.data;
+            const msg = data?.message || 'Kartu QR / NIS tidak valid.';
+            if (data?.status === 'blocked') {
+                setScanResult({
+                    status: 'blocked',
+                    student: data.student,
+                    message: data.message,
+                    time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+                });
+            } else {
+                setErrorMsg(msg);
+            }
         } finally {
             setLoading(false);
             setTimeout(() => { isProcessingRef.current = false; }, 1500);
@@ -274,7 +284,11 @@ export default function Kiosk({ settings, todayStats }) {
                                         
                                         {/* Status Badge */}
                                         <div className="mb-6">
-                                            {scanResult.status === 'late' ? (
+                                            {scanResult.status === 'blocked' ? (
+                                                <span className="px-6 py-2 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 font-black text-sm uppercase tracking-widest flex items-center shadow-lg shadow-rose-500/10">
+                                                    <XCircle className="w-5 h-5 mr-2 text-rose-400" /> Presensi Terblokir (Lewat Batas)
+                                                </span>
+                                            ) : scanResult.status === 'late' ? (
                                                 <span className="px-6 py-2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-black text-sm uppercase tracking-widest flex items-center shadow-lg shadow-amber-500/10">
                                                     <AlertTriangle className="w-5 h-5 mr-2 text-amber-400" /> Presensi Masuk (Terlambat)
                                                 </span>

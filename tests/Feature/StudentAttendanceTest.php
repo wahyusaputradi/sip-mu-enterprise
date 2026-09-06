@@ -114,8 +114,13 @@ class StudentAttendanceTest extends TestCase
         SystemSetting::updateOrCreate(['key' => 'student_jam_masuk'], ['value' => '07:00']);
         SystemSetting::updateOrCreate(['key' => 'student_batas_terlambat_menit'], ['value' => '15']);
 
-        // Mock arrival past deadline at 07:30 WIB
-        Carbon::setTestNow(Carbon::today()->setHour(7)->setMinute(30));
+        // Mock unblocked late arrival at 07:20 WIB
+        StudentAttendance::create([
+            'student_id' => $student->id,
+            'date' => Carbon::today()->toDateString(),
+            'is_unlocked' => true,
+        ]);
+        Carbon::setTestNow(Carbon::today()->setHour(7)->setMinute(20));
 
         $response = $this->actingAs($admin)
             ->postJson(route('student-attendance.scan-qr'), [

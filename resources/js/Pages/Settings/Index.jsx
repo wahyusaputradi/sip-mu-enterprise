@@ -24,8 +24,10 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
         liveness_detection_enabled: settings.liveness_detection_enabled !== undefined ? (settings.liveness_detection_enabled === '1' || settings.liveness_detection_enabled === 1 || settings.liveness_detection_enabled === true) : true,
         recap_cutoff_type: settings.recap_cutoff_type || 'calendar_month',
         recap_cutoff_day: settings.recap_cutoff_day || '20',
+        student_jam_masuk_buka: settings.student_jam_masuk_buka || '06:00',
         student_jam_masuk: settings.student_jam_masuk || '07:00',
         student_jam_pulang: settings.student_jam_pulang || '15:00',
+        student_jam_pulang_tutup: settings.student_jam_pulang_tutup || '17:30',
         student_batas_terlambat_menit: settings.student_batas_terlambat_menit || '15',
     });
 
@@ -350,11 +352,25 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                                     Kebijakan Waktu Presensi Siswa-Siswi
                                                 </h3>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-5 rounded-2xl border border-emerald-200 bg-emerald-50/30">
-                                                    <div className="space-y-3">
+                                                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-5 rounded-2xl border border-emerald-200 bg-emerald-50/30">
+                                                    <div className="space-y-2">
+                                                        <Label className="font-bold text-emerald-800 flex flex-col">
+                                                            <span>Presensi Masuk Dibuka</span>
+                                                            <span className="text-[10px] font-normal text-emerald-600 mt-0.5">(Awal Buka Gerbang)</span>
+                                                        </Label>
+                                                        <Input 
+                                                            type="time" 
+                                                            value={settingData.student_jam_masuk_buka} 
+                                                            onChange={e => setSettingData('student_jam_masuk_buka', e.target.value)} 
+                                                            className={`rounded-xl bg-white ${settingErrors.student_jam_masuk_buka ? 'border-rose-500 focus-visible:ring-rose-500' : 'border-emerald-200'}`}
+                                                        />
+                                                        {settingErrors.student_jam_masuk_buka && <p className="text-xs text-rose-500 font-bold mt-1">{settingErrors.student_jam_masuk_buka}</p>}
+                                                    </div>
+
+                                                    <div className="space-y-2">
                                                         <Label className="font-bold text-emerald-800 flex flex-col">
                                                             <span>Jam Masuk Siswa</span>
-                                                            <span className="text-[10px] font-normal text-emerald-600 mt-0.5">(Standar Gerbang Masuk)</span>
+                                                            <span className="text-[10px] font-normal text-emerald-600 mt-0.5">(Jam Bel Sekolah)</span>
                                                         </Label>
                                                         <Input 
                                                             type="time" 
@@ -365,10 +381,10 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                                         {settingErrors.student_jam_masuk && <p className="text-xs text-rose-500 font-bold mt-1">{settingErrors.student_jam_masuk}</p>}
                                                     </div>
 
-                                                    <div className="space-y-3">
+                                                    <div className="space-y-2">
                                                         <Label className="font-bold text-emerald-800 flex flex-col">
-                                                            <span>Batas Toleransi Terlambat</span>
-                                                            <span className="text-[10px] font-normal text-emerald-600 mt-0.5">(Grace period keterlambatan)</span>
+                                                            <span>Toleransi Terlambat</span>
+                                                            <span className="text-[10px] font-normal text-emerald-600 mt-0.5">(Grace period Kiosk)</span>
                                                         </Label>
                                                         <div className="flex items-center space-x-2">
                                                             <Input 
@@ -376,17 +392,17 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                                                 min="0"
                                                                 value={settingData.student_batas_terlambat_menit} 
                                                                 onChange={e => setSettingData('student_batas_terlambat_menit', e.target.value)} 
-                                                                className={`rounded-xl bg-white font-bold w-24 ${settingErrors.student_batas_terlambat_menit ? 'border-rose-500 focus-visible:ring-rose-500 text-rose-700' : 'border-emerald-200 text-emerald-800'}`}
+                                                                className={`rounded-xl bg-white font-bold ${settingErrors.student_batas_terlambat_menit ? 'border-rose-500 focus-visible:ring-rose-500 text-rose-700' : 'border-emerald-200 text-emerald-800'}`}
                                                             />
-                                                            <span className="text-sm font-bold text-emerald-800">Menit</span>
+                                                            <span className="text-xs font-bold text-emerald-800">Menit</span>
                                                         </div>
                                                         {settingErrors.student_batas_terlambat_menit && <p className="text-xs text-rose-500 font-bold mt-1">{settingErrors.student_batas_terlambat_menit}</p>}
                                                     </div>
 
-                                                    <div className="space-y-3">
+                                                    <div className="space-y-2">
                                                         <Label className="font-bold text-emerald-800 flex flex-col">
-                                                            <span>Jam Pulang Siswa</span>
-                                                            <span className="text-[10px] font-normal text-emerald-600 mt-0.5">(Standar Gerbang Pulang)</span>
+                                                            <span>Presensi Pulang Dibuka</span>
+                                                            <span className="text-[10px] font-normal text-emerald-600 mt-0.5">(Jam Bel Pulang)</span>
                                                         </Label>
                                                         <Input 
                                                             type="time" 
@@ -395,6 +411,20 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                                             className={`rounded-xl bg-white ${settingErrors.student_jam_pulang ? 'border-rose-500 focus-visible:ring-rose-500' : 'border-emerald-200'}`}
                                                         />
                                                         {settingErrors.student_jam_pulang && <p className="text-xs text-rose-500 font-bold mt-1">{settingErrors.student_jam_pulang}</p>}
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label className="font-bold text-emerald-800 flex flex-col">
+                                                            <span>Batas Akhir Pulang</span>
+                                                            <span className="text-[10px] font-normal text-emerald-600 mt-0.5">(Gerbang Ditutup)</span>
+                                                        </Label>
+                                                        <Input 
+                                                            type="time" 
+                                                            value={settingData.student_jam_pulang_tutup} 
+                                                            onChange={e => setSettingData('student_jam_pulang_tutup', e.target.value)} 
+                                                            className={`rounded-xl bg-white ${settingErrors.student_jam_pulang_tutup ? 'border-rose-500 focus-visible:ring-rose-500' : 'border-emerald-200'}`}
+                                                        />
+                                                        {settingErrors.student_jam_pulang_tutup && <p className="text-xs text-rose-500 font-bold mt-1">{settingErrors.student_jam_pulang_tutup}</p>}
                                                     </div>
                                                 </div>
                                             </div>

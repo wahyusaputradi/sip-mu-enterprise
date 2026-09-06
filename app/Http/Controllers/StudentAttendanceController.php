@@ -60,8 +60,10 @@ class StudentAttendanceController extends Controller
      */
     public function kiosk()
     {
+        $jamMasukBuka = SystemSetting::where('key', 'student_jam_masuk_buka')->value('value') ?? '06:00';
         $jamMasuk = SystemSetting::where('key', 'student_jam_masuk')->value('value') ?? '07:00';
         $jamPulang = SystemSetting::where('key', 'student_jam_pulang')->value('value') ?? '15:00';
+        $jamPulangTutup = SystemSetting::where('key', 'student_jam_pulang_tutup')->value('value') ?? '17:30';
         $toleransi = SystemSetting::where('key', 'student_batas_terlambat_menit')->value('value') ?? '15';
 
         $todayStats = [
@@ -73,8 +75,10 @@ class StudentAttendanceController extends Controller
 
         return Inertia::render('StudentAttendance/Kiosk', [
             'settings' => [
+                'jam_masuk_buka' => $jamMasukBuka,
                 'jam_masuk' => $jamMasuk,
                 'jam_pulang' => $jamPulang,
+                'jam_pulang_tutup' => $jamPulangTutup,
                 'toleransi_menit' => (int)$toleransi,
             ],
             'todayStats' => $todayStats,
@@ -109,20 +113,53 @@ class StudentAttendanceController extends Controller
         $dateStr = $now->toDateString();
         $timeStr = $now->toTimeString();
 
+        $jamMasukBukaStr = SystemSetting::where('key', 'student_jam_masuk_buka')->value('value') ?? '06:00';
         $jamMasukStr = SystemSetting::where('key', 'student_jam_masuk')->value('value') ?? '07:00';
         $toleransi = (int)(SystemSetting::where('key', 'student_batas_terlambat_menit')->value('value') ?? 15);
         $jamPulangStr = SystemSetting::where('key', 'student_jam_pulang')->value('value') ?? '15:00';
+        $jamPulangTutupStr = SystemSetting::where('key', 'student_jam_pulang_tutup')->value('value') ?? '17:30';
 
-        $jamBatasTerlambat = Carbon::parse($jamMasukStr)->addMinutes($toleransi);
-        $jamPulang = Carbon::parse($jamPulangStr);
+        $jamMasukBuka = Carbon::parse($dateStr . ' ' . $jamMasukBukaStr);
+        $jamMasuk = Carbon::parse($dateStr . ' ' . $jamMasukStr);
+        $jamBatasTerlambat = Carbon::parse($dateStr . ' ' . $jamMasukStr)->addMinutes($toleransi);
+        $jamPulang = Carbon::parse($dateStr . ' ' . $jamPulangStr);
+        $jamPulangTutup = Carbon::parse($dateStr . ' ' . $jamPulangTutupStr);
 
-        $attendance = StudentAttendance::firstOrNew([
-            'student_id' => $student->id,
-            'date' => $dateStr,
-        ]);
+        $attendance = StudentAttendance::where('student_id', $student->id)
+            ->whereDate('date', $dateStr)
+            ->first() ?? new StudentAttendance([
+                'student_id' => $student->id,
+                'date' => $dateStr,
+            ]);
 
         if (!$attendance->check_in_time) {
             // ── CHECK-IN MODE ──
+
+            // 1. Cek apakah belum masuk jam buka presensi
+            if ($now->lt($jamMasukBuka)) {
+                return response()->json([
+                    'success' => false,
+                    'mode' => 'check_in',
+                    'message' => "Presensi Masuk Belum Dibuka. Gerbang presensi dibuka jam {$jamMasukBukaStr} WIB.",
+                ], 400);
+            }
+
+            // 2. Cek apakah waktu presensi telah melebihi batas keterlambatan & terblokir (jika belum di-unblock)
+            if ($now->gt($jamBatasTerlambat) && !$attendance->is_unlocked) {
+                return response()->json([
+                    'success' => false,
+                    'mode' => 'check_in',
+                    'status' => 'blocked',
+                    'student' => [
+                        'name' => $student->name,
+                        'nis' => $student->nis,
+                        'class_name' => $student->schoolClass?->name ?? '-',
+                        'photo' => $student->photo,
+                    ],
+                    'message' => "Presensi Masuk Ditutup / Terblokir. Waktu presensi masuk telah berakhir ({$jamBatasTerlambat->format('H:i')} WIB). Silakan minta pembukaan blokir ke Wali Kelas atau Tim Kesiswaan/Absensi.",
+                ], 423);
+            }
+
             $checkInStatus = $now->gt($jamBatasTerlambat) ? 'late' : 'present';
 
             $attendance->check_in_time = $timeStr;
@@ -145,15 +182,15 @@ class StudentAttendanceController extends Controller
                 'time' => $now->format('H:i'),
                 'status' => $checkInStatus,
                 'message' => $checkInStatus === 'late'
-                    ? "PRESENSI MASUK: {$student->name} (TERLAMBAT)"
+                    ? "PRESENSI MASUK: {$student->name} (TERLAMBAT - DIUNBLOCK)"
                     : "PRESENSI MASUK: {$student->name} (TEPAT WAKTU)",
             ]);
         } else {
             // ── CHECK-OUT MODE / PREVENT ACCIDENTAL RE-SCAN ──
             $checkInDateTime = Carbon::parse($dateStr . ' ' . $attendance->check_in_time);
             
-            // Jeda minimal 15 menit antara presensi masuk & pulang untuk mencegah double-scan tidak sengaja
-            if ($now->diffInMinutes($checkInDateTime) < 15) {
+            // Jeda minimal 15 menit antara presensi masuk & pulang
+            if (abs($now->diffInMinutes($checkInDateTime)) < 15) {
                 return response()->json([
                     'success' => true,
                     'already_scanned' => true,
@@ -168,6 +205,24 @@ class StudentAttendanceController extends Controller
                     'status' => $attendance->check_in_status,
                     'message' => "Siswa {$student->name} telah presensi masuk pada jam " . Carbon::parse($attendance->check_in_time)->format('H:i') . " WIB.",
                 ]);
+            }
+
+            // Cek apakah presensi pulang belum dibuka
+            if ($now->lt($jamPulang)) {
+                return response()->json([
+                    'success' => false,
+                    'mode' => 'check_out',
+                    'message' => "Presensi Pulang Belum Dibuka. Jam pulang sekolah: {$jamPulangStr} WIB.",
+                ], 400);
+            }
+
+            // Cek apakah presensi pulang sudah ditutup
+            if ($now->gt($jamPulangTutup)) {
+                return response()->json([
+                    'success' => false,
+                    'mode' => 'check_out',
+                    'message' => "Presensi Pulang Sudah Ditutup. Batas akhir presensi pulang: {$jamPulangTutupStr} WIB.",
+                ], 400);
             }
 
             if ($attendance->check_out_time) {
@@ -187,7 +242,7 @@ class StudentAttendanceController extends Controller
                 ]);
             }
 
-            $checkOutStatus = $now->lt($jamPulang) ? 'early_leave' : 'normal';
+            $checkOutStatus = 'normal';
 
             $attendance->check_out_time = $timeStr;
             $attendance->check_out_status = $checkOutStatus;
@@ -210,6 +265,56 @@ class StudentAttendanceController extends Controller
                 'message' => "PRESENSI PULANG: {$student->name} (PULANG SEKOLAH)",
             ]);
         }
+    }
+
+    /**
+     * Unblock late student check-in access (Homeroom Teacher / Kesiswaan / Management Override)
+     */
+    public function unblockAndCheckIn(Request $request)
+    {
+        $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'reason' => 'required|string|max:255',
+        ]);
+
+        $user = Auth::user();
+        $student = Student::with('schoolClass')->findOrFail($request->student_id);
+
+        // Check role & homeroom teacher scope
+        $isGuru = $user->hasRole('Guru');
+        $isManagementOrKesiswaan = $user->hasAnyRole(['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Kesiswaan']);
+
+        if ($isGuru && !$isManagementOrKesiswaan) {
+            $teacherClassIds = $this->getTeacherClassIds();
+            if (!in_array($student->school_class_id, $teacherClassIds)) {
+                return back()->withErrors(['message' => 'Anda hanya berhak membuka blokir presensi untuk siswa di kelas diampu Anda.']);
+            }
+        } elseif (!$isGuru && !$isManagementOrKesiswaan) {
+            return back()->withErrors(['message' => 'Anda tidak memiliki hak akses untuk membuka blokir presensi siswa.']);
+        }
+
+        $now = Carbon::now();
+        $dateStr = $now->toDateString();
+        $timeStr = $now->toTimeString();
+
+        $attendance = StudentAttendance::where('student_id', $student->id)
+            ->whereDate('date', $dateStr)
+            ->first() ?? new StudentAttendance([
+                'student_id' => $student->id,
+                'date' => $dateStr,
+            ]);
+
+        $attendance->check_in_time = $timeStr;
+        $attendance->check_in_status = 'late';
+        $attendance->is_unlocked = true;
+        $attendance->unlocked_by_user_id = $user->id;
+        $attendance->unlocked_reason = $request->reason;
+        $attendance->scanned_by_user_id = $user->id;
+        $attendance->save();
+
+        WhatsAppNotificationService::sendAttendanceNotification($student, 'check_in', $now->format('H:i'), 'late');
+
+        return back()->with('message', "Akses presensi siswa {$student->name} berhasil dibuka dan dicatat sebagai Hadir Terlambat.");
     }
 
     /**
