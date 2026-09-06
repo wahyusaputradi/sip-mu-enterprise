@@ -4,8 +4,8 @@ import { Info, GraduationCap, Building2, ShieldCheck, MapPin, CheckCircle2, Awar
 
 export default function AboutUs({ auth }) {
     const stats = [
-        { label: "Tenaga Pendidik & Staf", value: "100+", icon: <Users className="w-5 h-5 text-indigo-400" /> },
-        { label: "Akurasi Geofencing GPS", value: "99.8%", icon: <MapPin className="w-5 h-5 text-emerald-400" /> },
+        { label: "Pegawai, Guru & Siswa", value: "1,100+", icon: <Users className="w-5 h-5 text-indigo-400" /> },
+        { label: "Akurasi Geofencing & QR", value: "99.8%", icon: <MapPin className="w-5 h-5 text-emerald-400" /> },
         { label: "Kampus Operasional", value: "2 Lokasi", icon: <Building2 className="w-5 h-5 text-amber-400" /> },
         { label: "Keamanan Data System", value: "AES-256", icon: <ShieldCheck className="w-5 h-5 text-purple-400" /> },
     ];
@@ -22,11 +22,11 @@ export default function AboutUs({ auth }) {
                     <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
                         SIP MU Enterprise <br className="hidden sm:inline" />
                         <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                            SMK Manbaul Ulum Cirebon
+                            Ekosistem Dual Presensi Pegawai & Siswa
                         </span>
                     </h1>
                     <p className="text-slate-400 text-sm sm:text-base max-w-3xl mx-auto leading-relaxed">
-                        Sistem Informasi Presensi & Tata Kelola Sumber Daya Manusia (SDM) Digital Modern yang dirancang khusus untuk mewujudkan efisiensi, akurasi, dan transparansi di lingkungan sekolah SMK Manbaul Ulum Cirebon.
+                        Sistem Informasi Presensi & Tata Kelola Sumber Daya Manusia (SDM) serta Kedisiplinan Siswa Digital Modern yang dirancang khusus untuk mewujudkan efisiensi, akurasi, dan transparansi di lingkungan SMK Manbaul Ulum Cirebon.
                     </p>
                 </div>
 
@@ -51,26 +51,26 @@ export default function AboutUs({ auth }) {
                             Latar Belakang & Visi Aplikasi
                         </h2>
                         <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-                            SMK Manbaul Ulum Cirebon merupakan sekolah kejuruan terkemuka di Kabupaten Cirebon yang terus berinovasi dalam memanfaat teknologi informasi. **SIP MU Enterprise** lahir sebagai jawaban atas kebutuhan otomatisasi presensi harian guru dan staf, manajemen jam mengajar (JTM), pencatatan alpa/izin secara digital, serta transparansi penggajian.
+                            SMK Manbaul Ulum Cirebon merupakan sekolah kejuruan terkemuka di Kabupaten Cirebon yang terus berinovasi dalam memanfaatkan teknologi informasi. **SIP MU Enterprise** lahir sebagai jawaban atas kebutuhan otomatisasi presensi harian pegawai/guru via Geofencing GPS, pemindai Standalone Kiosk QR Code presensi siswa, monitoring terpadu Wali Kelas & Kesiswaan, manajemen jam mengajar (JTM), serta verifikasi pengajuan izin/sakit digital secara transparan.
                         </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-800">
                         <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
                             <h3 className="text-lg font-bold text-indigo-300 flex items-center">
-                                <Award className="w-5 h-5 mr-2 text-indigo-400" /> Keunggulan Geofencing GPS
+                                <Award className="w-5 h-5 mr-2 text-indigo-400" /> Geofencing GPS & Standalone Kiosk
                             </h3>
                             <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
-                                Memastikan presensi kehadiran hanya dapat diproses ketika perangkat smartphone berada dalam radius presisi titik lokasi Kampus 1 maupun Kampus 2 SMK Manbaul Ulum Cirebon.
+                                Presensi pegawai diproteksi oleh validasi titik lokasi GPS Kampus 1 & Kampus 2. Sedangkan presensi siswa menggunakan mesin Kiosk QR Code terenkripsi yang cepat dan presisi.
                             </p>
                         </div>
 
                         <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
                             <h3 className="text-lg font-bold text-emerald-300 flex items-center">
-                                <CheckCircle2 className="w-5 h-5 mr-2 text-emerald-400" /> Swafoto & Anti-Cheat
+                                <CheckCircle2 className="w-5 h-5 mr-2 text-emerald-400" /> Swafoto & Anti-Cheat System
                             </h3>
                             <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
-                                Setiap presensi diverifikasi dengan foto kamera langsung (selfie) dan pengecekan integritas jaringan untuk mencegah praktik kecurangan titip absen.
+                                Seluruh aktivitas absensi dilengkapi fitur keamanan anti-titip absen, verifikasi swafoto selfie pegawai, serta token QR dinamis siswa yang dapat di-regenerate berkala oleh administrator.
                             </p>
                         </div>
                     </div>

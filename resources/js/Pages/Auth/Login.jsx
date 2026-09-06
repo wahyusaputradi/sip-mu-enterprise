@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { UserCircle, Lock, LogIn, Loader2, Eye, EyeOff, ShieldCheck, ShieldX, Timer, KeyRound, Briefcase, GraduationCap, Info } from 'lucide-react';
+import { UserCircle, Lock, LogIn, Loader2, Eye, EyeOff, ShieldCheck, ShieldX, Timer, KeyRound, Briefcase, GraduationCap, Info, QrCode } from 'lucide-react';
 import { useLanguage } from '@/Context/LanguageContext';
 
 export default function Login({ status, canResetPassword }) {
@@ -267,12 +267,28 @@ export default function Login({ status, canResetPassword }) {
                 </motion.div>
             </form>
 
+            {/* Standalone Kiosk Quick Action */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="mt-6 text-center"
+            >
+                <Link
+                    href="/student-attendance/kiosk"
+                    className="inline-flex items-center space-x-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 px-4 py-2.5 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 transition-all shadow-sm group"
+                >
+                    <QrCode className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+                    <span>Mode Pemindai Kiosk QR Code Siswa (Standalone)</span>
+                </Link>
+            </motion.div>
+
             {/* Administrator Note */}
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.55 }}
-                className="mt-8 text-center pt-6 border-t border-slate-100 dark:border-slate-800"
+                className="mt-6 text-center pt-6 border-t border-slate-100 dark:border-slate-800"
             >
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                     {t('login.help_contact')} <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">{t('login.help_admin')}</span>

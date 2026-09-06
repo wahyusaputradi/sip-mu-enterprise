@@ -25,7 +25,7 @@ export default function ContactUs({ auth }) {
                         Hubungi Kami <span className="text-blue-400">(Contact Us)</span>
                     </h1>
                     <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
-                        Punya pertanyaan seputar aplikasi SIP MU Enterprise atau butuh bantuan teknis? Hubungi tim support resmi SMK Manbaul Ulum Cirebon di bawah ini.
+                        Punya pertanyaan seputar aplikasi SIP MU Enterprise, presensi pegawai & siswa, Standalone Kiosk QR, atau butuh bantuan teknis? Hubungi tim support resmi SMK Manbaul Ulum Cirebon di bawah ini.
                     </p>
                 </div>
 

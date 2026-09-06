@@ -38,10 +38,10 @@ export default function TermsOfService({ auth }) {
                             Akun & Keamanan Kredensial
                         </h2>
                         <div className="pl-11 space-y-2 text-slate-300">
-                            <p>Sebagai pengguna terdaftar (Guru/Staf/Manajemen):</p>
+                            <p>Sebagai pengguna terdaftar (Guru, Staf, Manajemen, Wali Kelas, Kesiswaan, maupun Siswa):</p>
                             <ul className="list-disc pl-5 space-y-1.5 text-slate-400 text-sm">
-                                <li>Pengguna bertanggung jawab penuh atas kerahasiaan kata sandi (*password*) dan aktivitas yang terjadi di dalam akun Anda.</li>
-                                <li>Setiap tindakan pemalsuan presensi, manipulasi lokasi GPS (Fake GPS), atau penggunaan identitas orang lain secara tidak sah akan berakibat pada sanksi administratif dan pemblokiran akun.</li>
+                                <li>Pengguna bertanggung jawab penuh atas kerahasiaan kata sandi (*password*), akses akun NIS/Email, serta keamanan fisik kartu ID QR Code Siswa.</li>
+                                <li>Setiap tindakan pemalsuan presensi, manipulasi lokasi GPS (Fake GPS), pemalsuan QR Token, atau penggunaan akun orang lain secara tidak sah akan berakibat pada sanksi disiplin dan pemblokiran akun.</li>
                             </ul>
                         </div>
                     </section>

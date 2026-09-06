@@ -42,11 +42,11 @@ export default function PrivacyPolicy({ auth }) {
                             Informasi yang Kami Kumpulkan
                         </h2>
                         <div className="pl-11 space-y-2">
-                            <p>Dalam menjalankan sistem presensi digital, kami dapat mengumpulkan informasi berikut:</p>
+                            <p>Dalam menjalankan ekosistem presensi digital pegawai dan siswa, kami dapat mengumpulkan informasi berikut:</p>
                             <ul className="list-disc pl-5 space-y-1.5 text-slate-400 text-sm">
-                                <li>**Informasi Identitas:** Nama lengkap, NIP/NUPTK, email resmi, nomor WhatsApp, serta jabatan struktural di SMK Manbaul Ulum Cirebon.</li>
-                                <li>**Data Presensi & Geofencing:** Koordinat GPS (Latitude & Longitude) real-time dan foto selfie (swafoto) saat melakukan verifikasi masuk/keluar jam kerja.</li>
-                                <li>**Log Perangkat & Berkas:** Informasi browser, alamat IP, file surat pengajuan izin/sakit yang diunggah oleh pengguna.</li>
+                                <li>**Informasi Identitas Pegawai & Siswa:** Nama lengkap, NIP/NUPTK/NIS, email resmi, nomor WhatsApp, kelas diampu/diikuti, serta jabatan/wewenang di SMK Manbaul Ulum Cirebon.</li>
+                                <li>**Data Presensi & Token QR:** Koordinat GPS (Latitude & Longitude) real-time, foto selfie pegawai saat presensi, serta QR Token terenkripsi untuk presensi siswa di Standalone Kiosk.</li>
+                                <li>**Log Perangkat & Berkas Surat Izin:** Informasi browser, alamat IP, file surat pengajuan izin/sakit yang diunggah oleh pengguna (pegawai, siswa, atau wali murid).</li>
                             </ul>
                         </div>
                     </section>

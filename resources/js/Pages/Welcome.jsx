@@ -28,58 +28,58 @@ export default function Welcome({ auth }) {
 
     const features = [
         { 
-            title: "Smart Attendance", 
+            title: "Presensi Pegawai GPS", 
             tagline: "Presensi Swafoto & Geofencing Presisi",
-            desc: "Validasi lokasi presensi berbasis titik koordinat GPS lokasi sekolah dengan Radius Geofencing presisi dan foto selfie real-time.",
+            desc: "Validasi lokasi presensi pegawai berbasis titik koordinat GPS lokasi sekolah dengan Radius Geofencing presisi dan foto selfie real-time.",
             icon: <Fingerprint className="w-6 h-6" />, 
             color: "from-indigo-500 to-blue-600",
             badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200",
             highlights: ["Akurasi GPS hingga radius meter", "Foto Selfie Swafoto Wajib", "Cegah Kecurangan & Titip Absen"]
         },
         { 
-            title: "Monitoring Real-time", 
-            tagline: "Pantau Kehadiran Seluruh Pegawai Langsung",
-            desc: "Dashboard eksekutif untuk memantau status hadir, terlambat, izin, sakit, maupun alpa seluruh guru dan staf secara live.",
-            icon: <ClipboardCheck className="w-6 h-6" />, 
+            title: "Kiosk QR Code Siswa", 
+            tagline: "Scanning Presensi Siswa Cepat via Standalone Kiosk",
+            desc: "Mesin pemindai QR Code di gerbang sekolah untuk absensi masuk dan pulang siswa secara instan dengan token keamanan terenkripsi.",
+            icon: <Zap className="w-6 h-6" />, 
             color: "from-emerald-500 to-teal-600",
             badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
-            highlights: ["Statistik Kehadiran Harian", "Notifikasi Keterlambatan Realtime", "Multi-role Dashboard Super Admin & Kepala Sekolah"]
+            highlights: ["Scan QR Token Instan Hitungan Detik", "Pencetakan Kartu QR Code Siswa", "Regenerate Token Keamanan Terjadwal"]
+        },
+        { 
+            title: "Portal Siswa & Wali Murid", 
+            tagline: "Monitoring Mandiri & Pengajuan Izin/Sakit Digital",
+            desc: "Siswa dan Orang Tua dapat memantau grafik kehadiran, mengecek riwayat presensi harian, serta mengajukan surat izin/sakit secara online.",
+            icon: <Smartphone className="w-6 h-6" />, 
+            color: "from-purple-500 to-violet-600",
+            badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
+            highlights: ["Akses Login NIS / Email Siswa", "Pengajuan Surat Izin/Sakit Online", "Statistik Kehadiran Harian & Bulanan"]
+        },
+        { 
+            title: "Wali Kelas & Kesiswaan", 
+            tagline: "Dashboard Terpadu Pemantauan Kelas & Verifikasi Izin",
+            desc: "Akses khusus Wali Kelas (data kelas diampu) dan Tim Kesiswaan (Read-Only seluruh kelas) untuk verifikasi surat izin serta rekap bulanan.",
+            icon: <UserCheck className="w-6 h-6" />, 
+            color: "from-amber-500 to-orange-600",
+            badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
+            highlights: ["Filtering Data Otomatis Kelas Diampu", "Verifikasi Approval Surat Izin/Sakit", "Cetak Rekap Bulanan & Kartu QR Siswa"]
+        },
+        { 
+            title: "Monitoring Real-time", 
+            tagline: "Pantau Kehadiran Pegawai & Siswa Langsung",
+            desc: "Dashboard eksekutif untuk memantau status hadir, terlambat, izin, sakit, maupun alpa seluruh guru, staf, dan siswa secara live.",
+            icon: <ClipboardCheck className="w-6 h-6" />, 
+            color: "from-rose-500 to-pink-600",
+            badgeColor: "bg-rose-50 text-rose-700 border-rose-200",
+            highlights: ["Statistik Kehadiran Harian Terpadu", "Notifikasi Keterlambatan Realtime", "Multi-role Dashboard Admin & Pimpinan"]
         },
         { 
             title: "Dynamic Reporting", 
             tagline: "Generate Rekapitulasi Otomatis Excel / PDF",
-            desc: "Cetak rekapitulasi kehadiran bulanan, perhitung jam mengajar (JTM), serta kalkulasi gaji/payroll secara otomatis.",
+            desc: "Cetak rekapitulasi kehadiran bulanan pegawai & siswa, perhitungan jam mengajar (JTM), serta kalkulasi gaji/payroll secara otomatis.",
             icon: <BarChart3 className="w-6 h-6" />, 
-            color: "from-amber-500 to-orange-600",
-            badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
-            highlights: ["Export File Excel & PDF Siap Cetak", "Hitungan Jam Mengajar (JTM)", "Pencetakan Slip Gaji Pegawai"]
-        },
-        { 
-            title: "Leave Management", 
-            tagline: "Pengajuan Cuti & Izin Digital Alur Bertingkat",
-            desc: "Pengajuan surat izin, sakit, maupun cuti tahunan dilakukan secara online lengkap dengan unggah bukti foto/surat pendukung.",
-            icon: <Clock className="w-6 h-6" />, 
-            color: "from-purple-500 to-violet-600",
-            badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
-            highlights: ["Verifikasi Approval Berjenjang", "Unggah Lampiran Surat Dokter/Dinas", "Riwayat Pengajuan Terarsip Rapi"]
-        },
-        { 
-            title: "Jadwal Mengajar", 
-            tagline: "Manajemen Jam Mengajar Terintegrasi",
-            desc: "Integrasi jadwal mengajar guru per jam pelajaran (JP) dari Jam ke-1 hingga Jam ke-10 untuk verifikasi kehadiran di kelas.",
-            icon: <GraduationCap className="w-6 h-6" />, 
-            color: "from-rose-500 to-pink-600",
-            badgeColor: "bg-rose-50 text-rose-700 border-rose-200",
-            highlights: ["Presensi Per Jam Pelajaran (JP)", "Fitur Bursa Guru Inval / Pengganti", "Kalkulasi JTM Efektif"]
-        },
-        { 
-            title: "Kalender Akademik", 
-            tagline: "Kelola Hari Libur & Agenda Sekolah",
-            desc: "Pengaturan hari libur nasional, libur sekolah, serta agenda kegiatan yang otomatis mengecualikan hitungan alpa pegawai.",
-            icon: <CalendarDays className="w-6 h-6" />, 
             color: "from-sky-500 to-cyan-600",
             badgeColor: "bg-sky-50 text-sky-700 border-sky-200",
-            highlights: ["Sinkronisasi Hari Libur Otomatis", "Manajemen Kampus 1 & Kampus 2", "Bypass Alpa di Hari Libur Terdaftar"]
+            highlights: ["Export File Excel & PDF Siap Cetak", "Hitungan Jam Mengajar (JTM)", "Pencetakan Slip Gaji & Rekap Kesiswaan"]
         },
     ];
 
@@ -89,16 +89,20 @@ export default function Welcome({ auth }) {
             a: "Sistem secara otomatis mendeteksi posisi koordinat GPS perangkat smartphone pegawai saat melakukan presensi. Presensi hanya akan diterima oleh sistem jika lokasi pegawai berada di dalam batas radius area lokasi kampus SMK Manbaul Ulum Cirebon yang telah ditentukan."
         },
         {
-            q: "Apakah aplikasi ini mendukung akses fleksibel di berbagai perangkat (Mobile & Desktop)?",
-            a: "Ya! SIP MU Enterprise dirancang menggunakan arsitektur web responsif modern. Aplikasi dapat diakses dengan lancar melalui Smartphone (Android & iOS), Tablet, maupun Komputer/Laptop Desktop."
+            q: "Bagaimana alur presensi siswa menggunakan QR Code Kiosk di Sekolah?",
+            a: "Siswa menunjukkan kartu ID QR Code resmi atau QR Token dari aplikasi Portal Siswa ke kamera mesin Standalone Kiosk di sekolah. Sistem memverifikasi QR Token secara instan dan mencatat waktu hadir atau pulang siswa secara akurat."
         },
         {
-            q: "Bagaimana alur pengajuan izin atau sakit bagi guru dan karyawan?",
-            a: "Pegawai cukup masuk ke menu Pengajuan Cuti/Izin, memilih jenis pengajuan (Izin, Sakit, atau Dinas Luar), mengunggah foto bukti (surat dokter/surat tugas), dan mengirimkannya secara digital. Pimpinan dapat menyetujui atau menolak pengajuan tersebut secara langsung melalui dashboard admin."
+            q: "Bagaimana akses Wali Kelas dan Kesiswaan dalam sistem ini?",
+            a: "Guru yang ditugaskan sebagai Wali Kelas diberikan akses khusus pada menu Presensi Kesiswaan untuk memantau data siswa, menyetujui izin/sakit, dan mencetak rekap khusus kelas yang diampunya. Sementara role Kesiswaan memiliki akses Read-Only untuk pemantauan seluruh kelas."
         },
         {
-            q: "Apakah data rekap presensi dan perhitungan JTM dapat di-export?",
-            a: "Tentu saja. Super Admin dan tim manajemen dapat mengeksport rekapitulasi kehadiran bulanan, rincian Jam Terjadwal Mengajar (JTM), hingga cetak rekap PDF/Excel secara instan."
+            q: "Apakah siswa dan wali murid bisa mengajukan izin/sakit secara online?",
+            a: "Ya! Siswa dapat masuk ke Portal Siswa menggunakan NIS/Email dan mengunggah foto surat keterangan dokter/orang tua. Pengajuan tersebut akan masuk ke dashboard Wali Kelas untuk diverifikasi."
+        },
+        {
+            q: "Apakah aplikasi ini mendukung akses di Smartphone dan Komputer?",
+            a: "Tentu saja! SIP MU Enterprise dirancang dengan teknologi Progressive Web App (PWA) dan desain responsif modern yang dapat diakses dengan lancar via Android, iOS, Tablet, maupun Laptop/PC."
         }
     ];
 
@@ -295,8 +299,13 @@ export default function Welcome({ auth }) {
                                             {t('welcome.btn_start')} <ArrowRight className="ml-2 w-5 h-5" />
                                         </Button>
                                     </Link>
+                                    <Link href="/student-attendance/kiosk" className="w-full sm:w-auto">
+                                        <Button size="lg" className="h-14 px-7 text-base font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-200 hover:shadow-emerald-300 rounded-2xl w-full sm:w-auto transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center">
+                                            <Zap className="mr-2 w-5 h-5" /> Kiosk Scan QR Siswa
+                                        </Button>
+                                    </Link>
                                     <a href="#features" className="w-full sm:w-auto">
-                                        <Button size="lg" variant="outline" className="h-14 px-8 text-base font-bold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 rounded-2xl w-full sm:w-auto shadow-sm">
+                                        <Button size="lg" variant="outline" className="h-14 px-6 text-base font-bold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 rounded-2xl w-full sm:w-auto shadow-sm">
                                             {t('welcome.btn_features')}
                                         </Button>
                                     </a>
@@ -308,19 +317,19 @@ export default function Welcome({ auth }) {
                                         <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
                                             <Check className="w-3.5 h-3.5 stroke-[3]" />
                                         </div>
-                                        <span className="text-xs sm:text-sm font-semibold text-slate-700">GPS Geofencing Presisi</span>
+                                        <span className="text-xs sm:text-sm font-semibold text-slate-700">Presensi Pegawai GPS & Selfie</span>
                                     </div>
                                     <div className="flex items-center space-x-2.5">
                                         <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
                                             <Check className="w-3.5 h-3.5 stroke-[3]" />
                                         </div>
-                                        <span className="text-xs sm:text-sm font-semibold text-slate-700">Swafoto Selfie Real-time</span>
+                                        <span className="text-xs sm:text-sm font-semibold text-slate-700">Kiosk QR Code Scanner Siswa</span>
                                     </div>
                                     <div className="flex items-center space-x-2.5">
                                         <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
                                             <Check className="w-3.5 h-3.5 stroke-[3]" />
                                         </div>
-                                        <span className="text-xs sm:text-sm font-semibold text-slate-700">Export Rekap Excel / PDF</span>
+                                        <span className="text-xs sm:text-sm font-semibold text-slate-700">Monitoring Wali Kelas & Kesiswaan</span>
                                     </div>
                                 </div>
                             </motion.div>
