@@ -666,7 +666,7 @@ export default function StudentIndex({ auth = {}, students = {}, schoolClasses =
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div>
                                         <Label className="text-xs font-bold mb-1 block">No. KIP (Jika Ada)</Label>
-                                        <Input value={data.kip_number} onChange={e => handleNumericInput('kip_number', e.target.value, 30)} placeholder="Contoh: KIP12345" className="rounded-xl font-mono" />
+                                        <Input value={data.kip_number} onChange={e => setData('kip_number', e.target.value)} placeholder="Contoh: KIP123456 / Alfanumerik" className="rounded-xl font-mono" />
                                     </div>
                                     <div>
                                         <Label className="text-xs font-bold mb-1 block">No. HP/WA Siswa</Label>

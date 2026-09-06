@@ -98,4 +98,21 @@ class StudentProfileTest extends TestCase
 
         $response->assertSessionHasErrors('nik');
     }
+
+    public function test_alphanumeric_kip_number_is_accepted()
+    {
+        [$user, $student] = $this->createStudentUser();
+
+        $response = $this->actingAs($user)->post(route('student-portal.profile.update'), [
+            'name' => 'Siswa Test KIP',
+            'gender' => 'Laki-laki',
+            'kip_number' => 'KIP-889900-X',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('students', [
+            'id' => $student->id,
+            'kip_number' => 'KIP-889900-X',
+        ]);
+    }
 }

@@ -285,14 +285,14 @@ export default function Profile({ student }) {
                                     {errors.student_phone && <p className="text-rose-500 text-xs font-bold">{errors.student_phone}</p>}
                                 </div>
 
-                                {/* Nomor KIP (Angka) */}
+                                {/* Nomor KIP (Kartu Indonesia Pintar) */}
                                 <div className="space-y-2">
                                     <Label htmlFor="kip_number" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Nomor KIP (Kartu Indonesia Pintar)</Label>
                                     <Input
                                         id="kip_number"
                                         value={data.kip_number}
-                                        onChange={(e) => handleNumericInput('kip_number', e.target.value, 20)}
-                                        placeholder="Opsional (Angka saja)..."
+                                        onChange={(e) => setData('kip_number', e.target.value)}
+                                        placeholder="Opsional (Contoh: KIP123456 / Alfanumerik)..."
                                         className="font-mono font-bold"
                                     />
                                     {errors.kip_number && <p className="text-rose-500 text-xs font-bold">{errors.kip_number}</p>}
