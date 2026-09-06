@@ -31,8 +31,26 @@ class StudentController extends Controller
         return SchoolClass::where('homeroom_teacher_id', $employee->id)->pluck('id')->toArray();
     }
 
+    private function validateHomeroomTeacherAccess(): void
+    {
+        $user = auth()->user();
+        if (!$user) return;
+
+        $isGuru = $user->hasRole('Guru');
+        $isManagementOrKesiswaan = $user->hasAnyRole(['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Kesiswaan']);
+
+        if ($isGuru && !$isManagementOrKesiswaan) {
+            $teacherClassIds = $this->getTeacherClassIds();
+            if (empty($teacherClassIds)) {
+                abort(403, 'Akses ditolak. Menu ini hanya dapat diakses oleh Guru yang bertugas sebagai Wali Kelas.');
+            }
+        }
+    }
+
     public function index(Request $request)
     {
+        $this->validateHomeroomTeacherAccess();
+
         $search = $request->input('search');
         $classId = $request->input('class_id');
         $status = $request->input('status', 'active');
@@ -255,6 +273,8 @@ class StudentController extends Controller
 
     public function export(Request $request)
     {
+        $this->validateHomeroomTeacherAccess();
+
         $classId = $request->input('class_id');
         $search = $request->input('search');
 
@@ -321,6 +341,8 @@ class StudentController extends Controller
 
     public function cards(Request $request)
     {
+        $this->validateHomeroomTeacherAccess();
+
         $classId = $request->input('class_id');
         $search = $request->input('search');
 

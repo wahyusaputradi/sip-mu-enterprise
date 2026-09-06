@@ -35,6 +35,22 @@ class StudentAttendanceController extends Controller
         return SchoolClass::where('homeroom_teacher_id', $employee->id)->pluck('id')->toArray();
     }
 
+    private function validateHomeroomTeacherAccess(): void
+    {
+        $user = auth()->user();
+        if (!$user) return;
+
+        $isGuru = $user->hasRole('Guru');
+        $isManagementOrKesiswaan = $user->hasAnyRole(['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi', 'Kesiswaan']);
+
+        if ($isGuru && !$isManagementOrKesiswaan) {
+            $teacherClassIds = $this->getTeacherClassIds();
+            if (empty($teacherClassIds)) {
+                abort(403, 'Akses ditolak. Menu ini hanya dapat diakses oleh Guru yang bertugas sebagai Wali Kelas.');
+            }
+        }
+    }
+
     /**
      * Kiosk Terminal Scanner Page (Standalone / Gate Scanner Mode)
      */
@@ -236,6 +252,8 @@ class StudentAttendanceController extends Controller
      */
     public function monitoring(Request $request)
     {
+        $this->validateHomeroomTeacherAccess();
+
         $date = $request->input('date', Carbon::today()->toDateString());
         $classId = $request->input('class_id');
         $search = $request->input('search');
@@ -368,6 +386,8 @@ class StudentAttendanceController extends Controller
      */
     public function recap(Request $request)
     {
+        $this->validateHomeroomTeacherAccess();
+
         $month = (int) $request->input('month', Carbon::now()->month);
         $year = (int) $request->input('year', Carbon::now()->year);
         $classId = $request->input('class_id');
@@ -478,6 +498,8 @@ class StudentAttendanceController extends Controller
      */
     public function exportMonthlyExcel(Request $request)
     {
+        $this->validateHomeroomTeacherAccess();
+
         $month = (int) $request->input('month', Carbon::now()->month);
         $year = (int) $request->input('year', Carbon::now()->year);
         $classId = $request->input('class_id');

@@ -56,31 +56,7 @@ class StudentLeaveRequestController extends Controller
 
         // If not global view and not homeroom teacher for any class
         if (!$isFullAccessView && empty($teacherClassIds)) {
-            $classes = collect([]);
-            $leaveRequests = collect([]);
-            $students = collect([]);
-            $stats = [
-                'total_pending' => 0,
-                'total_approved' => 0,
-                'total_rejected' => 0,
-                'total_requests' => 0,
-            ];
-
-            return Inertia::render('StudentLeaveRequests/Index', [
-                'leaveRequests' => [
-                    'data' => [],
-                    'links' => [],
-                    'total' => 0,
-                    'current_page' => 1,
-                    'last_page' => 1,
-                ],
-                'classes' => $classes,
-                'students' => $students,
-                'stats' => $stats,
-                'filters' => $request->only(['class_id', 'status', 'search']),
-                'isGlobalAdmin' => $isGlobalAdmin,
-                'isReadOnly' => $isKesiswaan,
-            ]);
+            abort(403, 'Akses ditolak. Menu ini hanya dapat diakses oleh Guru yang bertugas sebagai Wali Kelas.');
         }
 
         // Available classes dropdown options

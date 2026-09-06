@@ -41,6 +41,12 @@ class HandleInertiaRequests extends Middleware
         $jsonPath = base_path("lang/{$locale}.json");
         $laravelTranslations = file_exists($jsonPath) ? json_decode(file_get_contents($jsonPath), true) : [];
 
+        $employee = $user?->employee;
+        $isHomeroomTeacher = false;
+        if ($employee) {
+            $isHomeroomTeacher = (bool) ($employee->is_homeroom_teacher && \App\Models\SchoolClass::where('homeroom_teacher_id', $employee->id)->exists());
+        }
+
         return [
             ...parent::share($request),
             'locale' => $locale,
@@ -52,7 +58,8 @@ class HandleInertiaRequests extends Middleware
                     'email' => $user->email,
                     'roles' => method_exists($user, 'getRoleNames') ? array_values($user->getRoleNames()->toArray()) : [],
                     'permissions' => method_exists($user, 'getAllPermissions') ? array_values($user->getAllPermissions()->pluck('name')->toArray()) : [],
-                    'employee_photo' => $user->employee?->photo_url ?? null,
+                    'employee_photo' => $employee?->photo_url ?? null,
+                    'is_homeroom_teacher' => $isHomeroomTeacher,
                 ] : null,
             ],
             'flash' => [

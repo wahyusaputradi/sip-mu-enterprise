@@ -136,4 +136,23 @@ class WaliKelasAndKesiswaanRoleTest extends TestCase
         ]);
         $responseClass->assertStatus(403);
     }
+
+    public function test_non_homeroom_teacher_is_blocked_from_student_management_pages()
+    {
+        $user = User::factory()->create();
+        Employee::create([
+            'user_id' => $user->id,
+            'nik' => '3201234567890002',
+            'name' => 'Guru Biasa',
+            'gender' => 'Perempuan',
+            'is_homeroom_teacher' => false,
+        ]);
+        $user->assignRole('Guru');
+
+        $this->actingAs($user)->get(route('students.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('student-attendance.monitoring'))->assertStatus(403);
+        $this->actingAs($user)->get(route('student-leave-requests.index'))->assertStatus(403);
+        $this->actingAs($user)->get(route('student-attendance.recap'))->assertStatus(403);
+        $this->actingAs($user)->get(route('students.cards'))->assertStatus(403);
+    }
 }
