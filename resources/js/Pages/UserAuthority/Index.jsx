@@ -57,6 +57,7 @@ export default function UserAuthorityIndex({
     const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false);
     const [isBulkRegenerateQrModalOpen, setIsBulkRegenerateQrModalOpen] = useState(false);
     const [isBulkStudentStatusModalOpen, setIsBulkStudentStatusModalOpen] = useState(false);
+    const [isBulkResetStudentPasswordModalOpen, setIsBulkResetStudentPasswordModalOpen] = useState(false);
     const [selectedStudentsForBulk, setSelectedStudentsForBulk] = useState([]);
     const [bulkTargetStatus, setBulkTargetStatus] = useState('active');
 
@@ -226,6 +227,16 @@ export default function UserAuthorityIndex({
             onSuccess: () => {
                 setSelectedStudentsForBulk([]);
                 setIsBulkStudentStatusModalOpen(false);
+            }
+        });
+    };
+
+    const confirmBulkResetStudentPassword = () => {
+        router.post(route('user-authority.students.bulk-reset-password'), { student_ids: selectedStudentsForBulk }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSelectedStudentsForBulk([]);
+                setIsBulkResetStudentPasswordModalOpen(false);
             }
         });
     };
@@ -635,6 +646,13 @@ export default function UserAuthorityIndex({
                                     >
                                         Ubah Status ({selectedStudentsForBulk.length})
                                     </Button>
+
+                                    <Button 
+                                        onClick={() => setIsBulkResetStudentPasswordModalOpen(true)}
+                                        className="h-10 px-3 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl flex items-center gap-1.5 shadow-sm"
+                                    >
+                                        <KeyRound className="w-3.5 h-3.5" /> Reset Password ({selectedStudentsForBulk.length})
+                                    </Button>
                                 </div>
                             )}
                         </div>
@@ -1041,6 +1059,29 @@ export default function UserAuthorityIndex({
                         </Button>
                         <Button onClick={confirmBulkUpdateStudentStatus} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl">
                             Simpan Perubahan
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal Bulk Reset Student Password */}
+            <Dialog open={isBulkResetStudentPasswordModalOpen} onOpenChange={setIsBulkResetStudentPasswordModalOpen}>
+                <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-bold text-rose-600 flex items-center gap-2">
+                            <KeyRound className="w-5 h-5" /> Reset Password Siswa Massal
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">
+                            Reset password akun login untuk {selectedStudentsForBulk.length} siswa terpilih ke default password (<code>password</code>).
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter className="gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setIsBulkResetStudentPasswordModalOpen(false)} className="rounded-xl text-xs">
+                            Batal
+                        </Button>
+                        <Button onClick={confirmBulkResetStudentPassword} className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl">
+                            Konfirmasi Reset
                         </Button>
                     </DialogFooter>
                 </DialogContent>

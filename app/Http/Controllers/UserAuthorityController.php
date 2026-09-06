@@ -216,6 +216,41 @@ class UserAuthorityController extends Controller
     }
 
     /**
+     * Bulk Reset Student Password to Default ('password')
+     */
+    public function bulkResetStudentPassword(Request $request)
+    {
+        $validated = $request->validate([
+            'student_ids'   => 'required|array',
+            'student_ids.*' => 'exists:students,id',
+        ]);
+
+        $students = Student::whereIn('id', $validated['student_ids'])->get();
+        $defaultPassword = Hash::make('password');
+        $resetCount = 0;
+
+        foreach ($students as $student) {
+            $user = $student->user;
+            if (!$user && !empty($student->nis)) {
+                $user = User::where('username', $student->nis)
+                    ->orWhere('email', $student->nis . '@siswa.smkmu.sch.id')
+                    ->orWhere('email', $student->nis . '@siswa.sipmu.sch.id')
+                    ->first();
+            }
+
+            if ($user) {
+                $user->update(['password' => $defaultPassword]);
+                if ($student->user_id !== $user->id) {
+                    $student->update(['user_id' => $user->id]);
+                }
+                $resetCount++;
+            }
+        }
+
+        return redirect()->back()->with('success', "Password login untuk {$resetCount} siswa terpilih berhasil direset ke default (password).");
+    }
+
+    /**
      * Auto Sync & Generate User Accounts for Students
      */
     public function syncStudentAccounts(Request $request)
