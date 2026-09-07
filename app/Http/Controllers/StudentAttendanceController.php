@@ -272,6 +272,10 @@ class StudentAttendanceController extends Controller
      */
     public function unblockAndCheckIn(Request $request)
     {
+        if ($this->isReadOnlyUser()) {
+            return back()->withErrors(['message' => 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.']);
+        }
+
         $request->validate([
             'student_id' => 'required|exists:students,id',
             'reason' => 'required|string|max:255',

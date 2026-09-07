@@ -135,6 +135,21 @@ class WaliKelasAndKesiswaanRoleTest extends TestCase
             'name' => 'Kelas Baru Test',
         ]);
         $responseClass->assertStatus(403);
+
+        // Try unblocking late student check-in
+        $responseUnblock = $this->actingAs($user)->post(route('student-attendance.unblock'), [
+            'student_id' => 1,
+            'reason' => 'Izin Kesiswaan',
+        ]);
+        $responseUnblock->assertSessionHasErrors(['message']);
+
+        // Try updating attendance status
+        $responseStatus = $this->actingAs($user)->post(route('student-attendance.update-status'), [
+            'student_id' => 1,
+            'date' => '2026-09-07',
+            'status' => 'present',
+        ]);
+        $responseStatus->assertStatus(403);
     }
 
     public function test_non_homeroom_teacher_is_blocked_from_student_management_pages()
