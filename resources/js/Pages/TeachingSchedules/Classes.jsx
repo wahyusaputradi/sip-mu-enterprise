@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Plus, Edit2, Trash2, School, AlertCircle, Sparkles, Search, Download, Upload, FileSpreadsheet, CheckSquare, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function Classes({ classes, teachers }) {
+export default function Classes({ classes, teachers, isReadOnly = false }) {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -111,9 +111,16 @@ export default function Classes({ classes, teachers }) {
                         <span className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-widest inline-flex items-center shadow-sm mb-2">
                             <School className="w-3 h-3 mr-1.5" /> Master Data
                         </span>
-                        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                            Data <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Kelas</span>
-                        </h2>
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                                Data <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Kelas</span>
+                            </h2>
+                            {isReadOnly && (
+                                <span className="text-xs font-bold px-3 py-1 bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800/60 rounded-full">
+                                    Read-Only (Kesiswaan)
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                         <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls,.csv" onChange={handleFileChange} />
@@ -123,17 +130,21 @@ export default function Classes({ classes, teachers }) {
                         <Button onClick={() => window.location.href = route('school-classes.export')} variant="outline" className="border-slate-200 hover:bg-slate-50 font-bold h-11 rounded-xl text-indigo-600">
                             <Download className="w-4 h-4 mr-2" /> Export
                         </Button>
-                        <Button onClick={handleImportClick} className="bg-white border-2 border-indigo-600 text-indigo-700 hover:bg-indigo-50 font-bold h-11 rounded-xl shadow-sm transition-all">
-                            <Upload className="w-4 h-4 mr-2" /> Import
-                        </Button>
-                        {checkedIds.length > 0 && (
+                        {!isReadOnly && (
+                            <Button onClick={handleImportClick} className="bg-white border-2 border-indigo-600 text-indigo-700 hover:bg-indigo-50 font-bold h-11 rounded-xl shadow-sm transition-all">
+                                <Upload className="w-4 h-4 mr-2" /> Import
+                            </Button>
+                        )}
+                        {!isReadOnly && checkedIds.length > 0 && (
                             <Button onClick={() => setIsBulkDeleteOpen(true)} variant="outline" className="rounded-xl border-rose-200 text-rose-600 font-bold hover:bg-rose-50 h-11">
                                 <Trash2 className="w-4 h-4 mr-2" /> Hapus ({checkedIds.length})
                             </Button>
                         )}
-                        <Button onClick={openCreate} className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold h-11 rounded-xl shadow-lg hover:-translate-y-0.5 transition-all">
-                            <Plus className="w-5 h-5 sm:mr-2" /><span className="hidden sm:inline">Tambah Kelas</span>
-                        </Button>
+                        {!isReadOnly && (
+                            <Button onClick={openCreate} className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold h-11 rounded-xl shadow-lg hover:-translate-y-0.5 transition-all">
+                                <Plus className="w-5 h-5 sm:mr-2" /><span className="hidden sm:inline">Tambah Kelas</span>
+                            </Button>
+                        )}
                     </div>
                 </div>
             }
@@ -156,9 +167,11 @@ export default function Classes({ classes, teachers }) {
                                 <TableHeader className="bg-slate-50/50 border-b border-slate-100">
                                     <TableRow className="hover:bg-transparent">
                                         <TableHead className="w-12 px-4 text-center">
-                                            <button onClick={toggleAll} className="text-slate-400 hover:text-indigo-600 transition-colors">
-                                                {allChecked ? <CheckSquare className="w-5 h-5 text-indigo-600" /> : <Square className="w-5 h-5" />}
-                                            </button>
+                                            {!isReadOnly && (
+                                                <button onClick={toggleAll} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                                                    {allChecked ? <CheckSquare className="w-5 h-5 text-indigo-600" /> : <Square className="w-5 h-5" />}
+                                                </button>
+                                            )}
                                         </TableHead>
                                         <TableHead className="font-black text-slate-900 py-5 px-6">Nama Kelas</TableHead>
                                         <TableHead className="font-black text-slate-900">Wali Kelas</TableHead>
@@ -175,9 +188,11 @@ export default function Classes({ classes, teachers }) {
                                                 <motion.tr key={cls.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                                                     className={`group hover:bg-slate-50/50 transition-colors border-b border-slate-50/50 ${isChecked ? 'bg-indigo-50/40' : ''}`}>
                                                     <TableCell className="px-4 text-center">
-                                                        <button onClick={() => toggleOne(cls.id)} className="text-slate-400 hover:text-indigo-600 transition-colors">
-                                                            {isChecked ? <CheckSquare className="w-5 h-5 text-indigo-600" /> : <Square className="w-5 h-5" />}
-                                                        </button>
+                                                        {!isReadOnly && (
+                                                            <button onClick={() => toggleOne(cls.id)} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                                                                {isChecked ? <CheckSquare className="w-5 h-5 text-indigo-600" /> : <Square className="w-5 h-5" />}
+                                                            </button>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell className="px-6 py-4">
                                                         <div className="flex items-center space-x-3">
@@ -203,10 +218,14 @@ export default function Classes({ classes, teachers }) {
                                                         ) : <span className="text-slate-300">—</span>}
                                                     </TableCell>
                                                     <TableCell className="px-6 text-right">
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            <Button onClick={() => openEdit(cls)} variant="outline" size="icon" className="h-8 w-8 rounded-xl border-slate-200 hover:bg-indigo-50 hover:text-indigo-600"><Edit2 className="w-4 h-4" /></Button>
-                                                            <Button onClick={() => openDelete(cls)} variant="outline" size="icon" className="h-8 w-8 rounded-xl border-slate-200 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="w-4 h-4" /></Button>
-                                                        </div>
+                                                        {isReadOnly ? (
+                                                            <span className="text-xs text-slate-400 font-semibold italic">Read-Only</span>
+                                                        ) : (
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <Button onClick={() => openEdit(cls)} variant="outline" size="icon" className="h-8 w-8 rounded-xl border-slate-200 hover:bg-indigo-50 hover:text-indigo-600"><Edit2 className="w-4 h-4" /></Button>
+                                                                <Button onClick={() => openDelete(cls)} variant="outline" size="icon" className="h-8 w-8 rounded-xl border-slate-200 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="w-4 h-4" /></Button>
+                                                            </div>
+                                                        )}
                                                     </TableCell>
                                                 </motion.tr>
                                             );

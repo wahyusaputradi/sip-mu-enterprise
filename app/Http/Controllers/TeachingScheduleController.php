@@ -204,6 +204,12 @@ class TeachingScheduleController extends Controller
         return back()->with('message', 'Jadwal berhasil diimpor.');
     }
 
+    private function isReadOnlyUser(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('Kesiswaan');
+    }
+
     // School Classes CRUD
     public function classIndex()
     {
@@ -215,6 +221,7 @@ class TeachingScheduleController extends Controller
         return Inertia::render('TeachingSchedules/Classes', [
             'classes' => $classes,
             'teachers' => $teachers,
+            'isReadOnly' => $this->isReadOnlyUser(),
         ]);
     }
 
@@ -230,6 +237,10 @@ class TeachingScheduleController extends Controller
 
     public function classImport(Request $request)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         $request->validate([
             'file' => 'required|mimes:xlsx,xls,csv|max:2048',
         ]);
@@ -241,6 +252,10 @@ class TeachingScheduleController extends Controller
 
     public function classStore(Request $request)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:50|unique:school_classes,name',
             'level' => 'nullable|string|max:10',
@@ -255,6 +270,10 @@ class TeachingScheduleController extends Controller
 
     public function classUpdate(Request $request, SchoolClass $schoolClass)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:50|unique:school_classes,name,' . $schoolClass->id,
             'level' => 'nullable|string|max:10',
@@ -269,6 +288,10 @@ class TeachingScheduleController extends Controller
 
     public function classDestroy(SchoolClass $schoolClass)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         if ($schoolClass->teachingSchedules()->count() > 0) {
             return back()->withErrors(['message' => 'Kelas ini masih digunakan di jadwal mengajar dan tidak bisa dihapus.']);
         }
@@ -282,6 +305,10 @@ class TeachingScheduleController extends Controller
      */
     public function classBulkDestroy(Request $request)
     {
+        if ($this->isReadOnlyUser()) {
+            abort(403, 'Akses ditolak. Peran Kesiswaan sebatas Read-Only.');
+        }
+
         $request->validate([
             'ids' => 'required|array',
             'ids.*' => 'integer|exists:school_classes,id'
