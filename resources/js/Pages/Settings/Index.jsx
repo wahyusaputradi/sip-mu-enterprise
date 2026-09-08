@@ -152,22 +152,24 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
             <div className="pb-8 max-w-5xl mx-auto space-y-6">
                 
                 {/* Custom Tabs Navigation */}
-                <div className="flex space-x-2 p-1 bg-white/50 backdrop-blur-xl rounded-2xl border border-slate-200/60 shadow-sm w-fit mx-auto md:mx-0">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            type="button"
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
-                                activeTab === tab.id 
-                                ? 'bg-white text-indigo-600 shadow-[0_4px_15px_rgba(0,0,0,0.05)]' 
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                            }`}
-                        >
-                            {tab.icon}
-                            {tab.label}
-                        </button>
-                    ))}
+                <div className="w-full overflow-x-auto pb-1">
+                    <div className="flex items-center space-x-1.5 sm:space-x-2 p-1.5 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-slate-800 shadow-sm w-max min-w-full sm:min-w-0 sm:w-fit">
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex items-center justify-center px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap shrink-0 ${
+                                    activeTab === tab.id 
+                                    ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-[0_4px_15px_rgba(0,0,0,0.05)]' 
+                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                                }`}
+                            >
+                                {tab.icon}
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 <Card className="border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white/80 backdrop-blur-xl overflow-hidden min-h-[500px]">
