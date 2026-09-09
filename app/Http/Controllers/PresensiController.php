@@ -85,9 +85,9 @@ class PresensiController extends Controller
         $employee->load('positions');
         $isGuruMurni = $employee->positions->count() === 1 && $employee->positions->first()?->name === 'Guru';
 
-        // Guru murni → no daily attendance, only per-hour teaching
+        // Guru murni → no daily attendance on normal days, BUT requires daily attendance on Special Workdays (Acara Sekolah)
         // Everyone else → daily attendance required
-        $requiresDailyAttendance = !$isGuruMurni;
+        $requiresDailyAttendance = !$isGuruMurni || $isSpecialWorkday;
 
         // ── Teaching Schedules for today ──
         $schedules = collect();
