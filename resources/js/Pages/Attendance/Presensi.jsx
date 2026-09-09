@@ -852,8 +852,33 @@ export default function Presensi({
                 {/* ══ RIGHT: Attendance Actions ══ */}
                 <div className="lg:col-span-7 space-y-6">
 
+                    {/* ═══ SPECIAL WORKDAY NO KBM NOTICE ═══ */}
+                    {!isHoliday && isSpecialWorkday && specialWorkdayInfo?.disable_kbm && (
+                        <Card className="border border-amber-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-gradient-to-r from-amber-50/90 via-orange-50/90 to-amber-50/90 backdrop-blur-xl overflow-hidden">
+                            <CardHeader className="bg-amber-100/60 border-b border-amber-200/60 p-6">
+                                <CardTitle className="text-xl font-black text-amber-900 flex items-center">
+                                    <Sparkles className="w-6 h-6 mr-3 text-amber-600" /> Kegiatan KBM Diliburkan (Hari Kerja Khusus)
+                                </CardTitle>
+                                <CardDescription className="text-amber-800/80 font-medium mt-1">
+                                    {specialWorkdayInfo?.name || 'Acara Sekolah'}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-6 space-y-3 text-amber-900">
+                                <div className="flex items-start gap-3 bg-white/80 p-4 rounded-2xl border border-amber-200/60 shadow-sm">
+                                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                                    <div className="text-xs space-y-1">
+                                        <p className="font-extrabold text-slate-900">Jam Mengajar (JTM) Otomatis Diakui 100%</p>
+                                        <p className="text-slate-600 font-medium leading-relaxed">
+                                            Seluruh jadwal mengajar Anda hari ini ({schedules?.length || 0} jam pelajaran) secara otomatis tercatat dan dihitung penuh ke Rekapitulasi JTM Bulanan. Presensi per jam kelas dinonaktifkan demi mendukung kelancaran acara sekolah.
+                                        </p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {/* ═══ TEACHING SCHEDULE SECTION ═══ */}
-                    {!isHoliday && hasTeachingSchedule && schedules && (
+                    {!isHoliday && !(isSpecialWorkday && specialWorkdayInfo?.disable_kbm) && hasTeachingSchedule && schedules && (
                         <Card className="border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white/80 backdrop-blur-xl overflow-hidden">
                             <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100 p-6">
                                 <CardTitle className="text-xl font-black text-indigo-900 flex items-center">
