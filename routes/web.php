@@ -12,6 +12,7 @@ use App\Http\Controllers\PositionController;
 use App\Http\Controllers\CampusLocationController;
 use App\Http\Controllers\UserAuthorityController;
 use App\Http\Controllers\TeachingScheduleController;
+use App\Http\Controllers\ExamSupervisionScheduleController;
 use App\Http\Controllers\MyScheduleController;
 use App\Http\Controllers\MyAttendanceController;
 use App\Http\Controllers\AttendancePhotoController;
@@ -154,6 +155,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Jadwal Saya (Guru only)
     Route::get('/my-schedule', [MyScheduleController::class, 'index'])->name('my-schedule.index');
+    Route::get('/my-exam-schedule', [\App\Http\Controllers\MyExamScheduleController::class, 'index'])->name('my-exam-schedule.index');
 
     // Rekap Absensi Pribadi
     Route::get('/my-attendance', [MyAttendanceController::class, 'index'])->name('my-attendance.index');
@@ -206,6 +208,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/attendance/recap', [AttendanceController::class, 'recap'])->name('attendance.recap');
         Route::get('/attendance/recap/export-excel', [AttendanceController::class, 'exportExcel'])->name('attendance.recap.export-excel');
         Route::get('/attendance/recap/export-pdf', [AttendanceController::class, 'exportPdf'])->name('attendance.recap.export-pdf');
+        Route::get('/attendance/recap/export-exam-excel', [AttendanceController::class, 'exportExamExcel'])->name('attendance.recap.export-exam-excel');
+        Route::get('/attendance/recap/export-exam-pdf', [AttendanceController::class, 'exportExamPdf'])->name('attendance.recap.export-exam-pdf');
     });
 
     // ══════════════════════════════════════════════════
@@ -298,6 +302,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/school-classes', [TeachingScheduleController::class, 'classIndex'])->name('school-classes.index');
         Route::get('/teaching-schedules', [TeachingScheduleController::class, 'index'])->name('teaching-schedules.index');
         Route::get('/teaching-schedules/export/excel', [TeachingScheduleController::class, 'export'])->name('teaching-schedules.export');
+        Route::get('/exam-schedules', [ExamSupervisionScheduleController::class, 'index'])->name('exam-schedules.index');
+        Route::get('/exam-schedules/export/excel', [ExamSupervisionScheduleController::class, 'export'])->name('exam-schedules.export');
+        Route::get('/exam-schedules/template', [ExamSupervisionScheduleController::class, 'template'])->name('exam-schedules.template');
     });
 
     // Write Operations Jadwal & Kelas (Excludes Kepala Sekolah & Absensi)
@@ -306,6 +313,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/teaching-schedules/{teachingSchedule}', [TeachingScheduleController::class, 'update'])->name('teaching-schedules.update');
         Route::delete('/teaching-schedules/{teachingSchedule}', [TeachingScheduleController::class, 'destroy'])->name('teaching-schedules.destroy');
         Route::post('/teaching-schedules/import/excel', [TeachingScheduleController::class, 'import'])->name('teaching-schedules.import');
+
+        Route::post('/exam-schedules', [ExamSupervisionScheduleController::class, 'store'])->name('exam-schedules.store');
+        Route::put('/exam-schedules/{examSchedule}', [ExamSupervisionScheduleController::class, 'update'])->name('exam-schedules.update');
+        Route::delete('/exam-schedules/{examSchedule}', [ExamSupervisionScheduleController::class, 'destroy'])->name('exam-schedules.destroy');
+        Route::post('/exam-schedules/import/excel', [ExamSupervisionScheduleController::class, 'import'])->name('exam-schedules.import');
+        Route::post('/exam-schedules/bulk-destroy', [ExamSupervisionScheduleController::class, 'bulkDestroy'])->name('exam-schedules.bulk-destroy');
 
         Route::get('/school-classes/template', [TeachingScheduleController::class, 'classTemplate'])->name('school-classes.template');
         Route::get('/school-classes/export', [TeachingScheduleController::class, 'classExport'])->name('school-classes.export');
@@ -344,7 +357,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Special Workdays (Hari Kerja Khusus / Acara Sekolah)
         Route::post('/special-workdays', [SystemSettingController::class, 'storeSpecialWorkday'])->name('special-workdays.store');
+        Route::put('/special-workdays/{specialWorkday}', [SystemSettingController::class, 'updateSpecialWorkday'])->name('special-workdays.update');
         Route::delete('/special-workdays/{specialWorkday}', [SystemSettingController::class, 'destroySpecialWorkday'])->name('special-workdays.destroy');
+
+        // Exam Days (Hari / Periode Ujian UTS & UAS)
+        Route::post('/exam-days', [SystemSettingController::class, 'storeExamDay'])->name('exam-days.store');
+        Route::put('/exam-days/{examDay}', [SystemSettingController::class, 'updateExamDay'])->name('exam-days.update');
+        Route::delete('/exam-days/{examDay}', [SystemSettingController::class, 'destroyExamDay'])->name('exam-days.destroy');
+        Route::post('/exam-days/bulk-destroy', [SystemSettingController::class, 'bulkDestroyExamDays'])->name('exam-days.bulk-destroy');
 
         // User Authority
         Route::get('/user-authority', [UserAuthorityController::class, 'index'])->name('user-authority.index');

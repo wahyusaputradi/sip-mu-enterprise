@@ -51,13 +51,17 @@ class HolidayController extends Controller
 
     public function update(Request $request, \App\Models\Holiday $holiday)
     {
-        $request->validate([
+        $validated = $request->validate([
             'date' => 'required|date|unique:holidays,date,' . $holiday->id,
             'description' => 'required|string|max:255',
             'is_national_holiday' => 'required|boolean',
         ]);
 
-        $holiday->update($request->all());
+        $holiday->update([
+            'date' => $validated['date'],
+            'description' => $validated['description'],
+            'is_national_holiday' => (bool) $validated['is_national_holiday'],
+        ]);
 
         return back()->with('message', 'Hari libur berhasil diperbarui.');
     }

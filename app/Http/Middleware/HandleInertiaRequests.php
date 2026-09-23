@@ -51,9 +51,12 @@ class HandleInertiaRequests extends Middleware
             );
         }
 
+        $isExamMode = \App\Models\TeachingSchedule::isExamMode(\Carbon\Carbon::today()->toDateString());
+
         return [
             ...parent::share($request),
             'locale' => $locale,
+            'isExamMode' => $isExamMode,
             'translations' => $laravelTranslations,
             'auth' => [
                 'user' => $user ? [

@@ -25,6 +25,7 @@ export default function Presensi({
     requiresDailyAttendance, hasTeachingSchedule, isGuruMurni,
     isHoliday, holidayInfo,
     isSpecialWorkday, specialWorkdayInfo,
+    isExamMode, examModeInfo,
     today, currentTime, attendance, schedules,
     campusLocations, settings, dailyCheckinBlocked, dailyCheckinBlockReason,
     dailyCheckinTooEarly, dailyCheckinEarlyTime,
@@ -158,7 +159,7 @@ export default function Presensi({
                 await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
                 await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
                 setModelsLoaded(true);
-                setLivenessMessage('Harap tengok ke kanan untuk verifikasi');
+                setLivenessMessage('Harap tengok perlahan ke Kiri atau Kanan');
             } catch (error) {
                 console.error("Gagal memuat model AI:", error);
                 setLivenessMessage('Gagal memuat model AI. Presensi terkendala.');
@@ -306,7 +307,7 @@ export default function Presensi({
         setPhotoData(null);
         if (isLivenessEnabled) {
             setIsLivenessVerified(false);
-            setLivenessMessage('Harap tengok ke kanan untuk verifikasi');
+            setLivenessMessage('Harap tengok perlahan ke Kiri atau Kanan');
         } else {
             setIsLivenessVerified(true);
             setLivenessMessage(userBypassLiveness ? '⚡ Bypass Verifikasi Wajah Aktif (Akun Khusus)' : 'Verifikasi Wajah Dinonaktifkan');
@@ -412,12 +413,16 @@ export default function Presensi({
 
                         setRotationRatio(ratio);
 
-                        // Threshold Tengok Kanan: jika hidung mendekati rahang kanan (ratio bertambah besar)
-                        // Nilai normal menghadap depan ~1.0, tengok kanan >= 1.6
-                        if (ratio >= 1.6) {
+                        // Multi-directional Liveness (Kiri atau Kanan)
+                        // Normal ~1.0. Kanan >= 1.45, Kiri <= 0.65 (1 / 1.5)
+                        if (ratio >= 1.45 || ratio <= 0.65) {
                             setIsLivenessVerified(true);
-                            setLivenessMessage('Wajah Terverifikasi! Silakan hadap depan kembali dan ambil foto.');
+                            setLivenessMessage('✅ Wajah Terverifikasi! Silakan hadap depan & ambil foto.');
                             clearInterval(detectionIntervalRef.current);
+                        } else if (ratio >= 1.3 || ratio <= 0.75) {
+                            setLivenessMessage('Sedikit lagi, putar lebih jauh...');
+                        } else {
+                            setLivenessMessage('Harap tengok perlahan ke Kiri atau Kanan');
                         }
                     }
                 }
@@ -597,6 +602,22 @@ export default function Presensi({
                     </motion.div>
                 </div>
             )}
+            {isExamMode && (
+                <div className="max-w-7xl mx-auto mb-8">
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}
+                        className="bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-[2rem] p-8 flex flex-col md:flex-row items-center gap-6 shadow-lg shadow-emerald-100/50">
+                        <div className="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center shrink-0 shadow-inner">
+                            <ShieldAlert className="w-10 h-10 text-emerald-600" />
+                        </div>
+                        <div className="text-center md:text-left">
+                            <h3 className="text-2xl font-black text-emerald-900">Periode Ujian Aktif 📝</h3>
+                            <p className="text-emerald-700 font-bold mt-1 text-lg">{examModeInfo?.name || 'Ujian Tengah/Akhir Semester'} ({examModeInfo?.type || 'UTS/UAS'})</p>
+                            <p className="text-emerald-600 mt-2 text-sm">Kegiatan Belajar Mengajar (KBM) reguler ditiadakan. Guru Murni cukup melakukan presensi saat jadwal/sesi mengawas ujian berlangsung.</p>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
             {isHoliday && (
                 <div className="max-w-7xl mx-auto mb-8">
                     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}

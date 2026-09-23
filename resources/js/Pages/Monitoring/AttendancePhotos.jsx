@@ -247,6 +247,8 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
                 return 'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20';
             case 'teaching':
                 return 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
+            case 'exam':
+                return 'bg-cyan-50 text-cyan-700 border-cyan-100 dark:bg-cyan-500/10 dark:text-cyan-400 dark:border-cyan-500/20';
             default:
                 return 'bg-slate-50 text-slate-700 border-slate-100 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20';
         }
@@ -395,6 +397,7 @@ export default function AttendancePhotos({ photos, campusLocations, stats, filte
                                         <SelectItem value="daily_in" className="font-semibold">Presensi Masuk</SelectItem>
                                         <SelectItem value="daily_out" className="font-semibold">Presensi Pulang</SelectItem>
                                         <SelectItem value="teaching" className="font-semibold">Presensi Mengajar</SelectItem>
+                                        <SelectItem value="exam" className="font-semibold text-emerald-600 dark:text-emerald-400">Mengawas Ujian</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

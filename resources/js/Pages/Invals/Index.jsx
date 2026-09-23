@@ -14,14 +14,15 @@ import {
     AlertCircle,
     Plus,
     Trash2,
-    Search
+    Search,
+    ShieldAlert
 } from 'lucide-react';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 
-export default function Index({ auth, date, lowongan = [], invals, isHoliday, isWeekend, holidayInfo, isSpecialWorkday, specialWorkdayInfo, canApprove, employees, filters = {} }) {
+export default function Index({ auth, date, lowongan = [], invals, isHoliday, isWeekend, holidayInfo, isSpecialWorkday, specialWorkdayInfo, canApprove, employees, filters = {}, isExamMode }) {
     const [selectedDate, setSelectedDate] = useState(date);
     const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
     const [selectedSchedule, setSelectedSchedule] = useState(null);
@@ -164,6 +165,30 @@ export default function Index({ auth, date, lowongan = [], invals, isHoliday, is
             <Head title="Bursa Inval" />
 
             <div className="space-y-8">
+                {isExamMode ? (
+                    <div className="bg-white dark:bg-card rounded-[2rem] border-2 border-red-100 dark:border-red-900/30 shadow-lg overflow-hidden p-8 text-center relative overflow-hidden">
+                        <div className="absolute -right-10 -top-10 text-red-50 dark:text-red-900/10 rotate-12">
+                            <ShieldAlert className="w-64 h-64" />
+                        </div>
+                        <div className="relative z-10 flex flex-col items-center justify-center max-w-2xl mx-auto py-12">
+                            <div className="w-20 h-20 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center mb-6 shadow-inner">
+                                <ShieldAlert className="w-10 h-10 text-red-600 dark:text-red-400" />
+                            </div>
+                            <h3 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white mb-4 tracking-tight">
+                                Bursa Inval Dinonaktifkan
+                            </h3>
+                            <p className="text-slate-600 dark:text-slate-300 text-lg leading-relaxed font-medium">
+                                Saat ini sistem sedang dalam <strong className="text-red-600 dark:text-red-400">Periode Ujian</strong>. Fitur pertukaran jadwal mandiri melalui Bursa Inval tidak dapat digunakan.
+                            </p>
+                            <div className="mt-8 bg-red-50 dark:bg-red-900/20 rounded-2xl p-6 border border-red-100 dark:border-red-900/30">
+                                <p className="text-red-800 dark:text-red-200 font-bold">
+                                    Jika Anda berhalangan hadir mengawas ujian, silakan lapor/konfirmasi kepada <strong className="text-red-900 dark:text-red-100">Panitia Ujian</strong> agar jadwal Anda diganti secara manual melalui Manajemen Jadwal Ujian.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <>
                 {/* Lowongan Inval Section */}
                 <div className="bg-white dark:bg-card rounded-[2rem] border border-slate-100 dark:border-border shadow-sm overflow-hidden">
                     <div className="p-6 md:p-8 border-b border-slate-100 dark:border-border bg-gradient-to-r from-indigo-50/50 to-transparent dark:from-indigo-500/5">
@@ -541,6 +566,8 @@ export default function Index({ auth, date, lowongan = [], invals, isHoliday, is
                         </div>
                     )}
                 </div>
+                    </>
+                )}
             </div>
 
             {/* Modal Claim */}

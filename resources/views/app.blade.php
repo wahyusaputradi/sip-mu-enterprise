@@ -3,7 +3,9 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="description" content="SIP-MU Enterprise - Sistem Tata Kelola Kepegawaian, Presensi Presisi, dan Manajemen Kedisiplinan SMK Manbaul Ulum Cirebon.">
+        
+        <!-- Dynamic SEO Meta Tags -->
+        <meta name="description" content="{{ $page['props']['meta']['description'] ?? 'SIP-MU Enterprise - Sistem Tata Kelola Kepegawaian, Presensi Presisi, dan Manajemen Kedisiplinan SMK Manbaul Ulum Cirebon.' }}">
         <meta name="keywords" content="SIP-MU Enterprise, SMK Manbaul Ulum Cirebon, Presensi Guru, Presensi Pegawai, E-Absensi">
         <meta name="robots" content="index, follow">
         <link rel="canonical" href="{{ url()->current() }}">
@@ -49,13 +51,14 @@
         </script>
 
         <!-- Open Graph Meta Tags -->
-        <meta property="og:title" content="SIP-MU Enterprise - SMK Manbaul Ulum Cirebon">
-        <meta property="og:description" content="Sistem Tata Kelola Kepegawaian, Presensi Presisi, dan Manajemen Kedisiplinan SMK Manbaul Ulum Cirebon.">
-        <meta property="og:image" content="{{ asset('images/logo.png') }}">
+        <meta property="og:title" content="{{ $page['props']['meta']['title'] ?? 'SIP-MU Enterprise - SMK Manbaul Ulum Cirebon' }}">
+        <meta property="og:description" content="{{ $page['props']['meta']['description'] ?? 'Sistem Tata Kelola Kepegawaian, Presensi Presisi, dan Manajemen Kedisiplinan SMK Manbaul Ulum Cirebon.' }}">
+        <meta property="og:image" content="{{ $page['props']['meta']['image'] ?? asset('images/logo.png') }}">
         <meta property="og:url" content="{{ url()->current() }}">
-        <meta property="og:type" content="website">
+        <meta property="og:type" content="{{ $page['props']['meta']['type'] ?? 'website' }}">
 
-        <title inertia>{{ config('app.name', 'SIP MU Enterprise') }}</title>
+        <!-- Dynamic Title -->
+        <title inertia>{{ $page['props']['meta']['title'] ?? config('app.name', 'SIP MU Enterprise') }}</title>
 
         <!-- Google AdSense Direct Script -->
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1006393524825968" crossorigin="anonymous"></script>
@@ -75,3 +78,5 @@
         @inertia
     </body>
 </html>
+
+

@@ -20,7 +20,7 @@ const STATUS_CFG = {
     holiday: { label: 'Libur', color: 'indigo', glow: 'rgba(99,102,241,0.8)' },
 };
 
-export default function Attendance({ attendances, stats, employees, todayHoliday, todaySchedules, todayUnlocks }) {
+export default function Attendance({ attendances, stats, employees, todayHoliday, todaySchedules, todayExamSchedules, todayUnlocks }) {
     const { auth } = usePage().props;
     const currentUserId = auth?.user?.id;
     const today = new Date();
@@ -30,20 +30,23 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
 
     const [editingAttendance, setEditingAttendance] = useState(null);
     const [unlockModal, setUnlockModal] = useState(false);
-    const [unlockData, setUnlockData] = useState({ employee_id: '', type: 'daily_checkin', teaching_schedule_id: '', reason: '', expires_in_minutes: '15', is_lateness_violation: true });
+    const [unlockData, setUnlockData] = useState({ employee_id: '', type: 'daily_checkin', teaching_schedule_id: '', exam_supervision_schedule_id: '', reason: '', expires_in_minutes: '15', is_lateness_violation: true });
     const [unlockProcessing, setUnlockProcessing] = useState(false);
 
     // Get teaching schedules for selected employee
     const selectedEmployeeSchedules = unlockData.employee_id && todaySchedules
         ? (todaySchedules[unlockData.employee_id] || [])
         : [];
+    const selectedEmployeeExamSchedules = unlockData.employee_id && todayExamSchedules
+        ? (todayExamSchedules[unlockData.employee_id] || [])
+        : [];
 
     const handleUnlockEmployeeChange = (v) => {
-        setUnlockData(d => ({...d, employee_id: v, teaching_schedule_id: ''}));
+        setUnlockData(d => ({...d, employee_id: v, teaching_schedule_id: '', exam_supervision_schedule_id: ''}));
     };
 
     const handleUnlockTypeChange = (v) => {
-        setUnlockData(d => ({...d, type: v, teaching_schedule_id: ''}));
+        setUnlockData(d => ({...d, type: v, teaching_schedule_id: '', exam_supervision_schedule_id: ''}));
     };
 
     const submitUnlock = (e) => {
@@ -51,9 +54,10 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
         setUnlockProcessing(true);
         const payload = { ...unlockData };
         if (payload.type !== 'teaching') payload.teaching_schedule_id = null;
+        if (payload.type !== 'exam_supervision') payload.exam_supervision_schedule_id = null;
         router.post(route('attendance.unlock'), payload, {
             preserveScroll: true,
-            onSuccess: () => { setUnlockModal(false); setUnlockData({ employee_id: '', type: 'daily_checkin', teaching_schedule_id: '', reason: '', expires_in_minutes: '15', is_lateness_violation: true }); },
+            onSuccess: () => { setUnlockModal(false); setUnlockData({ employee_id: '', type: 'daily_checkin', teaching_schedule_id: '', exam_supervision_schedule_id: '', reason: '', expires_in_minutes: '15', is_lateness_violation: true }); },
             onFinish: () => setUnlockProcessing(false),
         });
     };
@@ -450,9 +454,38 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
                                                     <SelectItem value="daily_checkin" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">Presensi Masuk (Harian)</SelectItem>
                                                     <SelectItem value="daily_checkout" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">Presensi Pulang (Harian)</SelectItem>
                                                     <SelectItem value="teaching" className="font-semibold text-sm p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-900 dark:text-slate-100">Presensi Jam Pelajaran</SelectItem>
+                                                    <SelectItem value="exam_supervision" className="font-semibold text-sm p-3 cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-emerald-900 dark:text-emerald-100">Presensi Mengawas Ujian</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
+
+                                          {/* Exam Supervision Schedule Dropdown - Only when type is 'exam_supervision' */}
+                                          {unlockData.type === 'exam_supervision' && (
+                                              <div className="space-y-3">
+                                                  <Label className="text-slate-700 dark:text-slate-200 font-bold flex items-center text-sm">Sesi Ujian</Label>
+                                                  {selectedEmployeeExamSchedules.length > 0 ? (
+                                                      <Select value={unlockData.exam_supervision_schedule_id} onValueChange={(v) => setUnlockData(d => ({...d, exam_supervision_schedule_id: v}))}>
+                                                          <SelectTrigger className="h-12 rounded-xl bg-emerald-50/50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500 transition-all font-medium text-emerald-900 dark:text-emerald-100"><SelectValue placeholder="Pilih sesi ujian..." /></SelectTrigger>
+                                                          <SelectContent className="rounded-2xl shadow-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                                                              {selectedEmployeeExamSchedules.map(s => (
+                                                                  <SelectItem key={s.id} value={String(s.id)} className="font-semibold text-sm p-3 cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-emerald-900 dark:text-emerald-100">
+                                                                      Sesi {s.session_number} • {s.class_name} • {s.time_start}-{s.time_end}
+                                                                  </SelectItem>
+                                                              ))}
+                                                          </SelectContent>
+                                                      </Select>
+                                                  ) : (
+                                                      <div className="bg-rose-50 dark:bg-rose-950/40 rounded-2xl p-4 border border-rose-100 dark:border-rose-800/50 flex items-start shadow-sm">
+                                                          <ShieldAlert className="w-5 h-5 text-rose-500 mr-3 shrink-0" />
+                                                          <p className="text-sm text-rose-700 dark:text-rose-300 font-semibold leading-relaxed">
+                                                              {unlockData.employee_id
+                                                                  ? 'Pegawai ini tidak memiliki jadwal mengawas ujian pada hari ini.'
+                                                                  : 'Silakan pilih pegawai terlebih dahulu.'}
+                                                          </p>
+                                                      </div>
+                                                  )}
+                                              </div>
+                                          )}
 
                                         {/* Teaching Schedule Dropdown - Only when type is 'teaching' */}
                                         {unlockData.type === 'teaching' && (
@@ -613,7 +646,7 @@ export default function Attendance({ attendances, stats, employees, todayHoliday
                         <Button 
                             type="submit" 
                             form="unlockForm"
-                            disabled={unlockProcessing || !unlockData.employee_id || (unlockData.type === 'teaching' && !unlockData.teaching_schedule_id)}
+                            disabled={unlockProcessing || !unlockData.employee_id || (unlockData.type === 'teaching' && !unlockData.teaching_schedule_id) || (unlockData.type === 'exam_supervision' && !unlockData.exam_supervision_schedule_id)}
                             className="rounded-xl h-12 px-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black shadow-[0_8px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_25px_rgba(99,102,241,0.4)] transition-all"
                         >
                             <Unlock className="w-4 h-4 mr-2" />

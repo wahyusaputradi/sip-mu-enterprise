@@ -78,6 +78,14 @@ class PresensiController extends Controller
             $jamKeluar = $todaySpecialWorkday->jam_keluar;
         }
 
+        // ── Exam Mode Check (UTS / UAS) ──
+        $isExamMode = TeachingSchedule::isExamMode($today->toDateString());
+        $examDayInfo = TeachingSchedule::getExamDayInfo($today->toDateString());
+        $examJamPulang = $examDayInfo['jam_keluar'] ?? ($settings['exam_mode_jam_pulang'] ?? '12:00');
+        if ($isExamMode && !$todaySpecialWorkday) {
+            $jamKeluar = $examJamPulang;
+        }
+
         // ── Campus Locations ──
         $campusLocations = CampusLocation::all();
 
@@ -85,38 +93,56 @@ class PresensiController extends Controller
         $employee->load('positions');
         $isGuruMurni = $employee->positions->count() === 1 && $employee->positions->first()?->name === 'Guru';
 
-        // Guru murni → no daily attendance on normal days, BUT requires daily attendance on Special Workdays (Acara Sekolah)
+        // Guru murni → no daily attendance on normal days, BUT requires daily attendance on Special Workdays. (During Exam Days, they only attend their supervised sessions)
         // Everyone else → daily attendance required
         $requiresDailyAttendance = !$isGuruMurni || $isSpecialWorkday;
 
         // ── Teaching Schedules for today ──
         $schedules = collect();
         $hasTeachingSchedule = false;
-        $hourSlots = TeachingSchedule::hourSlots();
+        $hourSlots = $isExamMode ? \App\Models\ExamSupervisionSchedule::sessionSlots() : TeachingSchedule::hourSlots($today->toDateString());
 
         $invalScheduleIds = [];
 
         if (!$isHoliday && $todayDow >= 1 && $todayDow <= 5) {
-            $schedules = TeachingSchedule::with('schoolClass')
-                ->where('employee_id', $employee->id)
-                ->where('day_of_week', $todayDow)
-                ->orderBy('hour_number')
-                ->get();
+            if ($isExamMode) {
+                $examSchedules = \App\Models\ExamSupervisionSchedule::with('schoolClass')
+                    ->where('employee_id', $employee->id)
+                    ->where('day_of_week', $todayDow)
+                    ->orderBy('session_number')
+                    ->get();
 
-            // Fetch approved inval schedules for today where this employee is the substitute
-            $invalScheduleIds = \App\Models\SubstituteTeaching::where('substitute_employee_id', $employee->id)
-                ->where('date', $today->toDateString())
-                ->where('status', 'approved')
-                ->pluck('teaching_schedule_id')
-                ->toArray();
-
-            if (!empty($invalScheduleIds)) {
-                $invalSchedules = TeachingSchedule::with(['schoolClass', 'employee']) // Load employee to get original teacher's name
-                    ->whereIn('id', $invalScheduleIds)
+                $schedules = $examSchedules->map(function ($es) {
+                    return (object)[
+                        'id' => $es->id,
+                        'hour_number' => $es->session_number,
+                        'subject' => 'Mengawas Ujian: ' . $es->subject . ($es->room_name ? " ({$es->room_name})" : ''),
+                        'schoolClass' => $es->schoolClass ?? (object)['name' => $es->room_name ?? 'Ruang Ujian'],
+                        'employee' => null,
+                    ];
+                });
+            } else {
+                $schedules = TeachingSchedule::with('schoolClass')
+                    ->where('employee_id', $employee->id)
+                    ->where('day_of_week', $todayDow)
                     ->orderBy('hour_number')
                     ->get();
-                    
-                $schedules = $schedules->merge($invalSchedules)->sortBy('hour_number')->values();
+
+                // Fetch approved inval schedules for today where this employee is the substitute
+                $invalScheduleIds = \App\Models\SubstituteTeaching::where('substitute_employee_id', $employee->id)
+                    ->where('date', $today->toDateString())
+                    ->where('status', 'approved')
+                    ->pluck('teaching_schedule_id')
+                    ->toArray();
+
+                if (!empty($invalScheduleIds)) {
+                    $invalSchedules = TeachingSchedule::with(['schoolClass', 'employee']) // Load employee to get original teacher's name
+                        ->whereIn('id', $invalScheduleIds)
+                        ->orderBy('hour_number')
+                        ->get();
+                        
+                    $schedules = $schedules->merge($invalSchedules)->sortBy('hour_number')->values();
+                }
             }
 
             $hasTeachingSchedule = $schedules->isNotEmpty();
@@ -128,10 +154,17 @@ class PresensiController extends Controller
             ->first();
 
         // ── Teaching attendance records ──
-        $teachingAttendances = TeachingAttendance::where('employee_id', $employee->id)
-            ->whereDate('date', $today)
-            ->get()
-            ->keyBy('teaching_schedule_id');
+        if ($isExamMode) {
+            $teachingAttendances = \App\Models\ExamSupervisionAttendance::where('employee_id', $employee->id)
+                ->whereDate('date', $today)
+                ->get()
+                ->keyBy('exam_supervision_schedule_id');
+        } else {
+            $teachingAttendances = TeachingAttendance::where('employee_id', $employee->id)
+                ->whereDate('date', $today)
+                ->get()
+                ->keyBy('teaching_schedule_id');
+        }
 
         // ── Unlocks for today ──
         $unlocks = AttendanceUnlock::where('employee_id', $employee->id)
@@ -215,7 +248,12 @@ class PresensiController extends Controller
             foreach ($schedules as $schedule) {
                 $slot = $hourSlots[$schedule->hour_number] ?? null;
                 $hasAttended = $teachingAttendances->has($schedule->id);
-                $attendanceTime = $hasAttended ? $teachingAttendances[$schedule->id]->time : null;
+                $attendanceTime = null;
+                if ($hasAttended) {
+                    $attRec = $teachingAttendances[$schedule->id];
+                    // ExamSupervisionAttendance doesn't have a 'time' column in migration, so use created_at
+                    $attendanceTime = $isExamMode ? $attRec->created_at->toTimeString() : $attRec->time;
+                }
 
                 $isInval = in_array($schedule->id, $invalScheduleIds);
                 $blocked = false;
@@ -245,13 +283,14 @@ class PresensiController extends Controller
                     // If it is an inval schedule or on Dinas Luar, bypass the slot deadline block
                     if (!$isInval && !$slotOnDinasLuar && $now->gt($slotDeadline)) {
                         // Past deadline — check for unlock
-                        $hasUnlock = $unlocks->where('type', 'teaching')
-                            ->where('teaching_schedule_id', $schedule->id)
+                        $hasUnlock = $unlocks->where('type', $isExamMode ? 'exam_supervision' : 'teaching')
+                            ->where($isExamMode ? 'exam_supervision_schedule_id' : 'teaching_schedule_id', $schedule->id)
                             ->isNotEmpty();
                         if (!$hasUnlock) {
                             $blocked = true;
                             $openStr = ($schedule->hour_number == 10) ? $slot['end'] : $slot['start'];
-                            $blockReason = "Batas presensi Jam ke-{$schedule->hour_number} ({$openStr} + {$teachingLateTolerance} menit) telah terlewat.";
+                            $lbl = $isExamMode ? "Sesi" : "Jam ke-";
+                            $blockReason = "Batas presensi {$lbl}{$schedule->hour_number} ({$openStr} + {$teachingLateTolerance} menit) telah terlewat.";
                         }
                     }
 
@@ -305,6 +344,12 @@ class PresensiController extends Controller
                 'jam_keluar' => $todaySpecialWorkday->jam_keluar,
                 'disable_kbm' => $todaySpecialWorkday->disable_kbm,
             ] : null,
+            'isExamMode' => $isExamMode,
+            'examModeInfo' => $isExamMode ? [
+                'name' => $examDayInfo['name'] ?? 'Ujian Tengah/Akhir Semester',
+                'type' => $examDayInfo['type'] ?? 'UTS/UAS',
+                'jam_keluar' => $examJamPulang,
+            ] : null,
             'today' => $today->translatedFormat('l, d F Y'),
             'currentTime' => $currentTimeStr,
             'attendance' => $attendance ? [
@@ -348,14 +393,23 @@ class PresensiController extends Controller
      */
     public function storeGuru(Request $request)
     {
+        $todayStr = \Carbon\Carbon::today()->toDateString();
+        $isExamMode = \App\Models\TeachingSchedule::isExamMode($todayStr);
+
         $request->validate([
-            'teaching_schedule_id' => 'required|exists:teaching_schedules,id',
+            'teaching_schedule_id' => 'required|integer', // Will check existence manually below based on mode
             'campus_location_id' => 'required|exists:campus_locations,id',
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
             'photo' => 'required|string',
             'gps_telemetry' => 'nullable|string',
         ]);
+
+        if ($isExamMode) {
+            $request->validate(['teaching_schedule_id' => 'exists:exam_supervision_schedules,id']);
+        } else {
+            $request->validate(['teaching_schedule_id' => 'exists:teaching_schedules,id']);
+        }
 
         $telemetryCheck = \App\Services\GpsTelemetryService::validateTelemetry($request->gps_telemetry);
         if (!$telemetryCheck['valid']) {
@@ -374,9 +428,15 @@ class PresensiController extends Controller
 
 
         // ── Fetch schedule first to check partial dinas luar time overlap ──
-        $schedule = TeachingSchedule::findOrFail($request->teaching_schedule_id);
-        $hourSlots = TeachingSchedule::hourSlots();
-        $slot = $hourSlots[$schedule->hour_number] ?? null;
+        if ($isExamMode) {
+            $schedule = \App\Models\ExamSupervisionSchedule::findOrFail($request->teaching_schedule_id);
+            $hourSlots = \App\Models\ExamSupervisionSchedule::sessionSlots();
+            $slot = $hourSlots[$schedule->session_number] ?? null;
+        } else {
+            $schedule = \App\Models\TeachingSchedule::findOrFail($request->teaching_schedule_id);
+            $hourSlots = TeachingSchedule::hourSlots();
+            $slot = $hourSlots[$schedule->hour_number] ?? null;
+        }
 
         $onDinasLuar = \App\Models\LeaveRequest::where('employee_id', $employee->id)
             ->where('type', 'izin_dinas_luar')
@@ -392,10 +452,17 @@ class PresensiController extends Controller
         }
 
         // ── Check duplicate ──
-        $exists = TeachingAttendance::where('employee_id', $employee->id)
-            ->where('teaching_schedule_id', $request->teaching_schedule_id)
-            ->whereDate('date', $today)
-            ->exists();
+        if ($isExamMode) {
+            $exists = \App\Models\ExamSupervisionAttendance::where('employee_id', $employee->id)
+                ->where('exam_supervision_schedule_id', $request->teaching_schedule_id)
+                ->whereDate('date', $today)
+                ->exists();
+        } else {
+            $exists = TeachingAttendance::where('employee_id', $employee->id)
+                ->where('teaching_schedule_id', $request->teaching_schedule_id)
+                ->whereDate('date', $today)
+                ->exists();
+        }
 
         if ($exists) {
             return back()->withErrors(['message' => 'Anda sudah melakukan presensi untuk jam pelajaran ini.']);
@@ -432,13 +499,15 @@ class PresensiController extends Controller
         $status = 'present';
 
         if (!$onDinasLuar && $slot) {
+            $slotNumber = $isExamMode ? $schedule->session_number : $schedule->hour_number;
             // For hour 10 (last hour), open time is slot['end'] (14:40) instead of slot['start'] (14:00)
-            $openTimeStr = ($schedule->hour_number == 10) ? $slot['end'] : $slot['start'];
+            $openTimeStr = (!$isExamMode && $slotNumber == 10) ? $slot['end'] : $slot['start'];
             $openTime = Carbon::createFromFormat('H:i', $openTimeStr);
             $slotDeadline = $openTime->copy()->addMinutes($teachingLateTolerance);
 
             if ($now->lt($openTime)) {
-                return back()->withErrors(['message' => "Belum waktunya jam pelajaran ke-{$schedule->hour_number}. Presensi Jam ke-10 baru dibuka pada pukul " . $openTimeStr]);
+                $sessionLabel = $isExamMode ? "Sesi " : "jam pelajaran ke-";
+                return back()->withErrors(['message' => "Belum waktunya {$sessionLabel}{$slotNumber}. Presensi baru dibuka pada pukul " . $openTimeStr]);
             }
 
             if ($isInval) {
@@ -448,8 +517,12 @@ class PresensiController extends Controller
                 // Check for unlock token
                 $unlock = AttendanceUnlock::where('employee_id', $employee->id)
                     ->whereDate('date', $today)
-                    ->where('type', 'teaching')
-                    ->where('teaching_schedule_id', $schedule->id)
+                    ->where('type', $isExamMode ? 'exam_supervision' : 'teaching')
+                    ->when($isExamMode, function($query) use ($schedule) {
+                        return $query->where('exam_supervision_schedule_id', $schedule->id);
+                    }, function($query) use ($schedule) {
+                        return $query->where('teaching_schedule_id', $schedule->id);
+                    })
                     ->where('used', false)
                     ->where(function ($query) use ($now) {
                         $query->whereNull('expires_at')->orWhere('expires_at', '>=', $now);
@@ -457,7 +530,8 @@ class PresensiController extends Controller
                     ->first();
 
                 if (!$unlock) {
-                    return back()->withErrors(['message' => "Batas waktu presensi Jam ke-{$schedule->hour_number} ({$openTimeStr} + {$teachingLateTolerance} menit) telah terlewat. Hubungi Admin Presensi/Kurikulum."]);
+                    $lbl = $isExamMode ? "Sesi" : "Jam ke-";
+                    return back()->withErrors(['message' => "Batas waktu presensi {$lbl}{$slotNumber} ({$openTimeStr} + {$teachingLateTolerance} menit) telah terlewat. Hubungi Admin Presensi/Kurikulum."]);
                 }
 
                 // Mark unlock as used
@@ -489,18 +563,30 @@ class PresensiController extends Controller
             }
         }
 
-        TeachingAttendance::create([
-            'employee_id' => $employee->id,
-            'teaching_schedule_id' => $request->teaching_schedule_id,
-            'date' => $today,
-            'time' => $now->toTimeString(),
-            'photo' => $photoPath,
-            'latitude' => $request->latitude,
-            'longitude' => $request->longitude,
-            'campus_location_id' => $request->campus_location_id,
-            'status' => $status,
-            'is_dinas_luar' => $onDinasLuar,
-        ]);
+        if ($isExamMode) {
+            \App\Models\ExamSupervisionAttendance::create([
+                'employee_id' => $employee->id,
+                'exam_supervision_schedule_id' => $request->teaching_schedule_id,
+                'date' => $today,
+                'photo_path' => $photoPath,
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+                'status' => $status,
+            ]);
+        } else {
+            TeachingAttendance::create([
+                'employee_id' => $employee->id,
+                'teaching_schedule_id' => $request->teaching_schedule_id,
+                'date' => $today,
+                'time' => $now->toTimeString(),
+                'photo' => $photoPath,
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+                'campus_location_id' => $request->campus_location_id,
+                'status' => $status,
+                'is_dinas_luar' => $onDinasLuar,
+            ]);
+        }
 
         // Increment teaching_hours on daily attendance record
         $dailyAtt = Attendance::firstOrCreate(

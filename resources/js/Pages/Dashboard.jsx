@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import AdSenseBanner from '@/Components/AdSenseBanner';
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, router } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -50,7 +50,7 @@ const item = {
     show: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
 };
 
-export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, employee, todayAttendance, campusLocations, monthlyStats, adminStats, studentStats, executiveStats, todayHoliday, primaryRole, roleData, managementMonthlyStats, dailyTrendStats, studentDailyTrendStats }) {
+export default function Dashboard({ serverTimestamp, isExamMode, isEmployee, isGuruMurni, employee, todayAttendance, campusLocations, monthlyStats, adminStats, studentStats, executiveStats, todayHoliday, primaryRole, roleData, managementMonthlyStats, dailyTrendStats, studentDailyTrendStats }) {
     const { t, language } = useLanguage();
     const dateLocale = language === 'en' ? 'en-US' : 'id-ID';
 
@@ -191,6 +191,43 @@ export default function Dashboard({ serverTimestamp, isEmployee, isGuruMurni, em
             }
         >
             <Head title="Dashboard" />
+            {/* Exam Mode Banner */}
+            {isExamMode && (
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 mt-6">
+                    <motion.div 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 rounded-2xl p-1 shadow-lg shadow-indigo-500/20"
+                    >
+                        <div className="bg-slate-900/40 backdrop-blur-sm rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
+                                    <span className="text-2xl">📝</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-white font-black text-lg tracking-wide flex items-center gap-2">
+                                        PERIODE UJIAN SEDANG BERLANGSUNG
+                                        <span className="relative flex h-3 w-3">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                        </span>
+                                    </h3>
+                                    <p className="text-indigo-100 text-sm font-medium opacity-90">
+                                        Silakan cek jadwal dan lakukan presensi pada menu <strong className="text-white">Jadwal Mengawas Ujian</strong>.
+                                    </p>
+                                </div>
+                            </div>
+                            <Link 
+                                href={['Guru', 'Karyawan'].includes(primaryRole) ? route('my-exam-schedule.index') : route('exam-schedules.index')}
+                                className="inline-flex items-center justify-center bg-white hover:bg-slate-100 text-indigo-700 font-bold rounded-xl h-11 px-6 shadow-md transition-all whitespace-nowrap w-full sm:w-auto"
+                            >
+                                Lihat Jadwal Ujian
+                            </Link>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
 
             <motion.div 
                 variants={container}

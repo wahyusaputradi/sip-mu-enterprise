@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendance;
 use App\Models\TeachingAttendance;
+use App\Models\ExamSupervisionAttendance;
 use App\Models\CampusLocation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -54,6 +55,18 @@ class AttendancePhotoController extends Controller
         if ($campusId) {
             $teachingQuery->where('campus_location_id', $campusId);
         }
+
+        // Query Exam Supervision Attendance
+        $examQuery = ExamSupervisionAttendance::select(['id', 'employee_id', 'date', 'created_at', 'photo_path', 'latitude', 'longitude', 'exam_supervision_schedule_id'])
+            ->with(['employee:id,name,nik', 'examSupervisionSchedule:id,school_class_id,session_number,subject', 'examSupervisionSchedule.schoolClass:id,name'])
+            ->whereBetween('date', [$startDate, $endDate]);
+
+        if ($search) {
+            $examQuery->whereHas('employee', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            });
+        }
+        // ExamSupervisionAttendance doesn't have campus_location_id in migration, so skip campus filtering
 
         $photos = collect();
         $disk = config('filesystems.default', 'public');
@@ -135,6 +148,39 @@ class AttendancePhotoController extends Controller
                         'longitude' => $record->longitude,
                         'campus_name' => $record->campusLocation->name ?? '-',
                         'description' => "Kelas {$className} • {$subject}",
+                        'size_bytes' => 0,
+                        'size_human' => '-',
+                    ]);
+                }
+            }
+        }
+
+        // Fetch exam records
+        if ($photoType === 'all' || $photoType === 'exam') {
+            $examRecords = $examQuery->get();
+            foreach ($examRecords as $record) {
+                if ($record->photo_path) {
+                    $activePhotoCount++;
+                    $sessionNumber = $record->examSupervisionSchedule->session_number ?? '-';
+                    $subject = $record->examSupervisionSchedule->subject ?? '-';
+                    $className = $record->examSupervisionSchedule->schoolClass->name ?? '-';
+
+                    $photos->push([
+                        'id' => $record->id,
+                        'unique_key' => "exam_{$record->id}",
+                        'type' => 'exam',
+                        'type_label' => "Mengawas Sesi {$sessionNumber}",
+                        'hour_number' => $sessionNumber, 
+                        'employee_name' => $record->employee->name ?? 'Pengawas',
+                        'employee_nip' => $record->employee->nip ?? $record->employee->nik ?? '-',
+                        'date' => $record->date,
+                        'time' => $record->created_at ? $record->created_at->format('H:i') : '-',
+                        'photo_path' => $record->photo_path,
+                        'photo_url' => route('media.stream', ['path' => $record->photo_path]),
+                        'latitude' => $record->latitude,
+                        'longitude' => $record->longitude,
+                        'campus_name' => '-',
+                        'description' => "Ujian {$className} — {$subject}",
                         'size_bytes' => 0,
                         'size_human' => '-',
                     ]);
@@ -680,6 +726,15 @@ class AttendancePhotoController extends Controller
                 $teaching->update(['photo' => null]);
                 $deleted = true;
             }
+        } elseif ($type === 'exam') {
+            $exam = ExamSupervisionAttendance::findOrFail($id);
+            if ($exam->photo_path) {
+                if (Storage::disk($disk)->exists($exam->photo_path)) {
+                    Storage::disk($disk)->delete($exam->photo_path);
+                }
+                $exam->update(['photo_path' => null]);
+                $deleted = true;
+            }
         }
 
         if ($deleted) {
@@ -733,6 +788,15 @@ class AttendancePhotoController extends Controller
                         Storage::disk($disk)->delete($teaching->photo);
                     }
                     $teaching->update(['photo' => null]);
+                    $deletedCount++;
+                }
+            } elseif ($type === 'exam') {
+                $exam = ExamSupervisionAttendance::find($id);
+                if ($exam && $exam->photo_path) {
+                    if (Storage::disk($disk)->exists($exam->photo_path)) {
+                        Storage::disk($disk)->delete($exam->photo_path);
+                    }
+                    $exam->update(['photo_path' => null]);
                     $deletedCount++;
                 }
             }

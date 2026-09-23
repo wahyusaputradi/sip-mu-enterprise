@@ -441,7 +441,10 @@ class AttendanceController extends Controller
             $isGuruMurni = $employee->positions->count() === 1 && $employee->positions->first()?->name === 'Guru';
         }
 
+        $isExamMode = \App\Models\TeachingSchedule::isExamMode(Carbon::today()->toDateString());
+
         return Inertia::render('Dashboard', [
+            'isExamMode' => $isExamMode,
             'isGuruMurni' => $isGuruMurni,
             'isEmployee' => (bool)$employee,
             'employee' => $employee ? $employee->load('positions') : null,
@@ -664,12 +667,28 @@ class AttendanceController extends Controller
             // Validasi jam pulang
             $settings = \App\Models\SystemSetting::pluck('value', 'key');
             $jamKeluarSetting = $settings['jam_keluar'] ?? '14:40';
+            
+            $todayStr = Carbon::today()->toDateString();
+            $todaySpecialWorkday = \App\Models\SpecialWorkday::whereDate('date', $todayStr)->first();
+            
+            if ($todaySpecialWorkday) {
+                $jamKeluarSetting = $todaySpecialWorkday->jam_keluar;
+            } else {
+                $isExamMode = \App\Models\TeachingSchedule::isExamMode($todayStr);
+                if ($isExamMode) {
+                    $examDayInfo = \App\Models\TeachingSchedule::getExamDayInfo($todayStr);
+                    $jamKeluarSetting = $examDayInfo['jam_keluar'] ?? ($settings['exam_mode_jam_pulang'] ?? '12:00');
+                }
+            }
+
+            // Normalize time string to H:i
+            $jamKeluarSetting = substr($jamKeluarSetting, 0, 5);
             $jamKeluar = Carbon::createFromFormat('H:i', $jamKeluarSetting);
+            
             $bufferPresensiKeluar = (int)($settings['buffer_presensi_keluar'] ?? 10);
             $jamBatas = $jamKeluar->copy()->addMinutes($bufferPresensiKeluar);
             $now = Carbon::now();
 
-            $todayStr = Carbon::today()->toDateString();
             $hasIzinPulangCepat = \App\Models\LeaveRequest::where('employee_id', $employee->id)
                 ->where('status', 'approved')
                 ->where('type', 'izin_pulang_cepat')
@@ -795,7 +814,7 @@ class AttendanceController extends Controller
             'total'   => $employees->count(),
         ];
 
-        $todayUnlocks = \App\Models\AttendanceUnlock::with(['employee', 'unlockedByUser', 'teachingSchedule.schoolClass'])
+        $todayUnlocks = \App\Models\AttendanceUnlock::with(['employee', 'unlockedByUser', 'teachingSchedule.schoolClass', 'examSupervisionSchedule.schoolClass'])
             ->whereDate('date', $today)
             ->orderBy('created_at', 'desc')
             ->get()
@@ -808,6 +827,10 @@ class AttendanceController extends Controller
                         'hour_number' => $unlock->teachingSchedule->hour_number,
                         'subject' => $unlock->teachingSchedule->subject,
                         'class_name' => $unlock->teachingSchedule->schoolClass->name ?? '-',
+                    ] : null,
+                    'exam_supervision_schedule' => $unlock->examSupervisionSchedule ? [
+                        'session_number' => $unlock->examSupervisionSchedule->session_number,
+                        'class_name' => $unlock->examSupervisionSchedule->schoolClass->name ?? '-',
                     ] : null,
                     'reason' => $unlock->reason,
                     'is_lateness_violation' => (bool)$unlock->is_lateness_violation,
@@ -825,6 +848,7 @@ class AttendanceController extends Controller
             'employees'   => $employees->map(fn($e) => ['id' => $e->id, 'name' => $e->name, 'user_id' => $e->user_id]),
             'todayHoliday' => $todayHoliday,
             'todaySchedules' => $this->getTodayTeachingSchedules(),
+            'todayExamSchedules' => $this->getTodayExamSchedules(),
             'todayUnlocks' => $todayUnlocks,
         ]);
     }
@@ -985,12 +1009,48 @@ class AttendanceController extends Controller
         return $pdf->download("Rekap_Presensi_{$monthName}_{$year}.pdf");
     }
 
+    public function exportExamExcel(Request $request)
+    {
+        $month = $request->input('month', Carbon::now()->month);
+        $year = $request->input('year', Carbon::now()->year);
+        $roleFilter = $request->input('role', 'all');
+
+        $months = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        $fileName = "Rekap_Mengawas_Ujian_{$months[$month]}_{$year}.xlsx";
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\ExamSupervisionRecapExport($month, $year, $roleFilter),
+            $fileName
+        );
+    }
+
+    public function exportExamPdf(Request $request)
+    {
+        $month = (int) $request->input('month', Carbon::now()->month);
+        $year = (int) $request->input('year', Carbon::now()->year);
+        $roleFilter = $request->input('role', 'all');
+
+        $result = \App\Services\ExamRecapService::getMonthlyRecap($month, $year, $roleFilter);
+
+        $recapData = $result['recapData'];
+        $stats = $result['totalStats'];
+        $monthName = $result['monthName'];
+        $periodLabel = $result['periodLabel'];
+        $printDate = Carbon::now()->translatedFormat('d F Y, H:i');
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.exam-attendance-recap', compact('recapData', 'stats', 'monthName', 'year', 'printDate', 'periodLabel'));
+        $pdf->setPaper('A4', 'landscape');
+
+        return $pdf->download("Rekap_Mengawas_Ujian_{$monthName}_{$year}.pdf");
+    }
+
     public function unlockAttendance(Request $request)
     {
         $request->validate([
             'employee_id' => 'required|exists:employees,id',
-            'type' => 'required|in:daily_checkin,daily_checkout,teaching',
+            'type' => 'required|in:daily_checkin,daily_checkout,teaching,exam_supervision',
             'teaching_schedule_id' => 'nullable|exists:teaching_schedules,id',
+            'exam_supervision_schedule_id' => 'nullable|exists:exam_supervision_schedules,id',
             'reason' => 'nullable|string|max:500',
             'expires_in_minutes' => 'required|integer|in:15,30,60',
             'is_lateness_violation' => 'nullable|boolean',
@@ -1046,6 +1106,10 @@ class AttendanceController extends Controller
             $query->where('teaching_schedule_id', $request->teaching_schedule_id);
         }
 
+        if ($request->type === 'exam_supervision' && $request->exam_supervision_schedule_id) {
+            $query->where('exam_supervision_schedule_id', $request->exam_supervision_schedule_id);
+        }
+
         if ($query->exists()) {
             return back()->withErrors(['message' => 'Unlock sudah diberikan sebelumnya untuk pegawai ini hari ini.']);
         }
@@ -1054,7 +1118,8 @@ class AttendanceController extends Controller
             'employee_id' => $request->employee_id,
             'date' => $today,
             'type' => $request->type,
-            'teaching_schedule_id' => $request->teaching_schedule_id,
+            'teaching_schedule_id' => $request->type === 'teaching' ? $request->teaching_schedule_id : null,
+            'exam_supervision_schedule_id' => $request->type === 'exam_supervision' ? $request->exam_supervision_schedule_id : null,
             'unlocked_by' => Auth::id(),
             'reason' => $request->reason,
             'is_lateness_violation' => $request->has('is_lateness_violation') ? (bool)$request->is_lateness_violation : true,
@@ -1066,6 +1131,26 @@ class AttendanceController extends Controller
     /**
      * Get today's teaching schedules grouped by employee.
      */
+    private function getTodayExamSchedules()
+    {
+        $todayDow = \Carbon\Carbon::now()->dayOfWeekIso;
+        if ($todayDow < 1 || $todayDow > 5) return [];
+
+        return \App\Models\ExamSupervisionSchedule::with('schoolClass')
+            ->where('day_of_week', $todayDow)
+            ->orderBy('session_number')
+            ->get()
+            ->groupBy('employee_id')
+            ->map(fn($schedules) => $schedules->map(fn($s) => [
+                'id' => $s->id,
+                'session_number' => $s->session_number,
+                'class_name' => $s->schoolClass?->name ?? '-',
+                'time_start' => \App\Models\ExamSupervisionSchedule::sessionSlots()[$s->session_number]['start'] ?? null,
+                'time_end' => \App\Models\ExamSupervisionSchedule::sessionSlots()[$s->session_number]['end'] ?? null,
+            ])->values())
+            ->toArray();
+    }
+
     private function getTodayTeachingSchedules()
     {
         $todayDow = Carbon::now()->dayOfWeekIso;

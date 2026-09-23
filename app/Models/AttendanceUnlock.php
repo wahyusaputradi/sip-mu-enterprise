@@ -14,6 +14,7 @@ class AttendanceUnlock extends Model
         'date',
         'type',
         'teaching_schedule_id',
+        'exam_supervision_schedule_id',
         'unlocked_by',
         'reason',
         'is_lateness_violation',
@@ -36,6 +37,11 @@ class AttendanceUnlock extends Model
     public function teachingSchedule()
     {
         return $this->belongsTo(TeachingSchedule::class);
+    }
+
+    public function examSupervisionSchedule()
+    {
+        return $this->belongsTo(ExamSupervisionSchedule::class);
     }
 
     public function unlockedByUser()

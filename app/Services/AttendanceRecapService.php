@@ -254,7 +254,52 @@ class AttendanceRecapService
                     $schedulesOnDay = $schedules->where('day_of_week', $dayOfWeek);
                     if ($schedulesOnDay->isEmpty()) continue;
 
+                    $isExamOnDate = TeachingSchedule::isExamMode($wDate);
+                    
+                    if ($isExamOnDate) {
+                        if ($wDate <= $todayStr) {
+                            $totalRegularJtmOnDay = $schedulesOnDay->count();
+
+                            // Cek permohonan izin/sakit pegawai
+                            $onLeave = false;
+                            foreach ($leaves as $leave) {
+                                if (\Carbon\Carbon::parse($wDate)->betweenIncluded(\Carbon\Carbon::parse($leave->start_date), \Carbon\Carbon::parse($leave->end_date))) {
+                                    $onLeave = true;
+                                    break;
+                                }
+                            }
+                            
+                            if ($onLeave) {
+                                $jtm_permit += $totalRegularJtmOnDay;
+                            } else {
+                                $examSchedules = \App\Models\ExamSupervisionSchedule::where('employee_id', $emp->id)
+                                    ->where('day_of_week', $dayOfWeek)
+                                    ->get();
+                                
+                                $totalExamSchedules = $examSchedules->count();
+                                $presenceRatio = 1.0; 
+                                
+                                if ($totalExamSchedules > 0) {
+                                    $attendedExamSchedules = \App\Models\ExamSupervisionAttendance::where('employee_id', $emp->id)
+                                        ->where('date', $wDate)
+                                        ->whereIn('status', ['present', 'late'])
+                                        ->count();
+                                        
+                                    $presenceRatio = $attendedExamSchedules / $totalExamSchedules;
+                                }
+
+                                $earnedJtm = (int) round($totalRegularJtmOnDay * $presenceRatio);
+                                $missedJtm = $totalRegularJtmOnDay - $earnedJtm;
+                                
+                                $jtm_holiday += $earnedJtm;
+                                $jtm_absent += $missedJtm;
+                            }
+                        }
+                        continue;
+                    }
+
                     foreach ($schedulesOnDay as $schedule) {
+
                         // Cek jika slot ini digantikan oleh guru lain (bursa inval)
                         $subsOnDay = $substitutions->get($emp->id)?->get($wDate) ?? collect();
                         $isSubstituted = $subsOnDay->where('teaching_schedule_id', $schedule->id)->isNotEmpty();

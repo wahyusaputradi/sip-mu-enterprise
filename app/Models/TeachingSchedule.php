@@ -42,9 +42,9 @@ class TeachingSchedule extends Model
     }
 
     /**
-     * Hour time slots based on SMK Manbaul Ulum schedule.
+     * Regular hour time slots based on SMK Manbaul Ulum schedule.
      */
-    public static function hourSlots(): array
+    public static function regularHourSlots(): array
     {
         return [
             1  => ['start' => '07:00', 'end' => '07:40'],
@@ -58,5 +58,84 @@ class TeachingSchedule extends Model
             9  => ['start' => '13:20', 'end' => '14:00'],
             10 => ['start' => '14:00', 'end' => '14:40'],
         ];
+    }
+
+    /**
+     * Exam hour time slots (UTS / UAS).
+     */
+    public static function examHourSlots(): array
+    {
+        return [
+            1 => ['start' => '07:30', 'end' => '08:30'],
+            2 => ['start' => '08:30', 'end' => '09:30'],
+            3 => ['start' => '10:00', 'end' => '11:00'],
+            4 => ['start' => '11:00', 'end' => '12:00'],
+        ];
+    }
+
+    /**
+     * Check if exam mode is active for a given date.
+     */
+    public static function isExamMode(?string $date = null): bool
+    {
+        $dateStr = $date ?: \Carbon\Carbon::today()->format('Y-m-d');
+        
+        // 1. Check if date is listed in exam_days table
+        $isExamDay = ExamDay::whereDate('date', $dateStr)->exists();
+        if ($isExamDay) {
+            return true;
+        }
+
+        // 2. Fallback check for global setting toggle
+        $examEnabled = SystemSetting::where('key', 'exam_mode_enabled')->value('value');
+        if ($examEnabled === '1' || $examEnabled === 1 || $examEnabled === 'true' || $examEnabled === true) {
+            $startDate = SystemSetting::where('key', 'exam_mode_start_date')->value('value');
+            $endDate = SystemSetting::where('key', 'exam_mode_end_date')->value('value');
+
+            if ($startDate && $endDate) {
+                return $dateStr >= $startDate && $dateStr <= $endDate;
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get exam day details for a given date if active.
+     */
+    public static function getExamDayInfo(?string $date = null): ?array
+    {
+        $dateStr = $date ?: \Carbon\Carbon::today()->format('Y-m-d');
+        $examDay = ExamDay::whereDate('date', $dateStr)->first();
+
+        if ($examDay) {
+            return [
+                'name' => $examDay->name,
+                'type' => strtoupper($examDay->type),
+                'jam_keluar' => $examDay->jam_keluar,
+                'date' => $examDay->date ? $examDay->date->format('Y-m-d') : $dateStr,
+            ];
+        }
+
+        if (self::isExamMode($dateStr)) {
+            $settings = SystemSetting::pluck('value', 'key');
+            return [
+                'name' => 'Ujian Tengah/Akhir Semester',
+                'type' => 'UTS/UAS',
+                'jam_keluar' => $settings['exam_mode_jam_pulang'] ?? '12:00',
+                'date' => $dateStr,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Get hour time slots dynamically based on exam mode.
+     */
+    public static function hourSlots(?string $date = null): array
+    {
+        return self::regularHourSlots();
     }
 }

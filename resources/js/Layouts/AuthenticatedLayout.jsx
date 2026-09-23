@@ -39,7 +39,8 @@ import {
     QrCode,
     Printer,
     FileSpreadsheet,
-    BookOpen
+    BookOpen,
+    ShieldAlert
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -89,7 +90,7 @@ export default function AuthenticatedLayout({ header, children }) {
         roles: [],
         ...rawUser,
     };
-    const { flash = {}, errors = {} } = usePage().props;
+    const { flash = {}, errors = {}, isExamMode = false } = usePage().props;
     const { t } = useLanguage();
     
     // Map new custom roles to system roles for backward compatibility with menu filtering
@@ -232,7 +233,12 @@ export default function AuthenticatedLayout({ header, children }) {
             { name: t('menu.dashboard'), route: 'dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
             { name: t('menu.presensi'), route: 'attendance.presensi', icon: <MapPin className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
             { name: t('menu.profile'), route: 'profile.edit', icon: <UserIcon className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
-            { name: t('menu.my_schedule'), route: 'my-schedule.index', icon: <GraduationCap className="w-5 h-5" />, roles: ['Guru'] },
+            
+            ...(isExamMode 
+                ? [{ name: 'Jadwal Mengawas', route: 'my-exam-schedule.index', icon: <ShieldCheck className="w-5 h-5" />, roles: ['Guru', 'Karyawan'] }]
+                : [{ name: t('menu.my_schedule'), route: 'my-schedule.index', icon: <GraduationCap className="w-5 h-5" />, roles: ['Guru'] }]
+            ),
+
             { name: t('menu.recap'), route: 'my-attendance.index', icon: <History className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
             { name: t('menu.leave_request'), route: 'leave-requests.index', icon: <FilePlus className="w-5 h-5" />, roles: ['Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
             { name: t('menu.inval'), route: 'invals.index', icon: <CalendarClock className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Bendahara', 'Absensi', 'Guru', 'Karyawan'] },
@@ -243,6 +249,7 @@ export default function AuthenticatedLayout({ header, children }) {
             { name: t('menu.attendance_recap'), route: 'attendance.recap', icon: <ClipboardList className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: t('menu.photos'), route: 'monitoring.photos.index', icon: <Image className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: t('menu.schedules'), route: 'teaching-schedules.index', icon: <CalendarDays className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
+            { name: 'Jadwal Pengawas Ujian', route: 'exam-schedules.index', icon: <ShieldAlert className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
             { name: t('menu.leave_approval'), route: 'leave-requests.approval', icon: <ClipboardCheck className="w-5 h-5" />, roles: ['Super Admin', 'Kepala Sekolah', 'Kurikulum', 'Absensi'] },
         ]},
         // ═══ PRESENSI & KESISWAAN (SMK) ═══

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from '@inertiajs/react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Calendar, User, ArrowLeft, Tag, Share2, BookOpen, Clock, ShieldCheck } from 'lucide-react';
+import AdSense from '@/Components/AdSense';
 
 export default function BlogDetail({ article, relatedArticles, auth }) {
     if (!article) return null;
@@ -57,11 +58,15 @@ export default function BlogDetail({ article, relatedArticles, auth }) {
                     />
                 </div>
 
+                <AdSense slot="5548607007" className="my-6" />
+
                 {/* Article Main Body Content */}
                 <div
                     className="prose prose-invert max-w-none text-slate-300 text-sm sm:text-base leading-relaxed space-y-6 bg-slate-900/40 border border-slate-800/80 p-6 sm:p-10 rounded-3xl"
                     dangerouslySetInnerHTML={{ __html: article.content }}
                 />
+
+                <AdSense slot="5548607007" className="my-8" />
 
                 {/* Related Articles Section */}
                 {relatedArticles && relatedArticles.length > 0 && (

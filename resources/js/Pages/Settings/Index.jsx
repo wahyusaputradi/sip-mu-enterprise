@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Settings as SettingsIcon, CalendarPlus, Trash2, CalendarDays, Clock, Save, Building2, Timer } from 'lucide-react';
+import { Settings as SettingsIcon, CalendarPlus, Trash2, CalendarDays, Clock, Save, Building2, Timer, Pencil, X, GraduationCap, ShieldAlert } from 'lucide-react';
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 
-export default function Index({ settings, holidays, specialWorkdays = [] }) {
+export default function Index({ settings, holidays, specialWorkdays = [], examDays = [] }) {
     const { data: settingData, setData: setSettingData, post: postSettings, processing: processingSettings, errors: settingErrors } = useForm({
         school_name: settings.school_name || 'SMK Manbaul Ulum Cirebon',
         jam_masuk: settings.jam_masuk || '07:00',
@@ -29,6 +29,10 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
         student_jam_pulang: settings.student_jam_pulang || '15:00',
         student_jam_pulang_tutup: settings.student_jam_pulang_tutup || '17:30',
         student_batas_terlambat_menit: settings.student_batas_terlambat_menit || '15',
+        exam_mode_enabled: settings.exam_mode_enabled !== undefined ? (settings.exam_mode_enabled === '1' || settings.exam_mode_enabled === 1 || settings.exam_mode_enabled === true) : false,
+        exam_mode_start_date: settings.exam_mode_start_date || '',
+        exam_mode_end_date: settings.exam_mode_end_date || '',
+        exam_mode_jam_pulang: settings.exam_mode_jam_pulang || '12:00',
     });
 
     const { data: holidayData, setData: setHolidayData, post: postHoliday, reset: resetHoliday, processing: processingHoliday, errors: holidayErrors } = useForm({
@@ -47,8 +51,101 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
         disable_kbm: true,
     });
 
+    const { data: examDayData, setData: setExamDayData, post: postExamDay, reset: resetExamDay, processing: processingExamDay, errors: examDayErrors } = useForm({
+        mode: 'single',
+        date: '',
+        start_date: '',
+        end_date: '',
+        name: '',
+        type: 'uts',
+        jam_keluar: '12:00',
+    });
+
     const [activeTab, setActiveTab] = useState('umum');
     const [checkedHolidayIds, setCheckedHolidayIds] = useState([]);
+    const [editingSpecialWorkday, setEditingSpecialWorkday] = useState(null);
+    const [editingHoliday, setEditingHoliday] = useState(null);
+    const [editingExamDay, setEditingExamDay] = useState(null);
+    const [checkedExamDayIds, setCheckedExamDayIds] = useState([]);
+
+    const toggleOneExamDay = (id) => {
+        setCheckedExamDayIds(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+
+    const allExamDaysChecked = examDays && examDays.length > 0 && examDays.every(e => checkedExamDayIds.includes(e.id));
+
+    const toggleAllExamDays = () => {
+        if (allExamDaysChecked) {
+            setCheckedExamDayIds([]);
+        } else {
+            setCheckedExamDayIds(examDays.map(e => e.id));
+        }
+    };
+
+    const submitExamDay = (e) => {
+        e.preventDefault();
+        if (editingExamDay) {
+            router.put(route('exam-days.update', editingExamDay.id), {
+                date: examDayData.date,
+                name: examDayData.name,
+                type: examDayData.type,
+                jam_keluar: examDayData.jam_keluar,
+            }, {
+                onSuccess: () => {
+                    toast.success("Hari Ujian berhasil diperbarui.");
+                    resetExamDay();
+                    setEditingExamDay(null);
+                }
+            });
+        } else {
+            postExamDay(route('exam-days.store'), {
+                onSuccess: () => {
+                    toast.success("Hari/Periode Ujian berhasil ditambahkan.");
+                    resetExamDay();
+                }
+            });
+        }
+    };
+
+    const handleEditExamDay = (ed) => {
+        setEditingExamDay(ed);
+        const rawDate = typeof ed.date === 'string' ? ed.date.split('T')[0] : '';
+        setExamDayData({
+            mode: 'single',
+            date: rawDate,
+            start_date: '',
+            end_date: '',
+            name: ed.name || '',
+            type: ed.type || 'uts',
+            jam_keluar: ed.jam_keluar ? ed.jam_keluar.substring(0, 5) : '12:00',
+        });
+    };
+
+    const cancelEditExamDay = () => {
+        setEditingExamDay(null);
+        resetExamDay();
+    };
+
+    const handleDeleteExamDay = (id) => {
+        if (confirm("Apakah Anda yakin ingin menghapus hari ujian ini?")) {
+            router.delete(route('exam-days.destroy', id), {
+                onSuccess: () => toast.success("Hari Ujian berhasil dihapus.")
+            });
+        }
+    };
+
+    const handleBulkDeleteExamDays = () => {
+        if (confirm(`Hapus ${checkedExamDayIds.length} hari ujian yang terpilih?`)) {
+            router.post(route('exam-days.bulk-destroy'), { ids: checkedExamDayIds }, {
+                onSuccess: () => {
+                    toast.success("Hari Ujian terpilih berhasil dihapus.");
+                    setCheckedExamDayIds([]);
+                }
+            });
+        }
+    };
 
     const toggleOneHoliday = (id) => {
         setCheckedHolidayIds(prev => 
@@ -75,28 +172,91 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
 
     const submitHoliday = (e) => {
         e.preventDefault();
-        postHoliday(route('holidays.store'), {
-            onSuccess: () => {
-                toast.success("Hari libur berhasil ditambahkan.");
-                resetHoliday();
-            }
+        if (editingHoliday) {
+            router.put(route('holidays.update', editingHoliday.id), {
+                date: holidayData.date,
+                description: holidayData.description,
+                is_national_holiday: holidayData.is_national_holiday,
+            }, {
+                onSuccess: () => {
+                    toast.success("Hari libur berhasil diperbarui.");
+                    resetHoliday();
+                    setEditingHoliday(null);
+                }
+            });
+        } else {
+            postHoliday(route('holidays.store'), {
+                onSuccess: () => {
+                    toast.success("Hari libur berhasil ditambahkan.");
+                    resetHoliday();
+                }
+            });
+        }
+    };
+
+    const handleEditHoliday = (holiday) => {
+        setEditingHoliday(holiday);
+        const rawDate = typeof holiday.date === 'string' ? holiday.date.split('T')[0] : '';
+        setHolidayData({
+            mode: 'single',
+            date: rawDate,
+            start_date: '',
+            end_date: '',
+            description: holiday.description || '',
+            is_national_holiday: Boolean(holiday.is_national_holiday),
         });
+    };
+
+    const cancelEditHoliday = () => {
+        setEditingHoliday(null);
+        resetHoliday();
     };
 
     const submitSpecialWorkday = (e) => {
         e.preventDefault();
-        postSpecialWorkday(route('special-workdays.store'), {
-            onSuccess: () => {
-                toast.success("Hari kerja khusus berhasil ditambahkan.");
-                resetSpecialWorkday();
-            }
+        if (editingSpecialWorkday) {
+            router.put(route('special-workdays.update', editingSpecialWorkday.id), specialWorkdayData, {
+                onSuccess: () => {
+                    toast.success("Hari kerja khusus berhasil diperbarui.");
+                    resetSpecialWorkday();
+                    setEditingSpecialWorkday(null);
+                }
+            });
+        } else {
+            postSpecialWorkday(route('special-workdays.store'), {
+                onSuccess: () => {
+                    toast.success("Hari kerja khusus berhasil ditambahkan.");
+                    resetSpecialWorkday();
+                }
+            });
+        }
+    };
+
+    const handleEditSpecialWorkday = (sw) => {
+        setEditingSpecialWorkday(sw);
+        const rawDate = typeof sw.date === 'string' ? sw.date.split('T')[0] : '';
+        setSpecialWorkdayData({
+            date: rawDate,
+            name: sw.name || '',
+            jam_keluar: sw.jam_keluar ? sw.jam_keluar.substring(0, 5) : '12:00',
+            disable_kbm: Boolean(sw.disable_kbm),
         });
+    };
+
+    const cancelEditSpecialWorkday = () => {
+        setEditingSpecialWorkday(null);
+        resetSpecialWorkday();
     };
 
     const handleDeleteSpecialWorkday = (id) => {
         if (confirm('Hapus hari kerja khusus ini?')) {
             router.delete(route('special-workdays.destroy', id), {
-                onSuccess: () => toast.success("Hari kerja khusus berhasil dihapus.")
+                onSuccess: () => {
+                    toast.success("Hari kerja khusus berhasil dihapus.");
+                    if (editingSpecialWorkday?.id === id) {
+                        cancelEditSpecialWorkday();
+                    }
+                }
             });
         }
     };
@@ -107,6 +267,9 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                 onSuccess: () => {
                     toast.success("Hari libur berhasil dihapus.");
                     setCheckedHolidayIds(prev => prev.filter(x => x !== id));
+                    if (editingHoliday?.id === id) {
+                        cancelEditHoliday();
+                    }
                 }
             });
         }
@@ -127,6 +290,7 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
         { id: 'umum', label: 'Konfigurasi Umum', icon: <SettingsIcon className="w-4 h-4 mr-2" /> },
         { id: 'libur', label: 'Manajemen Hari Libur', icon: <CalendarDays className="w-4 h-4 mr-2" /> },
         { id: 'khusus', label: 'Hari Kerja Khusus (Acara)', icon: <Clock className="w-4 h-4 mr-2" /> },
+        { id: 'ujian', label: 'Hari / Periode Ujian', icon: <ShieldAlert className="w-4 h-4 mr-2" /> },
     ];
 
     return (
@@ -430,7 +594,6 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                                     </div>
                                                 </div>
                                             </div>
-
                                             {/* Kebijakan Libur Kerja */}
                                             <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50">
                                                 <div className="flex items-center justify-between">
@@ -563,29 +726,31 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                             <div className="bg-slate-50/80 border border-slate-200 p-6 rounded-[1.5rem]">
                                                 <h3 className="text-lg font-bold text-slate-800 flex items-center mb-6">
                                                     <CalendarPlus className="mr-2 h-5 w-5 text-indigo-500" />
-                                                    Tambah Libur
+                                                    {editingHoliday ? 'Edit Hari Libur' : 'Tambah Libur'}
                                                 </h3>
                                                 <form onSubmit={submitHoliday} className="space-y-5">
-                                                    {/* Mode Switcher */}
-                                                    <div className="space-y-2">
-                                                        <Label className="font-bold text-slate-700">Tipe Input Hari Libur</Label>
-                                                        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100/80 rounded-xl border border-slate-200/50">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setHolidayData('mode', 'single')}
-                                                                className={`py-2 text-xs font-bold rounded-lg transition-all ${holidayData.mode === 'single' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/10' : 'text-slate-500 hover:text-slate-800'}`}
-                                                            >
-                                                                Satu Hari
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setHolidayData('mode', 'range')}
-                                                                className={`py-2 text-xs font-bold rounded-lg transition-all ${holidayData.mode === 'range' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/10' : 'text-slate-500 hover:text-slate-800'}`}
-                                                            >
-                                                                Rentang Tanggal
-                                                            </button>
+                                                    {/* Mode Switcher (Hanya ditampilkan saat Tambah Baru) */}
+                                                    {!editingHoliday && (
+                                                        <div className="space-y-2">
+                                                            <Label className="font-bold text-slate-700">Tipe Input Hari Libur</Label>
+                                                            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100/80 rounded-xl border border-slate-200/50">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setHolidayData('mode', 'single')}
+                                                                    className={`py-2 text-xs font-bold rounded-lg transition-all ${holidayData.mode === 'single' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/10' : 'text-slate-500 hover:text-slate-800'}`}
+                                                                >
+                                                                    Satu Hari
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setHolidayData('mode', 'range')}
+                                                                    className={`py-2 text-xs font-bold rounded-lg transition-all ${holidayData.mode === 'range' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/10' : 'text-slate-500 hover:text-slate-800'}`}
+                                                                >
+                                                                    Rentang Tanggal
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    )}
 
                                                     {holidayData.mode === 'single' ? (
                                                         <div className="space-y-3">
@@ -649,13 +814,26 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                                             Libur Nasional (Tgl Merah)
                                                         </Label>
                                                     </div>
-                                                    <Button 
-                                                        type="submit" 
-                                                        disabled={processingHoliday} 
-                                                        className="w-full rounded-xl font-bold h-11 bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_4px_12px_rgba(79,70,229,0.2)] transition-all"
-                                                    >
-                                                        Tambahkan
-                                                    </Button>
+                                                    <div className="flex gap-2">
+                                                        <Button 
+                                                            type="submit" 
+                                                            disabled={processingHoliday} 
+                                                            className="flex-1 rounded-xl font-bold h-11 bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_4px_12px_rgba(79,70,229,0.2)] transition-all"
+                                                        >
+                                                            {editingHoliday ? 'Simpan Perubahan' : 'Tambahkan'}
+                                                        </Button>
+                                                        {editingHoliday && (
+                                                            <Button 
+                                                                type="button" 
+                                                                variant="outline"
+                                                                onClick={cancelEditHoliday}
+                                                                className="rounded-xl font-bold h-11 border-slate-200 text-slate-600 hover:bg-slate-100"
+                                                            >
+                                                                <X className="w-4 h-4 mr-1" />
+                                                                Batal
+                                                            </Button>
+                                                        )}
+                                                    </div>
                                                 </form>
                                             </div>
                                         </div>
@@ -705,7 +883,7 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                                     <TableBody>
                                                         {holidays && holidays.length > 0 ? (
                                                             holidays.map((holiday) => (
-                                                                <TableRow key={holiday.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100">
+                                                                <TableRow key={holiday.id} className={`transition-colors border-b border-slate-100 ${editingHoliday?.id === holiday.id ? 'bg-indigo-50/70 hover:bg-indigo-50/90' : 'hover:bg-slate-50/50'}`}>
                                                                     <TableCell className="px-6 py-4 w-12">
                                                                         <Checkbox 
                                                                             checked={checkedHolidayIds.includes(holiday.id)}
@@ -729,13 +907,28 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                                                             </span>
                                                                         }
                                                                     </TableCell>
-                                                                    <TableCell className="text-right px-6">
+                                                                    <TableCell className="text-right px-6 space-x-1.5 whitespace-nowrap">
+                                                                        <Button 
+                                                                            type="button"
+                                                                            variant="outline" 
+                                                                            size="icon" 
+                                                                            onClick={() => handleEditHoliday(holiday)}
+                                                                            className={`h-8 w-8 rounded-lg border-slate-200 transition-colors ${
+                                                                                editingHoliday?.id === holiday.id 
+                                                                                    ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700' 
+                                                                                    : 'hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200'
+                                                                            }`}
+                                                                            title="Edit Hari Libur"
+                                                                        >
+                                                                            <Pencil className="w-4 h-4" />
+                                                                        </Button>
                                                                         <Button 
                                                                             type="button"
                                                                             variant="outline" 
                                                                             size="icon" 
                                                                             onClick={() => handleDeleteHoliday(holiday.id)}
                                                                             className="h-8 w-8 rounded-lg border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
+                                                                            title="Hapus Hari Libur"
                                                                         >
                                                                             <Trash2 className="w-4 h-4" />
                                                                         </Button>
@@ -777,7 +970,9 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                                         <Clock className="w-5 h-5" />
                                                     </div>
                                                     <div>
-                                                        <h3 className="font-bold text-slate-900 text-base">Tambah Hari Kerja Khusus</h3>
+                                                        <h3 className="font-bold text-slate-900 text-base">
+                                                            {editingSpecialWorkday ? 'Edit Hari Kerja Khusus' : 'Tambah Hari Kerja Khusus'}
+                                                        </h3>
                                                         <p className="text-xs text-slate-500 font-semibold">Acara sekolah / Lomba / Jam pulang khusus</p>
                                                     </div>
                                                 </div>
@@ -832,13 +1027,26 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                                         </Label>
                                                     </div>
 
-                                                    <Button 
-                                                        type="submit" 
-                                                        disabled={processingSpecialWorkday} 
-                                                        className="w-full rounded-xl font-bold h-11 bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_4px_12px_rgba(79,70,229,0.2)] transition-all"
-                                                    >
-                                                        Simpan Hari Kerja Khusus
-                                                    </Button>
+                                                    <div className="flex gap-2">
+                                                        <Button 
+                                                            type="submit" 
+                                                            disabled={processingSpecialWorkday} 
+                                                            className="flex-1 rounded-xl font-bold h-11 bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_4px_12px_rgba(79,70,229,0.2)] transition-all"
+                                                        >
+                                                            {editingSpecialWorkday ? 'Simpan Perubahan' : 'Simpan Hari Kerja Khusus'}
+                                                        </Button>
+                                                        {editingSpecialWorkday && (
+                                                            <Button 
+                                                                type="button" 
+                                                                variant="outline"
+                                                                onClick={cancelEditSpecialWorkday}
+                                                                className="rounded-xl font-bold h-11 border-slate-200 text-slate-600 hover:bg-slate-100"
+                                                            >
+                                                                <X className="w-4 h-4 mr-1" />
+                                                                Batal
+                                                            </Button>
+                                                        )}
+                                                    </div>
                                                 </form>
                                             </div>
                                         </div>
@@ -870,7 +1078,7 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                                     <TableBody>
                                                         {specialWorkdays && specialWorkdays.length > 0 ? (
                                                             specialWorkdays.map((sw) => (
-                                                                <TableRow key={sw.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100">
+                                                                <TableRow key={sw.id} className={`transition-colors border-b border-slate-100 ${editingSpecialWorkday?.id === sw.id ? 'bg-indigo-50/70 hover:bg-indigo-50/90' : 'hover:bg-slate-50/50'}`}>
                                                                     <TableCell className="font-bold text-slate-700 py-4 px-6">
                                                                         {new Date(sw.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
                                                                     </TableCell>
@@ -890,13 +1098,28 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                                                             </span>
                                                                         }
                                                                     </TableCell>
-                                                                    <TableCell className="text-right px-6">
+                                                                    <TableCell className="text-right px-6 space-x-1.5 whitespace-nowrap">
+                                                                        <Button 
+                                                                            type="button"
+                                                                            variant="outline" 
+                                                                            size="icon" 
+                                                                            onClick={() => handleEditSpecialWorkday(sw)}
+                                                                            className={`h-8 w-8 rounded-lg border-slate-200 transition-colors ${
+                                                                                editingSpecialWorkday?.id === sw.id 
+                                                                                    ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700' 
+                                                                                    : 'hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200'
+                                                                            }`}
+                                                                            title="Edit Hari Kerja Khusus"
+                                                                        >
+                                                                            <Pencil className="w-4 h-4" />
+                                                                        </Button>
                                                                         <Button 
                                                                             type="button"
                                                                             variant="outline" 
                                                                             size="icon" 
                                                                             onClick={() => handleDeleteSpecialWorkday(sw.id)}
                                                                             className="h-8 w-8 rounded-lg border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
+                                                                            title="Hapus Hari Kerja Khusus"
                                                                         >
                                                                             <Trash2 className="w-4 h-4" />
                                                                         </Button>
@@ -915,6 +1138,287 @@ export default function Index({ settings, holidays, specialWorkdays = [] }) {
                                                         )}
                                                     </TableBody>
                                                 </Table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                  </motion.div>
+                              )}
+
+                                
+                            {activeTab === 'ujian' && (
+                                <motion.div 
+                                    key="ujian"
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 20 }}
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    <div className="space-y-6">
+                                        <div className="flex flex-col lg:flex-row gap-6">
+                                            <div className="lg:w-1/3 flex-shrink-0">
+                                                <form onSubmit={submitExamDay} className="bg-white/80 p-6 rounded-[2rem] border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sticky top-6">
+                                                    <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-100">
+                                                        <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                                                            <ShieldAlert className="w-5 h-5" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="font-bold text-slate-900 text-base">
+                                                                {editingExamDay ? 'Edit Hari Ujian' : 'Tambah Hari Ujian'}
+                                                            </h3>
+                                                            <p className="text-xs text-slate-500 font-semibold">Mode Ujian UTS / UAS</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-5 mb-6">
+                                                        {!editingExamDay && (
+                                                            <div className="space-y-3">
+                                                                <Label className="font-bold text-slate-700">Tipe Input Tanggal</Label>
+                                                                <div className="grid grid-cols-2 gap-3">
+                                                                    <div className="relative flex items-start">
+                                                                        <div className="flex h-6 items-center">
+                                                                            <input
+                                                                                id="mode-single-exam"
+                                                                                type="radio"
+                                                                                checked={examDayData.mode === 'single'}
+                                                                                onChange={() => setExamDayData('mode', 'single')}
+                                                                                className="h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-600"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="ml-3 text-sm leading-6">
+                                                                            <label htmlFor="mode-single-exam" className="font-bold text-slate-900">Satu Hari</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="relative flex items-start">
+                                                                        <div className="flex h-6 items-center">
+                                                                            <input
+                                                                                id="mode-range-exam"
+                                                                                type="radio"
+                                                                                checked={examDayData.mode === 'range'}
+                                                                                onChange={() => setExamDayData('mode', 'range')}
+                                                                                className="h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-600"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="ml-3 text-sm leading-6">
+                                                                            <label htmlFor="mode-range-exam" className="font-bold text-slate-900">Rentang Waktu</label>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        <AnimatePresence mode="popLayout">
+                                                            {examDayData.mode === 'single' ? (
+                                                                <motion.div key="single-date-exam" className="space-y-2">
+                                                                    <Label className="font-bold text-slate-700">Pilih Tanggal <span className="text-rose-500">*</span></Label>
+                                                                    <Input 
+                                                                        type="date"
+                                                                        value={examDayData.date}
+                                                                        onChange={e => setExamDayData('date', e.target.value)}
+                                                                        required={examDayData.mode === 'single'}
+                                                                        className={`rounded-xl bg-slate-50/50 ${examDayErrors.date ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
+                                                                    />
+                                                                    {examDayErrors.date && <p className="text-xs text-rose-500 font-bold mt-1">{examDayErrors.date}</p>}
+                                                                </motion.div>
+                                                            ) : (
+                                                                <motion.div key="range-date-exam" className="space-y-4">
+                                                                    <div className="space-y-2">
+                                                                        <Label className="font-bold text-slate-700">Tanggal Mulai <span className="text-rose-500">*</span></Label>
+                                                                        <Input 
+                                                                            type="date"
+                                                                            value={examDayData.start_date}
+                                                                            onChange={e => setExamDayData('start_date', e.target.value)}
+                                                                            required={examDayData.mode === 'range'}
+                                                                            className={`rounded-xl bg-slate-50/50 ${examDayErrors.start_date ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
+                                                                        />
+                                                                        {examDayErrors.start_date && <p className="text-xs text-rose-500 font-bold mt-1">{examDayErrors.start_date}</p>}
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <Label className="font-bold text-slate-700">Tanggal Selesai <span className="text-rose-500">*</span></Label>
+                                                                        <Input 
+                                                                            type="date"
+                                                                            value={examDayData.end_date}
+                                                                            onChange={e => setExamDayData('end_date', e.target.value)}
+                                                                            min={examDayData.start_date}
+                                                                            required={examDayData.mode === 'range'}
+                                                                            className={`rounded-xl bg-slate-50/50 ${examDayErrors.end_date ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
+                                                                        />
+                                                                        {examDayErrors.end_date && <p className="text-xs text-rose-500 font-bold mt-1">{examDayErrors.end_date}</p>}
+                                                                    </div>
+                                                                </motion.div>
+                                                            )}
+                                                        </AnimatePresence>
+
+                                                        <div className="space-y-2">
+                                                            <Label className="font-bold text-slate-700">Nama Agenda Ujian <span className="text-rose-500">*</span></Label>
+                                                            <Input 
+                                                                value={examDayData.name}
+                                                                onChange={e => setExamDayData('name', e.target.value)}
+                                                                placeholder="Contoh: UTS Semester Ganjil"
+                                                                required
+                                                                className={`rounded-xl bg-slate-50/50 ${examDayErrors.name ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
+                                                            />
+                                                            {examDayErrors.name && <p className="text-xs text-rose-500 font-bold mt-1">{examDayErrors.name}</p>}
+                                                        </div>
+                                                        
+                                                        <div className="space-y-2">
+                                                            <Label className="font-bold text-slate-700">Jenis Ujian</Label>
+                                                            <select 
+                                                                value={examDayData.type}
+                                                                onChange={e => setExamDayData('type', e.target.value)}
+                                                                className="flex h-10 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                                                            >
+                                                                <option value="uts">Ujian Tengah Semester (UTS)</option>
+                                                                <option value="uas">Ujian Akhir Semester (UAS)</option>
+                                                            </select>
+                                                            {examDayErrors.type && <p className="text-xs text-rose-500 font-bold mt-1">{examDayErrors.type}</p>}
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <Label className="font-bold text-slate-700">Jam Pulang Khusus</Label>
+                                                            <Input 
+                                                                type="time"
+                                                                value={examDayData.jam_keluar}
+                                                                onChange={e => setExamDayData('jam_keluar', e.target.value)}
+                                                                required
+                                                                className={`rounded-xl bg-slate-50/50 font-bold text-purple-700 ${examDayErrors.jam_keluar ? 'border-rose-500 focus-visible:ring-rose-500' : ''}`}
+                                                            />
+                                                            {examDayErrors.jam_keluar && <p className="text-xs text-rose-500 font-bold mt-1">{examDayErrors.jam_keluar}</p>}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex gap-2">
+                                                        <Button 
+                                                            type="submit" 
+                                                            disabled={processingExamDay} 
+                                                            className="flex-1 rounded-xl font-bold h-11 bg-indigo-600 hover:bg-indigo-700 text-white transition-all"
+                                                        >
+                                                            {editingExamDay ? 'Simpan Perubahan' : 'Simpan Hari Ujian'}
+                                                        </Button>
+                                                        {editingExamDay && (
+                                                            <Button 
+                                                                type="button" 
+                                                                variant="outline"
+                                                                onClick={cancelEditExamDay}
+                                                                className="rounded-xl font-bold h-11 border-slate-200 text-slate-600 hover:bg-slate-100"
+                                                            >
+                                                                <X className="w-4 h-4 mr-1" />
+                                                                Batal
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </form>
+                                            </div>
+
+                                            <div className="lg:w-2/3 space-y-6">
+                                                <div className="bg-purple-50 border border-purple-100 p-5 rounded-2xl flex items-start space-x-4">
+                                                    <div className="bg-purple-100 p-2 rounded-xl text-purple-600 shrink-0 mt-0.5">
+                                                     <ShieldAlert className="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-purple-900 text-sm">Fungsi Hari / Periode Ujian</h4>
+                                                        <p className="text-xs font-semibold text-purple-800/80 mt-1">
+                                                            Ketika hari ini termasuk dalam Hari Ujian, sistem presensi guru akan menyesuaikan otomatis menjadi 4 Sesi Ujian, dan jadwal guru akan diarahkan ke Jadwal Pengawas Ujian.
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between">
+                                                    <h3 className="font-extrabold text-slate-800 text-lg flex items-center">
+                                                        <ShieldAlert className="w-5 h-5 mr-2 text-indigo-500" />
+                                                        Daftar Hari Ujian Aktif
+                                                    </h3>
+                                                    {checkedExamDayIds.length > 0 && (
+                                                        <Button 
+                                                            onClick={handleBulkDeleteExamDays}
+                                                            variant="destructive"
+                                                            className="h-9 px-4 rounded-lg font-bold text-xs"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                                                            Hapus Terpilih ({checkedExamDayIds.length})
+                                                        </Button>
+                                                    )}
+                                                </div>
+
+                                                <div className="border border-slate-200 rounded-[1.5rem] overflow-hidden bg-white">
+                                                    <Table>
+                                                        <TableHeader className="bg-slate-50 border-b border-slate-200">
+                                                            <TableRow className="hover:bg-transparent">
+                                                                <TableHead className="w-12 px-6">
+                                                                    <Checkbox 
+                                                                        checked={allExamDaysChecked}
+                                                                        onCheckedChange={toggleAllExamDays}
+                                                                        className="border-slate-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600 rounded"
+                                                                    />
+                                                                </TableHead>
+                                                                <TableHead className="font-black text-slate-800 py-4 px-6">Tanggal</TableHead>
+                                                                <TableHead className="font-black text-slate-800">Nama Agenda</TableHead>
+                                                                <TableHead className="font-black text-slate-800">Jenis</TableHead>
+                                                                <TableHead className="font-black text-slate-800 text-right px-6">Aksi</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {examDays && examDays.length > 0 ? (
+                                                                examDays.map((ed) => (
+                                                                    <TableRow key={ed.id} className={`transition-colors border-b border-slate-100 ${editingExamDay?.id === ed.id ? 'bg-indigo-50/70 hover:bg-indigo-50/90' : 'hover:bg-slate-50/50'}`}>
+                                                                        <TableCell className="px-6">
+                                                                            <Checkbox 
+                                                                                checked={checkedExamDayIds.includes(ed.id)}
+                                                                                onCheckedChange={() => toggleOneExamDay(ed.id)}
+                                                                                className="border-slate-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600 rounded"
+                                                                            />
+                                                                        </TableCell>
+                                                                        <TableCell className="font-bold text-slate-700 py-4 px-6">
+                                                                            {new Date(ed.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                                        </TableCell>
+                                                                        <TableCell className="font-extrabold text-slate-800">
+                                                                            {ed.name}
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md border border-purple-200">
+                                                                                {ed.type.toUpperCase()} - {ed.jam_keluar} WIB
+                                                                            </span>
+                                                                        </TableCell>
+                                                                        <TableCell className="text-right px-6 space-x-1.5 whitespace-nowrap">
+                                                                            <Button 
+                                                                                type="button"
+                                                                                variant="outline" 
+                                                                                size="icon" 
+                                                                                onClick={() => handleEditExamDay(ed)}
+                                                                                className={`h-8 w-8 rounded-lg border-slate-200 transition-colors ${
+                                                                                    editingExamDay?.id === ed.id 
+                                                                                        ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700' 
+                                                                                        : 'hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200'
+                                                                                }`}
+                                                                                title="Edit"
+                                                                            >
+                                                                                <Pencil className="w-4 h-4" />
+                                                                            </Button>
+                                                                            <Button 
+                                                                                type="button"
+                                                                                variant="outline" 
+                                                                                size="icon" 
+                                                                                onClick={() => handleDeleteExamDay(ed.id)}
+                                                                                className="h-8 w-8 rounded-lg border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
+                                                                                title="Hapus"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </Button>
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                ))
+                                                            ) : (
+                                                                <TableRow>
+                                                                    <TableCell colSpan={5} className="text-center py-12">
+                                                                        <div className="flex flex-col items-center justify-center text-slate-400">
+                                                                            <ShieldAlert className="w-10 h-10 mb-3 text-slate-200" />
+                                                                            <p className="font-bold text-slate-500">Belum ada jadwal periode ujian.</p>
+                                                                        </div>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            )}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

@@ -42,6 +42,8 @@ class SubstituteTeachingController extends Controller
 
     public function index(Request $request)
     {
+        $isExamMode = TeachingSchedule::isExamMode();
+
         $date = $request->input('date', Carbon::today()->toDateString());
         $carbonDate = Carbon::parse($date);
         $dayOfWeek = $carbonDate->dayOfWeekIso; // 1 (Monday) to 7 (Sunday)
@@ -171,6 +173,7 @@ class SubstituteTeachingController extends Controller
                 'disable_kbm' => $todaySpecialWorkday->disable_kbm,
             ] : null,
             'canApprove' => $this->canApprove(),
+            'isExamMode' => $isExamMode,
             'employees' => Employee::where('status', 'active')->orderBy('name')->get(['id', 'name']),
             'filters' => [
                 'history_start_date' => $historyStartDate,
@@ -182,6 +185,10 @@ class SubstituteTeachingController extends Controller
 
     public function store(Request $request)
     {
+        if (TeachingSchedule::isExamMode()) {
+            return back()->with('error', 'Bursa Inval dinonaktifkan selama periode ujian.');
+        }
+
         $request->validate([
             'date' => 'required|date',
             'absent_employee_id' => 'required|exists:employees,id',
@@ -256,8 +263,12 @@ class SubstituteTeachingController extends Controller
         });
     }
 
-    public function approve(SubstituteTeaching $inval)
+    public function approve(Request $request, SubstituteTeaching $inval)
     {
+        if (TeachingSchedule::isExamMode()) {
+            return back()->with('error', 'Bursa Inval dinonaktifkan selama periode ujian.');
+        }
+
         if (!$this->canApproveClaim(Auth::user(), $inval->substitute_employee_id)) {
             abort(403);
         }
@@ -270,8 +281,12 @@ class SubstituteTeachingController extends Controller
         return back()->with('success', 'Klaim Inval disetujui.');
     }
 
-    public function reject(SubstituteTeaching $inval)
+    public function reject(Request $request, SubstituteTeaching $inval)
     {
+        if (TeachingSchedule::isExamMode()) {
+            return back()->with('error', 'Bursa Inval dinonaktifkan selama periode ujian.');
+        }
+
         if (!$this->canApproveClaim(Auth::user(), $inval->substitute_employee_id)) {
             abort(403);
         }

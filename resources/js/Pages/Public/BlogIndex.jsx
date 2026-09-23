@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from '@inertiajs/react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { BookOpen, Calendar, User, ArrowRight, Sparkles, Tag, ShieldCheck } from 'lucide-react';
+import AdSense from '@/Components/AdSense';
 
 export default function BlogIndex({ articles, auth }) {
     return (
@@ -20,6 +21,8 @@ export default function BlogIndex({ articles, auth }) {
                         Pelajari berbagai artikel panduan presensi modern, efisiensi tata kelola sekolah kejuruan, teknologi Geofencing GPS, dan inovasi pendidikan digital di SMK Manbaul Ulum Cirebon.
                     </p>
                 </div>
+
+                <AdSense slot="5548607007" className="my-6" />
 
                 {/* Articles Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -73,6 +76,8 @@ export default function BlogIndex({ articles, auth }) {
                         </div>
                     )}
                 </div>
+
+                <AdSense slot="5548607007" className="mt-12" />
             </div>
         </PublicLayout>
     );

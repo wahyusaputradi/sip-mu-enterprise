@@ -47,6 +47,14 @@ export default function Recap({ recapData, totalStats, filters, periodLabel }) {
         window.location.href = route('attendance.recap.export-pdf', { month, year, role });
     };
 
+    const handleExportExamExcel = () => {
+        window.location.href = route('attendance.recap.export-exam-excel', { month, year, role });
+    };
+
+    const handleExportExamPdf = () => {
+        window.location.href = route('attendance.recap.export-exam-pdf', { month, year, role });
+    };
+
     useEffect(() => {
         handleFilterChange();
     }, [month, year, role]);
@@ -101,19 +109,37 @@ export default function Recap({ recapData, totalStats, filters, periodLabel }) {
                             Periode Aktif: <span className="text-indigo-600 font-bold ml-1">{periodLabel}</span>
                         </p>
                     </div>
-                    <div className="flex items-center space-x-3">
-                        <Button 
-                            onClick={handleExportExcel}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-11 px-5 font-bold flex items-center transition-all shadow-lg shadow-emerald-200 hover:shadow-emerald-300"
-                        >
-                            <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
-                        </Button>
-                        <Button 
-                            onClick={handleExportPdf}
-                            className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl h-11 px-5 font-bold flex items-center transition-all shadow-lg shadow-rose-200 hover:shadow-rose-300"
-                        >
-                            <Printer className="w-4 h-4 mr-2" /> Export PDF
-                        </Button>
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center space-x-2">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reguler:</span>
+                            <Button 
+                                onClick={handleExportExcel}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg h-9 px-4 text-xs font-bold flex items-center transition-all shadow-md shadow-emerald-200"
+                            >
+                                <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> Excel
+                            </Button>
+                            <Button 
+                                onClick={handleExportPdf}
+                                className="bg-rose-600 hover:bg-rose-700 text-white rounded-lg h-9 px-4 text-xs font-bold flex items-center transition-all shadow-md shadow-rose-200"
+                            >
+                                <Printer className="w-3.5 h-3.5 mr-1.5" /> PDF
+                            </Button>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Ujian:</span>
+                            <Button 
+                                onClick={handleExportExamExcel}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg h-9 px-4 text-xs font-bold flex items-center transition-all shadow-md shadow-indigo-200"
+                            >
+                                <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> Excel
+                            </Button>
+                            <Button 
+                                onClick={handleExportExamPdf}
+                                className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg h-9 px-4 text-xs font-bold flex items-center transition-all shadow-md shadow-purple-200"
+                            >
+                                <Printer className="w-3.5 h-3.5 mr-1.5" /> PDF
+                            </Button>
+                        </div>
                     </div>
                 </div>
             }
